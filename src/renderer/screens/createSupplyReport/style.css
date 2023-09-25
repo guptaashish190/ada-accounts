@@ -1,0 +1,55 @@
+.create-supply-report-screen-container .title {
+  color: black;
+}
+
+.bill-row-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 10 30px;
+  padding: 4px;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.471);
+}
+
+.bill-row-container.label-header {
+  color: grey;
+}
+
+.bill-row-container .party-name {
+  width: 20%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bill-row-container .bill-number {
+  color: grey;
+  width: 10%;
+  margin-left: 15px;
+}
+
+.bill-row-container .field {
+  border-color: #90c2e7;
+  width: 10%;
+  margin-left: 15px;
+}
+
+.bill-row-container .spinner {
+  width: 7%;
+  margin-left: 20px;
+}
+
+.bill-row-container .delete-button {
+  margin-left: 20px;
+}
+
+.bag-row-total {
+  margin-top: 20px;
+  width: 500px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.no-bills-added {
+  color: grey;
+  margin: 100px 0;
+}

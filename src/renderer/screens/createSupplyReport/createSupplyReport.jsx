@@ -1,0 +1,306 @@
+import React, { useContext, useState } from 'react';
+import './style.css';
+import {
+  Button,
+  Dropdown,
+  Image,
+  Input,
+  useId,
+  Option,
+  SpinButton,
+  Text,
+  Toaster,
+  useToastController,
+  Textarea,
+  Spinner,
+} from '@fluentui/react-components';
+import {
+  DeleteRegular,
+  Person12Filled,
+  Check20Filled,
+} from '@fluentui/react-icons';
+import shortid from 'shortid';
+import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
+import BillSelector from '../../components/billSelector/billSelector';
+import AllUsersContext, { useAuthUser } from '../../contexts/allUsersContext';
+import constants from '../../constants';
+import { showToast } from '../../common/toaster';
+import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
+import { firebaseDB } from '../../firebaseInit';
+import Loader from '../../common/loader';
+
+export default function CreateSupplyReportScreen() {
+  const [bills, setBills] = useState([]);
+  const [modifiedBills, setModifiedBills] = useState([]);
+  const [selectedSupplyman, setSelectedSupplyman] = useState();
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const addBills = (b) => {
+    const toAddBills = [];
+    b.forEach((element) => {
+      if (bills.findIndex((x) => x.id === element.id) === -1) {
+        toAddBills.push(element);
+      }
+    });
+
+    setBills([...bills, ...toAddBills]);
+    setModifiedBills([...modifiedBills, ...toAddBills]);
+  };
+
+  const getTotalCases = () =>
+    modifiedBills.reduce((acc, cur) => acc + cur.bags[0].quantity, 0);
+  const getTotalPolyBags = () =>
+    modifiedBills.reduce((acc, cur) => acc + cur.bags[1].quantity, 0);
+  const getTotalPackets = () =>
+    modifiedBills.reduce((acc, cur) => acc + cur.bags[2].quantity, 0);
+
+  const toasterId = useId('toaster');
+  const { dispatchToast } = useToastController(toasterId);
+
+  const onSubmit = async () => {
+    if (bills.length === 0) {
+      showToast(dispatchToast, 'Please add bills', 'error');
+      return;
+    }
+
+    if (!selectedSupplyman) {
+      showToast(dispatchToast, 'Please select a supplyman', 'error');
+    }
+
+    try {
+      setLoading(true);
+      const supplyReportsCol = collection(firebaseDB, 'supplyReports');
+      const reportDocRef = doc(supplyReportsCol);
+
+      const supplyReport = {
+        timestamp: new Date().getTime(),
+        numCases: getTotalCases(),
+        numPackets: getTotalPackets(),
+        numPolybags: getTotalPolyBags(),
+        isCompleted: false,
+        note: notes,
+        orders: bills.map((b) => b.id),
+        supplymanId: selectedSupplyman.uid,
+        id: reportDocRef.id,
+      };
+
+      const docRef = await setDoc(reportDocRef, supplyReport);
+      showToast(dispatchToast, 'Forwarded to accounts', 'success');
+      resetScreenState();
+      setLoading(false);
+    } catch (error) {
+      console.error('Error adding document: ', error);
+      showToast(
+        dispatchToast,
+        `An error occured uploading supply report ${error}`,
+        'error',
+      );
+      setLoading(false);
+    }
+  };
+
+  const resetScreenState = () => {
+    setNotes('');
+    setBills([]);
+    setModifiedBills([]);
+    setSelectedSupplyman(null);
+  };
+
+  return (
+    <>
+      {loading ? <Loader translucent /> : null}
+      <Toaster toasterId={toasterId} />
+      <div className="create-supply-report-screen-container">
+        <center>
+          <h3 className="title">Create Supply Report</h3>
+          <VerticalSpace1 />
+          <BillSelector onBillsAdded={(b) => addBills(b)} />
+          <VerticalSpace1 />
+          <BillRowLabelHeader />
+          {bills.length === 0 ? (
+            <div className="no-bills-added">No bills added</div>
+          ) : (
+            bills.map((b, i) => (
+              <BillRow
+                key={b.id}
+                bill={b}
+                remove={() => {
+                  const tempBills = bills.filter((bill1) => b.id !== bill1.id);
+                  const tempBills2 = modifiedBills.filter(
+                    (bill1) => b.id !== bill1.id,
+                  );
+                  setModifiedBills(tempBills2);
+                  setBills(tempBills);
+                }}
+                updatedBill={(newBill) => {
+                  const tempBill = [...modifiedBills];
+                  tempBill[i] = newBill;
+
+                  setModifiedBills(tempBill);
+                }}
+              />
+            ))
+          )}
+          {bills.length !== 0 ? (
+            <>
+              <TotalBagsComponent
+                cases={getTotalCases()}
+                polybags={getTotalPolyBags()}
+                packet={getTotalPackets()}
+              />
+              <VerticalSpace2 />
+              <SelectSupplyMan
+                supplyman={selectedSupplyman}
+                setSupplyman={setSelectedSupplyman}
+              />
+              <VerticalSpace2 />
+              <Textarea
+                value={notes}
+                onChange={(x) => setNotes(x.target.value)}
+                style={{ width: '50%' }}
+                placeholder="Extra notes"
+              />
+              <VerticalSpace2 />
+              <Button
+                onClick={() => onSubmit()}
+                size="large"
+                appearance="primary"
+                icon={<Check20Filled />}
+              >
+                Forward to accounts
+              </Button>
+            </>
+          ) : null}
+        </center>
+      </div>
+    </>
+  );
+}
+
+function SelectSupplyMan({ supplyman, setSupplyman }) {
+  const { allUsers } = useAuthUser();
+  if (!allUsers) {
+    return <div>Error loading all users</div>;
+  }
+  return (
+    <Dropdown
+      size="large"
+      placeholder="Select a Supplyman"
+      style={{ width: '50%' }}
+      value={supplyman?.username || ''}
+      onOptionSelect={(ev, data) => {
+        setSupplyman(data.optionValue);
+      }}
+    >
+      {allUsers.map((option) => (
+        <Option value={option} key={option.id}>
+          <Image
+            src={option.profilePicture}
+            style={{ width: '30px', marginRight: '10px' }}
+            shape="circular"
+          />
+
+          {option.username}
+        </Option>
+      ))}
+    </Dropdown>
+  );
+}
+
+function TotalBagsComponent({ cases, polybags, packet }) {
+  return (
+    <div className="bag-row-total">
+      <Text size={400}>
+        Cases:{' '}
+        <Text size={600}>
+          <b>{cases}</b>
+        </Text>
+      </Text>
+      <Text size={400}>
+        Polybags:{' '}
+        <Text size={600}>
+          <b>{polybags}</b>
+        </Text>
+      </Text>
+      <Text size={400}>
+        Packets:{' '}
+        <Text size={600}>
+          <b>{packet}</b>
+        </Text>
+      </Text>
+    </div>
+  );
+}
+
+function BillRow({ bill, updatedBill, remove }) {
+  return (
+    <div className="bill-row-container">
+      <Text className="party-name">{bill.party.name}</Text>
+      <Text className="bill-number">{bill.billNumber.toUpperCase()}</Text>
+      <Input className="field" width="100px" placeholder="File..." />
+      <Input className="field" placeholder="Area..." />
+
+      <SpinButton
+        className="spinner"
+        defaultValue={bill.bags[0].quantity}
+        min={0}
+        max={20}
+        id={shortid.generate()}
+        onChange={(_, data) => {
+          const tempBill = { ...bill };
+          tempBill.bags[0].quantity = data.value;
+          console.log(tempBill);
+          updatedBill(tempBill);
+        }}
+      />
+      <SpinButton
+        className="spinner"
+        defaultValue={bill.bags[1].quantity}
+        onChange={(_, data) => {
+          const tempBill = { ...bill };
+          tempBill.bags[1].quantity = data.value;
+          updatedBill(tempBill);
+        }}
+        min={0}
+        max={20}
+        id={shortid.generate()}
+      />
+      <SpinButton
+        className="spinner"
+        defaultValue={bill.bags[2].quantity}
+        min={0}
+        max={20}
+        id={shortid.generate()}
+        onChange={(_, data) => {
+          const tempBill = { ...bill };
+          tempBill.bags[2].quantity = data.value;
+          updatedBill(tempBill);
+        }}
+      />
+      <Button
+        className="delete-button"
+        icon={<DeleteRegular />}
+        aria-label="Delete"
+        onClick={() => {
+          remove();
+        }}
+      />
+    </div>
+  );
+}
+
+function BillRowLabelHeader() {
+  return (
+    <div className="bill-row-container label-header">
+      <Text className="party-name">Party</Text>
+      <Text className="bill-number">Bill Number</Text>
+      <Text className="field">File</Text>
+
+      <Text className="field">Area</Text>
+      <Text className="spinner">Cases</Text>
+      <Text className="spinner">Polybags</Text>
+      <Text className="spinner">Packets</Text>
+    </div>
+  );
+}
