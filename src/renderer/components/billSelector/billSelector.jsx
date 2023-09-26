@@ -24,6 +24,7 @@ import {
 } from 'firebase/firestore';
 import shortid from 'shortid';
 import firebaseApp, { firebaseDB } from '../../firebaseInit';
+import globalUtils from '../../services/globalUtils';
 
 export default function BillSelector({ onBillsAdded }) {
   const [ordersList, setOrdersList] = useState([]);
@@ -31,36 +32,13 @@ export default function BillSelector({ onBillsAdded }) {
   const [searchPartyName, setSearchPartyName] = useState('');
   const [addedBills, setAddedBills] = useState([]);
 
-  const fetchPartyInfoForOrders = async (orders) => {
-    try {
-      const updatedOrders = await Promise.all(
-        orders.map(async (order) => {
-          const partyRef = doc(firebaseDB, 'parties', order.data().partyId); // Replace 'parties' with your collection name
-
-          const partySnapshot = await getDoc(partyRef);
-
-          if (partySnapshot.exists()) {
-            const partyData = partySnapshot.data();
-            // Replace the partyId with the party object
-            return { ...order.data(), party: partyData };
-          }
-          // If the party document doesn't exist, you can handle this case as needed.
-          // For example, you can return the order as is or mark it as an invalid order.
-          return order;
-        }),
-      );
-
-      return updatedOrders;
-    } catch (error) {
-      console.error('Error fetching party information:', error);
-      return orders; // Return the original list of orders if there's an 6aerror
-    }
-  };
   const getDispatchableBills = async () => {
     const ordersRef = collection(firebaseDB, 'orders');
 
     const unsubscribe = onSnapshot(ordersRef, async (snapshot) => {
-      const allOrders = await fetchPartyInfoForOrders(snapshot.docs);
+      const snapshotDocData = snapshot.docs.map((sn) => sn.data());
+      const allOrders =
+        await globalUtils.fetchPartyInfoForOrders(snapshotDocData);
       setOrdersList(allOrders);
       setShowOrderList(allOrders);
     });
@@ -166,18 +144,19 @@ function OrderRow({ order, onAddToggle, isSelected }) {
       key={shortid.generate()}
       className={`order-row ${isSelected ? 'is-selected' : ''}`}
     >
-      <div className="bill-number">{order.billNumber.toUpperCase()}</div>
+      <div className="bill-number">{order.billNumber?.toUpperCase()}</div>
       <div className="bill-name">
         {order.party.name} {order.fileNumber}
       </div>
       <div className="bill-amount">₹{order.orderAmount}</div>
       <Button
-        type="button"
+        appearance="secondary"
         onKeyDown={() => onAddToggle()}
         onClick={() => onAddToggle()}
         style={{
-          backgroundColor: isSelected ? '#F25C54aa' : '#06D6A0aa',
-          border: 'none',
+          backgroundColor: isSelected ? '#F25C5466' : null,
+          color: 'black',
+          border: isSelected ? '1px solid #F25C5477' : '1px solid #ddd',
         }}
       >
         {isSelected ? 'Remove' : 'Add'}

@@ -1,4 +1,4 @@
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Text } from '@fluentui/react-components';
@@ -7,39 +7,51 @@ import './style.css';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 
-export default function AllSupplyReportsScreen() {
+export default function PendingSupplyReports() {
   const [supplyReports, setSupplyReports] = useState([]);
 
   const [loading, setLoading] = useState(false);
 
-  const fetchSupplyReports = async () => {
+  // Function to fetch supply reports where "isDispatched" is false
+  const fetchUndispatchedSupplyReports = async () => {
     setLoading(true);
     try {
+      // Reference to the "supplyReports" collection
       const supplyReportsCollection = collection(firebaseDB, 'supplyReports');
-      const querySnapshot = await getDocs(supplyReportsCollection);
 
-      const reportsData = [];
-      querySnapshot.forEach((doc) => {
-        reportsData.push({ id: doc.id, ...doc.data() });
-      });
+      // Create a query to filter where "isDispatched" is false
+      const q = query(
+        supplyReportsCollection,
+        where('isDispatched', '==', false),
+      );
 
-      setSupplyReports(reportsData);
+      // Execute the query and get the documents
+      const querySnapshot = await getDocs(q);
+
+      // Extract the data from the querySnapshot
+      const undispatchedReports = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
       setLoading(false);
+      setSupplyReports(undispatchedReports);
     } catch (error) {
-      console.error('Error fetching supply reports:', error);
+      console.error('Error fetching undispatched supply reports:', error);
       setLoading(false);
+      throw error;
     }
   };
   useEffect(() => {
-    fetchSupplyReports();
+    fetchUndispatchedSupplyReports();
   }, []);
 
   if (loading) return <Loader />;
 
   return (
     <center>
-      <div className="all-supply-reports-container">
-        <h3>All Supply Reports</h3>
+      <div className="pending-supply-reports-container">
+        <h3>Pending Supply Reports</h3>
         {supplyReports.map((sr) => {
           return <SupplyReportRow data={sr} />;
         })}
@@ -62,15 +74,8 @@ function SupplyReportRow({ data }) {
   }, []);
   return (
     <>
-      <Button
-        appearance="subtle"
-        onClick={() => {
-          navigate('/viewSupplyReport', {
-            state: { prefillSupplyReport: data },
-          });
-        }}
-      >
-        <div className="supply-report-row">
+      <div className="supply-report-row">
+        <div style={{ width: '100%' }}>
           <div className="top-row">
             <Text className="sr-id">{data.timestamp}</Text>
             <Text className="sr-timestamp">
@@ -88,7 +93,17 @@ function SupplyReportRow({ data }) {
             </Text>
           </div>
         </div>
-      </Button>
+        <Button
+          size="large"
+          appearance="subtle"
+          className="verify-button"
+          onClick={() => {
+            navigate('/verifySupplyReport', { state: { supplyReport: data } });
+          }}
+        >
+          <span style={{ color: '#F25C54' }}>Verify</span>
+        </Button>
+      </div>
       <br />
     </>
   );

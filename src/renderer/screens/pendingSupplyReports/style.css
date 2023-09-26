@@ -1,0 +1,45 @@
+.pending-supply-reports-container .supply-report-row {
+  cursor: pointer;
+  padding: 10px;
+  width: 50vw;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.086);
+  display: flex;
+  margin-left: 20px;
+}
+.pending-supply-reports-container .verify-button {
+  border: 'none';
+  margin-left: 20px;
+}
+
+.pending-supply-reports-container .supply-report-row .top-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.pending-supply-reports-container .supply-report-row .bottom-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.pending-supply-reports-container .supply-report-row .sr-id {
+  font-weight: bold;
+}
+
+.pending-supply-reports-container .supply-report-row .sr-parties-length {
+  color: rgba(128, 128, 128, 0.816);
+}
+
+.pending-supply-reports-container .supply-report-row .sr-supplyman {
+  color: var(--green);
+  margin-left: 10px;
+}
+
+.pending-supply-reports-container .supply-report-row .sr-bags {
+  color: rgba(128, 128, 128, 0.594);
+}
+
+.pending-supply-reports-container .dialog-supply-report {
+  width: 90%;
+}

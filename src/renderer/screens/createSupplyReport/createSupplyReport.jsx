@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import './style.css';
 import {
   Button,
@@ -20,6 +20,7 @@ import {
   Check20Filled,
 } from '@fluentui/react-icons';
 import shortid from 'shortid';
+import { useLocation } from 'react-router-dom';
 import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import BillSelector from '../../components/billSelector/billSelector';
 import AllUsersContext, { useAuthUser } from '../../contexts/allUsersContext';
@@ -28,13 +29,57 @@ import { showToast } from '../../common/toaster';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import { firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
+import globalUtils from '../../services/globalUtils';
 
-export default function CreateSupplyReportScreen() {
+export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
+  const location = useLocation();
+
+  const locationState = location.state;
+  const prefillSupplyReport =
+    locationState?.prefillSupplyReport || prefillSupplyReportP;
+
   const [bills, setBills] = useState([]);
   const [modifiedBills, setModifiedBills] = useState([]);
   const [selectedSupplyman, setSelectedSupplyman] = useState();
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const [editable, setEditable] = useState(true);
+
+  const prefillState = async () => {
+    setLoading(true);
+    try {
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        prefillSupplyReport.orders,
+      );
+
+      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      setBills(fetchedOrders);
+      setModifiedBills(fetchedOrders);
+
+      const supplymanUser = await globalUtils.fetchUserById(
+        prefillSupplyReport.supplymanId,
+      );
+      console.log(fetchedOrders, supplymanUser);
+      setSelectedSupplyman(supplymanUser);
+      setNotes(prefillSupplyReport.note);
+      setEditable(false);
+      setLoading(false);
+    } catch (e) {
+      setLoading(false);
+      showToast(
+        dispatchToast,
+        'An error occured loading supply report',
+        'error',
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (prefillSupplyReport) {
+      prefillState();
+    }
+  }, []);
 
   const addBills = (b) => {
     const toAddBills = [];
@@ -58,7 +103,7 @@ export default function CreateSupplyReportScreen() {
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
-  const onSubmit = async () => {
+  const onSubmit = async (save) => {
     if (bills.length === 0) {
       showToast(dispatchToast, 'Please add bills', 'error');
       return;
@@ -70,24 +115,48 @@ export default function CreateSupplyReportScreen() {
 
     try {
       setLoading(true);
-      const supplyReportsCol = collection(firebaseDB, 'supplyReports');
-      const reportDocRef = doc(supplyReportsCol);
+      let reportDocRef;
+      if (save) {
+        reportDocRef = doc(firebaseDB, 'supplyReports', prefillSupplyReport.id);
+      } else {
+        const supplyReportsCol = collection(firebaseDB, 'supplyReports');
+        reportDocRef = doc(supplyReportsCol);
+      }
 
-      const supplyReport = {
-        timestamp: new Date().getTime(),
-        numCases: getTotalCases(),
-        numPackets: getTotalPackets(),
-        numPolybags: getTotalPolyBags(),
-        isCompleted: false,
-        note: notes,
-        orders: bills.map((b) => b.id),
-        supplymanId: selectedSupplyman.uid,
-        id: reportDocRef.id,
-      };
+      let supplyReport;
+      if (save) {
+        supplyReport = {
+          ...prefillSupplyReport,
+          timestamp: new Date().getTime(),
+          numCases: getTotalCases(),
+          numPackets: getTotalPackets(),
+          numPolybags: getTotalPolyBags(),
+          note: notes,
+          orders: bills.map((b) => b.id),
+          supplymanId: selectedSupplyman.uid,
+        };
+      } else {
+        supplyReport = {
+          timestamp: new Date().getTime(),
+          numCases: getTotalCases(),
+          numPackets: getTotalPackets(),
+          numPolybags: getTotalPolyBags(),
+          isCompleted: false,
+          note: notes,
+          orders: bills.map((b) => b.id),
+          supplymanId: selectedSupplyman.uid,
+          id: reportDocRef.id,
+          isDispatched: false,
+        };
+      }
 
       const docRef = await setDoc(reportDocRef, supplyReport);
       showToast(dispatchToast, 'Forwarded to accounts', 'success');
-      resetScreenState();
+      if (!save) {
+        resetScreenState();
+      } else {
+        setEditable(false);
+      }
       setLoading(false);
     } catch (error) {
       console.error('Error adding document: ', error);
@@ -99,6 +168,8 @@ export default function CreateSupplyReportScreen() {
       setLoading(false);
     }
   };
+
+  const onSave = () => {};
 
   const resetScreenState = () => {
     setNotes('');
@@ -113,35 +184,45 @@ export default function CreateSupplyReportScreen() {
       <Toaster toasterId={toasterId} />
       <div className="create-supply-report-screen-container">
         <center>
-          <h3 className="title">Create Supply Report</h3>
+          <h3 className="title">
+            {prefillSupplyReport
+              ? `Supply Report: ${prefillSupplyReport.id}`
+              : 'Create Supply Report'}
+          </h3>
           <VerticalSpace1 />
-          <BillSelector onBillsAdded={(b) => addBills(b)} />
-          <VerticalSpace1 />
-          <BillRowLabelHeader />
+          {editable ? <BillSelector onBillsAdded={(b) => addBills(b)} /> : null}
+          <VerticalSpace2 />
           {bills.length === 0 ? (
             <div className="no-bills-added">No bills added</div>
           ) : (
-            bills.map((b, i) => (
-              <BillRow
-                key={b.id}
-                bill={b}
-                remove={() => {
-                  const tempBills = bills.filter((bill1) => b.id !== bill1.id);
-                  const tempBills2 = modifiedBills.filter(
-                    (bill1) => b.id !== bill1.id,
-                  );
-                  setModifiedBills(tempBills2);
-                  setBills(tempBills);
-                }}
-                updatedBill={(newBill) => {
-                  const tempBill = [...modifiedBills];
-                  tempBill[i] = newBill;
+            <div className="bill-row-container">
+              <BillRowLabelHeader />
+              {bills.map((b, i) => (
+                <BillRow
+                  editable={editable}
+                  key={b.id}
+                  bill={b}
+                  remove={() => {
+                    const tempBills = bills.filter(
+                      (bill1) => b.id !== bill1.id,
+                    );
+                    const tempBills2 = modifiedBills.filter(
+                      (bill1) => b.id !== bill1.id,
+                    );
+                    setModifiedBills(tempBills2);
+                    setBills(tempBills);
+                  }}
+                  updatedBill={(newBill) => {
+                    const tempBill = [...modifiedBills];
+                    tempBill[i] = newBill;
 
-                  setModifiedBills(tempBill);
-                }}
-              />
-            ))
+                    setModifiedBills(tempBill);
+                  }}
+                />
+              ))}
+            </div>
           )}
+          <VerticalSpace1 />
           {bills.length !== 0 ? (
             <>
               <TotalBagsComponent
@@ -151,25 +232,51 @@ export default function CreateSupplyReportScreen() {
               />
               <VerticalSpace2 />
               <SelectSupplyMan
+                editable={editable}
                 supplyman={selectedSupplyman}
                 setSupplyman={setSelectedSupplyman}
               />
               <VerticalSpace2 />
               <Textarea
+                disabled={!editable}
                 value={notes}
                 onChange={(x) => setNotes(x.target.value)}
                 style={{ width: '50%' }}
                 placeholder="Extra notes"
               />
               <VerticalSpace2 />
-              <Button
-                onClick={() => onSubmit()}
-                size="large"
-                appearance="primary"
-                icon={<Check20Filled />}
-              >
-                Forward to accounts
-              </Button>
+              {!prefillSupplyReport ? (
+                <Button
+                  onClick={() => onSubmit()}
+                  size="large"
+                  appearance="primary"
+                  icon={<Check20Filled />}
+                >
+                  Forward to accounts
+                </Button>
+              ) : null}
+
+              {prefillSupplyReport && editable ? (
+                <Button
+                  onClick={() => onSubmit(true)}
+                  size="large"
+                  appearance="primary"
+                  icon={<Check20Filled />}
+                >
+                  Save
+                </Button>
+              ) : null}
+
+              {prefillSupplyReport && !editable ? (
+                <Button
+                  onClick={() => setEditable(true)}
+                  size="large"
+                  appearance="primary"
+                  icon={<Check20Filled />}
+                >
+                  Edit Supply Report
+                </Button>
+              ) : null}
             </>
           ) : null}
         </center>
@@ -178,13 +285,14 @@ export default function CreateSupplyReportScreen() {
   );
 }
 
-function SelectSupplyMan({ supplyman, setSupplyman }) {
+function SelectSupplyMan({ supplyman, setSupplyman, editable }) {
   const { allUsers } = useAuthUser();
   if (!allUsers) {
     return <div>Error loading all users</div>;
   }
   return (
     <Dropdown
+      disabled={!editable}
       size="large"
       placeholder="Select a Supplyman"
       style={{ width: '50%' }}
@@ -233,15 +341,21 @@ function TotalBagsComponent({ cases, polybags, packet }) {
   );
 }
 
-function BillRow({ bill, updatedBill, remove }) {
+function BillRow({ bill, updatedBill, remove, editable }) {
   return (
-    <div className="bill-row-container">
+    <>
       <Text className="party-name">{bill.party.name}</Text>
       <Text className="bill-number">{bill.billNumber.toUpperCase()}</Text>
-      <Input className="field" width="100px" placeholder="File..." />
-      <Input className="field" placeholder="Area..." />
+      <Input
+        disabled={!editable}
+        className="field"
+        width="100px"
+        placeholder="File..."
+      />
+      <Input disabled={!editable} className="field" placeholder="Area..." />
 
       <SpinButton
+        disabled={!editable}
         className="spinner"
         defaultValue={bill.bags[0].quantity}
         min={0}
@@ -255,6 +369,7 @@ function BillRow({ bill, updatedBill, remove }) {
         }}
       />
       <SpinButton
+        disabled={!editable}
         className="spinner"
         defaultValue={bill.bags[1].quantity}
         onChange={(_, data) => {
@@ -267,6 +382,7 @@ function BillRow({ bill, updatedBill, remove }) {
         id={shortid.generate()}
       />
       <SpinButton
+        disabled={!editable}
         className="spinner"
         defaultValue={bill.bags[2].quantity}
         min={0}
@@ -278,29 +394,34 @@ function BillRow({ bill, updatedBill, remove }) {
           updatedBill(tempBill);
         }}
       />
-      <Button
-        className="delete-button"
-        icon={<DeleteRegular />}
-        aria-label="Delete"
-        onClick={() => {
-          remove();
-        }}
-      />
-    </div>
+      {editable ? (
+        <Button
+          className="delete-button"
+          icon={<DeleteRegular />}
+          aria-label="Delete"
+          onClick={() => {
+            remove();
+          }}
+        />
+      ) : (
+        <div />
+      )}
+    </>
   );
 }
 
 function BillRowLabelHeader() {
   return (
-    <div className="bill-row-container label-header">
-      <Text className="party-name">Party</Text>
-      <Text className="bill-number">Bill Number</Text>
-      <Text className="field">File</Text>
+    <>
+      <Text className="party-name label-header">Party</Text>
+      <Text className="bill-number label-header">Bill Number</Text>
+      <Text className="field label-header">File</Text>
 
-      <Text className="field">Area</Text>
-      <Text className="spinner">Cases</Text>
-      <Text className="spinner">Polybags</Text>
-      <Text className="spinner">Packets</Text>
-    </div>
+      <Text className="field label-header">Area</Text>
+      <Text className="spinner label-header">Cases</Text>
+      <Text className="spinner label-header">Polybags</Text>
+      <Text className="spinner label-header">Packets</Text>
+      <Text className="spinner" />
+    </>
   );
 }

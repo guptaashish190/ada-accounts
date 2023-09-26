@@ -6,21 +6,14 @@
   display: flex;
   font-size: 12px;
   flex-direction: row;
-  border: 1px solid grey;
+  border: 1px solid rgba(128, 128, 128, 0.1);
   border-radius: 6px;
   margin: 5px;
   padding: 10px;
-  cursor: pointer;
-  transition: background-color 0.2s ease 0s;
   align-items: center;
 }
 
-.order-row:hover {
-  background-color: rgb(226, 242, 255);
-}
-
 .order-row .bill-name {
-  font-weight: bold;
   margin: 0px 10px;
   width: 100%;
 }

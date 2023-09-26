@@ -1,10 +1,8 @@
 .all-supply-reports-container .supply-report-row {
   cursor: pointer;
   padding: 10px;
-  margin: 10px 0;
-  width: 50%;
+  width: 50vw;
   border-bottom: 1px solid rgba(128, 128, 128, 0.086);
-  transition: background-color 0.3s ease 0s;
 }
 
 .all-supply-reports-container .supply-report-row .top-row {
@@ -36,6 +34,6 @@
   color: rgba(128, 128, 128, 0.594);
 }
 
-.all-supply-reports-container .supply-report-row:hover {
-  background-color: #06d69e24;
+.all-supply-reports-container .dialog-supply-report {
+  width: 90%;
 }

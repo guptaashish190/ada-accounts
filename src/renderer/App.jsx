@@ -17,11 +17,18 @@ import AllUsersContext from './contexts/allUsersContext';
 import constants from './constants';
 import TabNavigator from './screens/tabNavigator';
 import AllSupplyReportsScreen from './screens/allSupplyReports/allSupplyReports';
+import ViewSupplyReportScreen from './screens/viewSupplyReport/viewSupplyReport';
+import PendingSupplyReports from './screens/pendingSupplyReports/pendingSupplyReports';
+import VerifySupplyReport from './screens/verifySupplyReport/verifySupplyReport';
 
 export default function App() {
   const testLogin = async () => {
-    const auth = getAuth();
-    await signInWithEmailAndPassword(auth, 'pintu@gmail.com', 'password');
+    try {
+      const auth = getAuth();
+      await signInWithEmailAndPassword(auth, 'pintu@gmail.com', 'password');
+    } catch (e) {
+      console.log(e);
+    }
   };
   useEffect(() => {
     testLogin();
@@ -36,8 +43,20 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<CreateSupplyReportScreen />} />
                 <Route
+                  path="/viewSupplyReport"
+                  element={<ViewSupplyReportScreen />}
+                />
+                <Route
                   path="/allSupplyReports"
                   element={<AllSupplyReportsScreen />}
+                />
+                <Route
+                  path="/pendingSupplyReports"
+                  element={<PendingSupplyReports />}
+                />
+                <Route
+                  path="/verifySupplyReport"
+                  element={<VerifySupplyReport />}
                 />
               </Routes>
             </TabNavigator>
