@@ -20,6 +20,7 @@ import AllSupplyReportsScreen from './screens/allSupplyReports/allSupplyReports'
 import ViewSupplyReportScreen from './screens/viewSupplyReport/viewSupplyReport';
 import PendingSupplyReports from './screens/pendingSupplyReports/pendingSupplyReports';
 import VerifySupplyReport from './screens/verifySupplyReport/verifySupplyReport';
+import ReceiveSupplyReportScreen from './screens/receiveSupplyReport/receiveSupplyReport';
 
 export default function App() {
   const testLogin = async () => {
@@ -57,6 +58,10 @@ export default function App() {
                 <Route
                   path="/verifySupplyReport"
                   element={<VerifySupplyReport />}
+                />
+                <Route
+                  path="/receiveSupplyReports"
+                  element={<ReceiveSupplyReportScreen />}
                 />
               </Routes>
             </TabNavigator>

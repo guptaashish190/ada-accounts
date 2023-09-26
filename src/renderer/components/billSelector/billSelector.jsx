@@ -146,12 +146,11 @@ function OrderRow({ order, onAddToggle, isSelected }) {
     >
       <div className="bill-number">{order.billNumber?.toUpperCase()}</div>
       <div className="bill-name">
-        {order.party.name} {order.fileNumber}
+        {order.party?.name} {order.fileNumber}
       </div>
       <div className="bill-amount">₹{order.orderAmount}</div>
       <Button
         appearance="secondary"
-        onKeyDown={() => onAddToggle()}
         onClick={() => onAddToggle()}
         style={{
           backgroundColor: isSelected ? '#F25C5466' : null,

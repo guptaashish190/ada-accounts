@@ -12,9 +12,16 @@
   border-bottom: 1px solid rgba(137, 137, 137, 0.255);
   justify-content: center;
   margin-bottom: 20px;
+  position: fixed;
+  top: 0px;
+  right: 0;
+  left: 0;
+  z-index: 12;
+  background-color: white;
 }
 
 .tab-navigator .right {
+  margin-top: 50px;
   overflow: scroll;
   position: relative;
   padding: 10px;

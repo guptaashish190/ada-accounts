@@ -18,6 +18,10 @@ export default function TabNavigator({ children }) {
       name: 'Pending Supply Reports',
       route: '/pendingSupplyReports',
     },
+    {
+      name: 'Receive Supply Reports',
+      route: '/receiveSupplyReports',
+    },
   ];
 
   return (

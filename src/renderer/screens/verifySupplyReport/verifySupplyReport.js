@@ -25,6 +25,7 @@ import { showToast } from '../../common/toaster';
 import './style.css';
 import { firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
+import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 
 // BALANCE WILL BE ADDED TO THE ORDER DOCUMENT BEFORE THIS SCREEN FOR A NEW ORDER(BILL)
 // BECAUSE OF THIS, AS THE OLD BILLS ARE FILTERED BASED ON BALANCE, THE NEW BILL SHOULD NOT
@@ -37,7 +38,7 @@ export default function VerifySupplyReport() {
   const locationState = location.state;
   const supplyReport = locationState?.supplyReport;
   const [attachedBills, setAttachedBills] = useState([]);
-
+  const [supplymanUser, setSupplymanUser] = useState();
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
@@ -52,9 +53,10 @@ export default function VerifySupplyReport() {
       fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
       setBills(fetchedOrders);
 
-      const supplymanUser = await globalUtils.fetchUserById(
+      const supplymanUser1 = await globalUtils.fetchUserById(
         supplyReport.supplymanId,
       );
+      setSupplymanUser(supplymanUser1);
       setLoading(false);
     } catch (e) {
       setLoading(false);
@@ -76,10 +78,15 @@ export default function VerifySupplyReport() {
 
       await updateDoc(supplyReportRef, {
         isDispatched: true,
+        attachedBills,
       });
 
       await bills.forEach(async (bill1) => {
         await updateOrder(bill1);
+      });
+
+      await attachedBills.forEach(async (bill1) => {
+        await updateOldOrder(bill1);
       });
       setLoading(false);
     } catch (e) {
@@ -87,7 +94,6 @@ export default function VerifySupplyReport() {
       setLoading(false);
     }
   };
-
   const updateOrder = async (bill1) => {
     try {
       // Create a reference to the specific order document
@@ -95,8 +101,24 @@ export default function VerifySupplyReport() {
 
       // Update the "orderStatus" field in the order document to "dispatched"
       await updateDoc(orderRef, {
-        orderStatus: 'dispatched',
         balance: bill1.orderAmount,
+        with: supplyReport.supplymanId,
+      });
+
+      console.log(`Order status updated to "dispatched"`);
+    } catch (error) {
+      console.error(`Error updating order  status:`, error);
+    }
+  };
+  const updateOldOrder = async (modifiedBill1) => {
+    try {
+      // Create a reference to the specific order document
+      const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
+
+      // Update the "orderStatus" field in the order document to "dispatched"
+      await updateDoc(orderRef, {
+        ...modifiedBill1,
+        with: supplyReport.supplymanId,
       });
 
       console.log(`Order status updated to "dispatched"`);
@@ -109,8 +131,12 @@ export default function VerifySupplyReport() {
     <div className="verify-supply-report">
       <center>
         {loading ? <Loader /> : null}
-        <h3>Verify Supply Report: {supplyReport?.id}</h3>
-
+        <h3>Verify Supply Report</h3>
+        ID: {supplyReport?.id}{' '}
+        <span style={{ color: 'grey' }}>
+          (Supplyman: {supplymanUser?.username})
+        </span>
+        <VerticalSpace2 />
         {bills.map((b, i) => {
           return (
             <PartySection
@@ -239,6 +265,7 @@ function OldBillRow({ oldbill, attachBill, isAttached, removeAttachedBill }) {
   const [newBalance, setNewBalance] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [scheduledData, setScheduledDate] = useState();
+  const [withUser, setWithUser] = useState();
 
   const scheduledForPaymentDate = () => {
     if (oldbill.scheduledForPayment) {
@@ -258,24 +285,39 @@ function OldBillRow({ oldbill, attachBill, isAttached, removeAttachedBill }) {
     }
     attachBill(modifiedBill);
   };
+
+  const fetchWithUser = async () => {
+    if (oldbill.with && oldbill.with !== 'Accounts') {
+      const user = await globalUtils.fetchUserById(oldbill.with);
+      setWithUser(user.username);
+    } else {
+      setWithUser('Accounts');
+    }
+  };
+
+  const disabled = isAttached || oldbill.with !== 'Accounts';
+
+  useEffect(() => {
+    fetchWithUser();
+  }, []);
   return (
     <>
       <div className="old-bill bill-number">{oldbill.billNumber}</div>
       <div className="old-bill bill-number">
         {new Date(oldbill.creationTime).toLocaleDateString()}
       </div>
-      <div className="old-bill with">{oldbill.with || 'Account'}</div>
+      <div className="old-bill with">{withUser}</div>
       <div className="old-bill amount">₹{oldbill.orderAmount}</div>
 
-      <Tooltip content={`₹${oldbill.balance || oldbill.orderAmount}`}>
+      <Tooltip content={`₹${oldbill.balance}`}>
         <Input
-          disabled={isAttached}
+          disabled={disabled}
           style={{ width: '100px' }}
           size="small"
           value={newBalance}
           contentBefore="₹"
           appearance="underline"
-          placeholder={`${oldbill.balance || oldbill.orderAmount}`}
+          placeholder={`${oldbill.balance}`}
           className="old-bill amount"
           onChange={(_, d) => setNewBalance(d.value)}
         />
@@ -283,7 +325,7 @@ function OldBillRow({ oldbill, attachBill, isAttached, removeAttachedBill }) {
       <div className="old-bill scheduled">{scheduledForPaymentDate()}</div>
       <Tooltip content={oldbill.note}>
         <Input
-          disabled={isAttached}
+          disabled={disabled}
           style={{ width: '100px' }}
           size="small"
           className="old-bill notes"
@@ -302,14 +344,23 @@ function OldBillRow({ oldbill, attachBill, isAttached, removeAttachedBill }) {
           Remove Bill
         </Button>
       ) : (
-        <Button
-          className="old-bill"
-          appearance="subtle"
-          style={{ color: '#F25C54' }}
-          onClick={() => onAttachBill()}
+        <Tooltip
+          content={
+            withUser !== 'Accounts'
+              ? 'Cannot attach bill as it is not present in accounts.'
+              : 'Attach Bill'
+          }
         >
-          Attach Bill
-        </Button>
+          <Button
+            disabled={disabled}
+            className="old-bill"
+            appearance="subtle"
+            style={{ color: '#F25C54' }}
+            onClick={() => onAttachBill()}
+          >
+            Attach Bill
+          </Button>
+        </Tooltip>
       )}
     </>
   );

@@ -344,8 +344,8 @@ function TotalBagsComponent({ cases, polybags, packet }) {
 function BillRow({ bill, updatedBill, remove, editable }) {
   return (
     <>
-      <Text className="party-name">{bill.party.name}</Text>
-      <Text className="bill-number">{bill.billNumber.toUpperCase()}</Text>
+      <Text className="party-name">{bill.party?.name}</Text>
+      <Text className="bill-number">{bill.billNumber?.toUpperCase()}</Text>
       <Input
         disabled={!editable}
         className="field"
