@@ -75,4 +75,27 @@ export default {
       return orders; // Return the original list of orders if there's an 6aerror
     }
   },
+  fetchPartyInfo: async (partyId) => {
+    try {
+      const partyRef = doc(firebaseDB, 'parties', partyId); // Replace 'parties' with your collection name
+
+      const partySnapshot = await getDoc(partyRef);
+
+      return partySnapshot.data();
+    } catch (error) {
+      console.error('Error fetching party information:', error);
+      return null;
+    }
+  },
+  getCurrencyFormat: (num) => {
+    const formatter = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+
+      // These options are needed to round to whole numbers if that's what you want.
+      // minimumFractionDigits: 0, // (this suffices for whole numbers, but will print 2500.10 as $2,500.1)
+      maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
+    });
+    return formatter.format(num);
+  },
 };

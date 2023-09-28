@@ -1,20 +1,10 @@
 .all-supply-reports-container .supply-report-row {
   cursor: pointer;
-  padding: 10px;
-  width: 50vw;
+  padding-bottom: 10px;
+  width: 60vw;
   border-bottom: 1px solid rgba(128, 128, 128, 0.086);
-}
-
-.all-supply-reports-container .supply-report-row .top-row {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.all-supply-reports-container .supply-report-row .bottom-row {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr;
 }
 
 .all-supply-reports-container .supply-report-row .sr-id {
@@ -28,12 +18,4 @@
 .all-supply-reports-container .supply-report-row .sr-supplyman {
   color: var(--green);
   margin-left: 10px;
-}
-
-.all-supply-reports-container .supply-report-row .sr-bags {
-  color: rgba(128, 128, 128, 0.594);
-}
-
-.all-supply-reports-container .dialog-supply-report {
-  width: 90%;
 }

@@ -1,0 +1,45 @@
+.all-bills-screen {
+  width: 80%;
+}
+
+.all-bills-screen .all-bills-row-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  font-weight: bold;
+  color: grey;
+}
+
+.all-bills-screen .all-bills-search-input-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+
+.all-bills-screen .all-bills-search-input-container .input {
+  margin: 10px;
+}
+
+.all-bills-screen .bill-row {
+  display: grid;
+  grid-template-columns: 0.2fr 2fr repeat(4, minmax(0, 1fr));
+  padding: 10px 10px;
+  border-bottom: 1px solid #dddddd6c;
+  cursor: pointer;
+  transition: background-color 0.3s ease-out 0s;
+}
+.all-bills-screen .all-bills-header {
+  display: grid;
+  grid-template-columns: 0.2fr 2fr repeat(4, minmax(0, 1fr));
+  font-weight: bold;
+  color: rgba(128, 128, 128, 0.379);
+  border-bottom: 2px solid #6767672e;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.all-bills-screen .bill-row:hover {
+  background-color: #8f8f8f2e;
+}

@@ -8,6 +8,8 @@ import {
   Button,
   Toaster,
   useId,
+  createLightTheme,
+  createDarkTheme,
 } from '@fluentui/react-components';
 import { useEffect } from 'react';
 import icon from '../../assets/icon.svg';
@@ -20,7 +22,36 @@ import AllSupplyReportsScreen from './screens/allSupplyReports/allSupplyReports'
 import ViewSupplyReportScreen from './screens/viewSupplyReport/viewSupplyReport';
 import PendingSupplyReports from './screens/pendingSupplyReports/pendingSupplyReports';
 import VerifySupplyReport from './screens/verifySupplyReport/verifySupplyReport';
-import ReceiveSupplyReportScreen from './screens/receiveSupplyReport/receiveSupplyReport';
+import ReceiveSupplyReportScreen from './screens/receiveSupplyReport/receiveSupplyReportList';
+import ReceiveSRScreen from './screens/receiveSupplyReport/receiveSRScreen/receiveSRScreen';
+import AllBillsScreen from './screens/allBills/allBills';
+
+const myNewTheme = {
+  10: '#010304',
+  20: '#0A191E',
+  30: '#0C2934',
+  40: '#0D3546',
+  50: '#104258',
+  60: '#174F6A',
+  70: '#225D7C',
+  80: '#2E6A8E',
+  90: '#3D77A0',
+  100: '#4D85B1',
+  110: '#5F93C2',
+  120: '#71A0D2',
+  130: '#85AEE0',
+  140: '#9BBCEC',
+  150: '#B1CAF5',
+  160: '#C8D8FB',
+};
+
+const lightTheme = {
+  ...createLightTheme(myNewTheme),
+};
+
+const darkTheme = {
+  ...createDarkTheme(myNewTheme),
+};
 
 export default function App() {
   const testLogin = async () => {
@@ -36,7 +67,7 @@ export default function App() {
   }, []);
 
   return (
-    <FluentProvider theme={webLightTheme}>
+    <FluentProvider theme={lightTheme}>
       <AllUsersContext>
         <UserContext>
           <Router>
@@ -63,6 +94,8 @@ export default function App() {
                   path="/receiveSupplyReports"
                   element={<ReceiveSupplyReportScreen />}
                 />
+                <Route path="/searchBills" element={<AllBillsScreen />} />
+                <Route path="/receiveSRScreen" element={<ReceiveSRScreen />} />
               </Routes>
             </TabNavigator>
           </Router>

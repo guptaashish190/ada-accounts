@@ -1,6 +1,6 @@
 /* eslint-disable no-restricted-syntax */
 import React, { useContext, useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Button,
   Input,
@@ -20,10 +20,11 @@ import {
 } from 'firebase/firestore';
 import shortid from 'shortid';
 import { evaluate } from 'mathjs';
+import { getAuth } from 'firebase/auth';
 import globalUtils from '../../services/globalUtils';
 import { showToast } from '../../common/toaster';
 import './style.css';
-import { firebaseDB } from '../../firebaseInit';
+import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 
@@ -41,6 +42,7 @@ export default function VerifySupplyReport() {
   const [supplymanUser, setSupplymanUser] = useState();
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
+  const navigate = useNavigate();
 
   const prefillState = async () => {
     setLoading(true);
@@ -77,8 +79,9 @@ export default function VerifySupplyReport() {
       const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
 
       await updateDoc(supplyReportRef, {
-        isDispatched: true,
-        attachedBills,
+        status: 'Dispatched',
+        dispatchTimestamp: new Date().getTime(),
+        attachedBills: attachedBills.map((b) => b.id),
       });
 
       await bills.forEach(async (bill1) => {
@@ -89,6 +92,7 @@ export default function VerifySupplyReport() {
         await updateOldOrder(bill1);
       });
       setLoading(false);
+      navigate(-1);
     } catch (e) {
       console.log(e);
       setLoading(false);
@@ -103,6 +107,15 @@ export default function VerifySupplyReport() {
       await updateDoc(orderRef, {
         balance: bill1.orderAmount,
         with: supplyReport.supplymanId,
+        orderStatus: 'Dispatched',
+        flow: [
+          ...bill1.flow,
+          {
+            employeeId: getAuth(firebaseApp).currentUser.uid,
+            timestamp: new Date().getTime(),
+            type: 'Dispatched',
+          },
+        ],
       });
 
       console.log(`Order status updated to "dispatched"`);
@@ -245,9 +258,13 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
                   setAttachedBills((ab) => [...ab, ob]);
                 }}
                 removeAttachedBill={() => {
+                  if (bill.id === ob.id) {
+                    return;
+                  }
                   setAttachedBills((ab) => ab.filter((x) => x.id !== ob.id));
                 }}
                 isAttached={
+                  bill.id === ob.id ||
                   attachedBills.findIndex((fi) => fi.id === ob.id) !== -1
                 }
               />

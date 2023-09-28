@@ -146,7 +146,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           orders: bills.map((b) => b.id),
           supplymanId: selectedSupplyman.uid,
           id: reportDocRef.id,
-          isDispatched: false,
+          status: 'To Accounts',
         };
       }
 

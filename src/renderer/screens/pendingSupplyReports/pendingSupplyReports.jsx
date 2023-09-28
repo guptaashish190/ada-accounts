@@ -22,7 +22,7 @@ export default function PendingSupplyReports() {
       // Create a query to filter where "isDispatched" is false
       const q = query(
         supplyReportsCollection,
-        where('isDispatched', '==', false),
+        where('status', '==', 'To Accounts'),
       );
 
       // Execute the query and get the documents

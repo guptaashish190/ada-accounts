@@ -22,6 +22,10 @@ export default function TabNavigator({ children }) {
       name: 'Receive Supply Reports',
       route: '/receiveSupplyReports',
     },
+    {
+      name: 'Search Bills',
+      route: '/searchBills',
+    },
   ];
 
   return (

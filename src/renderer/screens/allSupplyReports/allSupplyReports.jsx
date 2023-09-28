@@ -23,6 +23,7 @@ export default function AllSupplyReportsScreen() {
         reportsData.push({ id: doc.id, ...doc.data() });
       });
 
+      reportsData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
       setSupplyReports(reportsData);
       setLoading(false);
     } catch (error) {
@@ -40,15 +41,15 @@ export default function AllSupplyReportsScreen() {
     <center>
       <div className="all-supply-reports-container">
         <h3>All Supply Reports</h3>
-        {supplyReports.map((sr) => {
-          return <SupplyReportRow data={sr} />;
+        {supplyReports.map((sr, i) => {
+          return <SupplyReportRow index={i} data={sr} />;
         })}
       </div>
     </center>
   );
 }
 
-function SupplyReportRow({ data }) {
+function SupplyReportRow({ data, index }) {
   const navigate = useNavigate();
   const [supplyman, setSupplyman] = useState();
 
@@ -60,6 +61,14 @@ function SupplyReportRow({ data }) {
   useEffect(() => {
     getSupplyman();
   }, []);
+  const timeOptions = {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  };
   return (
     <>
       <Button
@@ -71,22 +80,16 @@ function SupplyReportRow({ data }) {
         }}
       >
         <div className="supply-report-row">
-          <div className="top-row">
-            <Text className="sr-id">{data.timestamp}</Text>
-            <Text className="sr-timestamp">
-              {new Date(data.timestamp).toLocaleString()}
-            </Text>
-          </div>
-          <div className="bottom-row">
-            <Text className="sr-parties-length">
-              {data.orders.length} Parties{' '}
-              <Text className="sr-supplyman">{supplyman?.username}</Text>
-            </Text>
-            <Text className="sr-bags">
-              {data.numPolybags} Polybags, {data.numCases} Cases,{' '}
-              {data.numPackets} Packets
-            </Text>
-          </div>
+          <Text className="sr-id">
+            {index + 1}.&nbsp;{data.timestamp}
+          </Text>
+          <Text className="sr-timestamp">
+            {new Date(data.timestamp).toLocaleTimeString('en-us', timeOptions)}
+          </Text>
+          <Text className="sr-parties-length">
+            {data.orders.length + (data.attachedBills?.length || 0)} Bills{' '}
+          </Text>
+          <Text className="sr-supplyman">{supplyman?.username}</Text>
         </div>
       </Button>
       <br />

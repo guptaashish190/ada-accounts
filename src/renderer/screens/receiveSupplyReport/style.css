@@ -1,0 +1,28 @@
+.receive-supply-reports-container .supply-report-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.121);
+  align-items: center;
+  width: 60%;
+}
+.receive-supply-reports-container .supply-report-row-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  font-weight: bold;
+  color: grey;
+  width: 60%;
+}
+.receive-supply-reports-container .supply-report-row span {
+  text-align: center;
+}
+
+.receive-supply-reports-container .supply-report-row-header span {
+  font-size: 0.9em;
+  text-align: center;
+  font-weight: bold;
+  background-color: rgba(128, 128, 128, 0.047);
+}
+
+.receive-supply-reports-container .sr-id {
+  font-weight: bold;
+}

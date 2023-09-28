@@ -1,0 +1,36 @@
+.receive-sr-container .bill-row-top {
+  display: grid;
+  grid-template-columns: 4fr 1fr 1fr 2fr 2fr 2fr;
+  align-items: center;
+}
+.receive-sr-container .bill-row-bottom {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+}
+.receive-sr-container .bill-row {
+  margin-bottom: 30px;
+  text-align: left;
+  width: 80%;
+}
+
+.receive-sr-container .bill-row * {
+  font-size: 0.95em;
+}
+
+.receive-sr-container .bill-row .input {
+  margin: 0 10px;
+}
+.receive-sr-container .bill-row .receive-button {
+  color: #f25c54;
+  font-weight: bold;
+}
+
+.receive-sr-container .input.payment {
+  border-color: #00a9a5;
+}
+
+.receive-sr-container .bill-row .undo-button {
+  color: #00a9a5;
+  font-weight: bold;
+}
