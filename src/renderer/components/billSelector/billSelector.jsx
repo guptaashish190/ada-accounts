@@ -88,6 +88,7 @@ export default function BillSelector({ onBillsAdded }) {
               {showOrderList.map((order) => {
                 return (
                   <OrderRow
+                    key={`bill-select-id-${order.id}`}
                     isSelected={
                       addedBills.findIndex((x) => x.id === order.id) !== -1
                     }

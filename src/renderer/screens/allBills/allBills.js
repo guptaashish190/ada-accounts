@@ -1,11 +1,20 @@
+/* eslint-disable no-restricted-syntax */
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import lodash from 'lodash';
+// import { throttle, debounce } from 'lodash';
 
 import {
   Button,
   Card,
+  Combobox,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
   Dropdown,
   Input,
   Option,
@@ -15,43 +24,26 @@ import {
 import { firebaseDB } from '../../firebaseInit';
 import './style.css';
 import Loader from '../../common/loader';
-import globalUtils from '../../services/globalUtils';
+import globalUtils, { useDebounce } from '../../services/globalUtils';
 import { VerticalSpace1 } from '../../common/verticalSpace';
+import BillDetailDialog from './billDetail/billDetail';
+import { useAuthUser } from '../../contexts/allUsersContext';
 
 export default function AllBillsScreen() {
   const [partyDetails, setPartyDetails] = useState([]);
-  const [allUsers, setAllUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [queryPartyName, setQueryPartyName] = useState('');
+  const [queryPartyId, setQueryPartyId] = useState('');
+
+  const debouncedValue = useDebounce(queryPartyName, 500);
   const [queryWith, setQueryWith] = useState();
+  const [queryWithId, setQueryWithId] = useState();
   const [queryBillNumber, setQueryBillNumber] = useState('');
   const [queryMR, setQueryMR] = useState('');
-  const [queryArea, setQueryArea] = useState('');
-  const [queryStatus, setQueryStatus] = useState('');
 
   const [filteredOrders, setFilteredOrders] = useState([]);
-
-  const fetchUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      const usersCollection = collection(firebaseDB, 'users');
-      const querySnapshot = await getDocs(usersCollection);
-
-      const userList = [];
-      querySnapshot.forEach((doc) => {
-        userList.push(doc.data());
-      });
-
-      setAllUsers(userList);
-      setLoadingUsers(false);
-    } catch (error) {
-      console.error('Error fetching users: ', error);
-      setLoadingUsers(false);
-    }
-  };
-
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -73,18 +65,70 @@ export default function AllBillsScreen() {
     }
   };
 
-  const handler = useCallback(
-    lodash.debounce(() => {
-      console.log('Fetc');
-    }, 1000),
-    [],
-  );
+  const onSearchBill = () => {
+    const ordersRef = collection(firebaseDB, 'orders');
 
+    // Build the query dynamically based on non-empty filter fields
+    let dynamicQuery = ordersRef;
+
+    const filters = {
+      partyId: queryPartyId,
+      with: queryWith,
+      billNumber: queryBillNumber ? `T-${queryBillNumber}` : null,
+      mrId: queryMR,
+    };
+
+    console.log(filters);
+
+    for (const field in filters) {
+      if (filters[field]) {
+        dynamicQuery = query(dynamicQuery, where(field, '==', filters[field]));
+      }
+    }
+    dynamicQuery = query(dynamicQuery, limit(10));
+    // Fetch parties based on the dynamic query
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const querySnapshot = await getDocs(dynamicQuery);
+        const orderData = querySnapshot.docs.map((doc) => doc.data());
+        console.log(orderData.length);
+        setFilteredOrders(orderData);
+      } catch (error) {
+        console.error('Error fetching parties:', error);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+  };
+
+  const { allUsers } = useAuthUser();
   useEffect(() => {
-    handler();
-  }, [queryPartyName]);
+    if (!debouncedValue || debouncedValue.length < 3) return;
+    const fetchParties = async () => {
+      // Define a reference to the "parties" collection
+      const partiesRef = collection(firebaseDB, 'parties');
 
-  if (loading) return <Loader />;
+      // Create a query with a "name" field filter
+      const q = query(
+        partiesRef,
+        where('name', '>=', debouncedValue.toUpperCase()),
+        limit(10),
+      );
+
+      try {
+        const querySnapshot = await getDocs(q);
+        const partyData = querySnapshot.docs.map((doc) => doc.data());
+        setPartyDetails(partyData);
+        console.log(partyData);
+      } catch (error) {
+        console.error('Error fetching parties:', error);
+      }
+    };
+
+    fetchParties();
+  }, [debouncedValue]);
 
   const options = [
     'Created',
@@ -100,31 +144,53 @@ export default function AllBillsScreen() {
       <div className="all-bills-screen">
         <h3>Search Bills</h3>
         <div className="all-bills-search-input-container">
-          <Input
-            onChange={(_, e) => setQueryPartyName(e.value)}
-            className="input"
+          <Combobox
+            onInput={(e) => {
+              setQueryPartyName(e.target.value);
+            }}
+            freeform
+            value={queryPartyName}
+            onOptionSelect={(_, e) => {
+              setQueryPartyName(e.optionText);
+              setQueryPartyId(e.optionValue);
+            }}
             placeholder="Party name"
-          />
+          >
+            {partyDetails?.length ? (
+              partyDetails.map((option1) => (
+                <Option
+                  value={option1.id}
+                  text={option1.name}
+                  key={`search-bill-${option1.id}`}
+                >
+                  {option1.name}
+                </Option>
+              ))
+            ) : (
+              <Option key="!212231">None</Option>
+            )}
+          </Combobox>
 
           <Dropdown
             onOptionSelect={(_, e) => setQueryWith(e.optionValue)}
-            onOpenChange={(_, e) => {
-              if (!allUsers.length) {
-                fetchUsers();
-              }
-            }}
             className="dropdown"
             placeholder="With"
           >
-            {loadingUsers ? (
-              <Spinner />
-            ) : (
-              allUsers.map((user) => (
-                <Option text={user.username} value={user.uid} key={user.uid}>
-                  {user.username}
-                </Option>
-              ))
-            )}
+            <Option
+              text="Accounts"
+              value="Accounts"
+              key="accounts-with-dropdown"
+            >
+              Accounts
+            </Option>
+            <Option text={null} value={null} key="accounts-none-dropdown">
+              None
+            </Option>
+            {allUsers.map((user) => (
+              <Option text={user.username} value={user.uid} key={user.uid}>
+                {user.username}
+              </Option>
+            ))}
           </Dropdown>
 
           <Input
@@ -136,41 +202,24 @@ export default function AllBillsScreen() {
           />
           <Dropdown
             onOptionSelect={(_, e) => setQueryMR(e.optionValue)}
-            onOpenChange={(_, e) => {
-              if (!allUsers.length) {
-                fetchUsers();
-              }
-            }}
             className="dropdown"
             placeholder="MR"
           >
-            {loadingUsers ? (
-              <Spinner />
-            ) : (
-              allUsers.map((user) => (
-                <Option text={user.username} value={user.uid} key={user.uid}>
-                  {user.username}
-                </Option>
-              ))
-            )}
-          </Dropdown>
-          <Input
-            onChange={(_, e) => setQueryArea(e.value)}
-            className="input"
-            placeholder="Area"
-          />
-          <Dropdown
-            onOptionSelect={(_, e) => setQueryStatus(e.optionText)}
-            className="input"
-            placeholder="Status"
-          >
-            {options.map((option) => (
-              <Option text={option} key={option}>
-                {option}
+            {allUsers.map((user) => (
+              <Option text={user.username} value={user.uid} key={user.uid}>
+                {user.username}
               </Option>
             ))}
           </Dropdown>
         </div>
+        <VerticalSpace1 />
+        <Button
+          onClick={() => {
+            onSearchBill();
+          }}
+        >
+          Search
+        </Button>
         <VerticalSpace1 />
         <div className="all-bills-row-header" />
         <VerticalSpace1 />
@@ -180,11 +229,16 @@ export default function AllBillsScreen() {
           <div>Bill No.</div>
           <div>Date</div>
           <div>With</div>
+          <div>MR</div>
           <div>Amount</div>
         </div>
-        {filteredOrders.map((sr, index) => {
-          return <BillRow data={sr} index={index} />;
-        })}
+        {loading ? (
+          <Spinner />
+        ) : (
+          filteredOrders.map((sr, index) => {
+            return <BillRow data={sr} index={index} />;
+          })
+        )}
       </div>
     </center>
   );
@@ -194,6 +248,7 @@ function BillRow({ data, index }) {
   const navigate = useNavigate();
   const [party, setParty] = useState();
   const [withUser, setWithUser] = useState();
+  const [mrUser, setMrUser] = useState();
 
   const getParty = async () => {
     const party1 = await globalUtils.fetchPartyInfo(data.partyId);
@@ -208,20 +263,38 @@ function BillRow({ data, index }) {
     setWithUser(user1.username);
   };
 
+  const getMrUser = async () => {
+    const user1 = await globalUtils.fetchUserById(data.mrId);
+    setMrUser(user1.username);
+  };
   useEffect(() => {
     getParty();
     getWithUser();
+    getMrUser();
   }, []);
   return (
-    <div className="bill-row">
-      <Text style={{ color: '#aaa' }}>{index + 1}.</Text>
-      <Text>{party?.name || ''}</Text>
-      <Text>
-        <b>{data.billNumber?.toUpperCase() || ''}</b>
-      </Text>
-      <Text>{new Date(data.creationTime).toLocaleDateString()}</Text>
-      <Text>{withUser || ''}</Text>
-      <Text>{globalUtils.getCurrencyFormat(data.orderAmount)}</Text>
-    </div>
+    <Dialog>
+      <DialogTrigger>
+        <div className="bill-row">
+          <Text style={{ color: '#aaa' }}>{index + 1}.</Text>
+          <Text>{party?.name || '--'}</Text>
+          <Text>
+            <b>{data.billNumber?.toUpperCase() || '--'}</b>
+          </Text>
+          <Text>{new Date(data.creationTime).toLocaleDateString()}</Text>
+          <Text>{withUser || '--'}</Text>
+          <Text>{mrUser || '--'}</Text>
+          <Text>{globalUtils.getCurrencyFormat(data.orderAmount)}</Text>
+        </div>
+      </DialogTrigger>
+      <DialogSurface>
+        <BillDetailDialog
+          party={party}
+          withUser={withUser}
+          mrUser={mrUser}
+          order={data}
+        />
+      </DialogSurface>
+    </Dialog>
   );
 }

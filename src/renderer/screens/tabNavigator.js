@@ -9,22 +9,27 @@ export default function TabNavigator({ children }) {
     {
       name: 'Create Supply Report',
       route: '/',
+      key: 'tab-create-supply-report',
     },
     {
       name: 'All Supply Reports',
       route: '/allSupplyReports',
+      key: 'tab-allSupplyReports',
     },
     {
       name: 'Pending Supply Reports',
       route: '/pendingSupplyReports',
+      key: 'tab-pendingSupplyReports',
     },
     {
       name: 'Receive Supply Reports',
       route: '/receiveSupplyReports',
+      key: 'tab-receiveSupplyReports',
     },
     {
       name: 'Search Bills',
       route: '/searchBills',
+      key: 'tab-searchBills',
     },
   ];
 
@@ -35,6 +40,7 @@ export default function TabNavigator({ children }) {
           {tabs.map((tab) => {
             return (
               <Tab
+                key={tab.key}
                 value={tab.name}
                 onClick={() => {
                   navigate(tab.route);

@@ -77,6 +77,7 @@ export default function ReceiveSRScreen() {
       await updateDoc(supplyReportRef, {
         ...(!save ? { status: 'Completed' } : {}),
         orderDetails: receivedBills.map((rb) => ({
+          billId: rb.id,
           notes: rb.notes,
           payments: rb.payments || [],
           ...(rb.schedulePaymentDate
@@ -84,6 +85,7 @@ export default function ReceiveSRScreen() {
             : {}),
           with: rb.with,
         })),
+        receivedBy: getAuth(firebaseApp).currentUser.uid,
       });
 
       for await (const rb2 of receivedBills) {

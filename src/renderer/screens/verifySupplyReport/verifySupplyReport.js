@@ -132,6 +132,7 @@ export default function VerifySupplyReport() {
       await updateDoc(orderRef, {
         ...modifiedBill1,
         with: supplyReport.supplymanId,
+        supplyReport: supplyReport.id,
       });
 
       console.log(`Order status updated to "dispatched"`);

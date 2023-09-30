@@ -1,6 +1,6 @@
 .all-supply-reports-container .supply-report-row {
   cursor: pointer;
-  padding-bottom: 10px;
+  padding: 10px 0;
   width: 60vw;
   border-bottom: 1px solid rgba(128, 128, 128, 0.086);
   display: grid;

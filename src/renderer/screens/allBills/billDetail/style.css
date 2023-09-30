@@ -1,0 +1,24 @@
+.bill-detail-container {
+  padding: 10px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.bill-detail-container .bill-detail-content-container {
+  padding-right: 50px;
+  padding-bottom: 20px;
+}
+
+.bill-detail-container .bill-detail-content-container .label {
+  color: grey;
+}
+
+.bill-detail-container .bill-detail-content-container .value {
+}
+
+.bill-detail-content-container .pop-over-button-bill-detail {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}

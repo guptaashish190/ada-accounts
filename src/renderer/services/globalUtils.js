@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
 } from 'firebase/firestore';
+import { useEffect, useRef, useState } from 'react';
 import firebaseApp, { firebaseDB } from '../firebaseInit';
 
 export default {
@@ -88,6 +89,9 @@ export default {
     }
   },
   getCurrencyFormat: (num) => {
+    if (!num || num === '') {
+      return '--';
+    }
     const formatter = new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -98,4 +102,37 @@ export default {
     });
     return formatter.format(num);
   },
+  getTimeFormat: (millisecondsSinceEpoch, dateOnly = false) => {
+    if (dateOnly) {
+      return new Date(millisecondsSinceEpoch).toLocaleDateString();
+    }
+    const timeOptions = {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    };
+    const date = new Date(millisecondsSinceEpoch).toLocaleTimeString(
+      'en-us',
+      timeOptions,
+    );
+    return date;
+  },
+};
+
+export const useDebounce = (value, delay = 500) => {
+  const [debouncedValue, setDebouncedValue] = useState('');
+  const timerRef = useRef();
+
+  useEffect(() => {
+    timerRef.current = setTimeout(() => setDebouncedValue(value), delay);
+
+    return () => {
+      clearTimeout(timerRef.current);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 };

@@ -23,7 +23,7 @@
 
 .all-bills-screen .bill-row {
   display: grid;
-  grid-template-columns: 0.2fr 2fr repeat(4, minmax(0, 1fr));
+  grid-template-columns: 0.2fr 2fr repeat(5, minmax(0, 1fr));
   padding: 10px 10px;
   border-bottom: 1px solid #dddddd6c;
   cursor: pointer;
@@ -31,7 +31,7 @@
 }
 .all-bills-screen .all-bills-header {
   display: grid;
-  grid-template-columns: 0.2fr 2fr repeat(4, minmax(0, 1fr));
+  grid-template-columns: 0.2fr 2fr repeat(5, minmax(0, 1fr));
   font-weight: bold;
   color: rgba(128, 128, 128, 0.379);
   border-bottom: 2px solid #6767672e;
