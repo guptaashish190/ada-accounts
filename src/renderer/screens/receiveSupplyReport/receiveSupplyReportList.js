@@ -21,7 +21,11 @@ export default function ReceiveSupplyReportScreen() {
       const supplyReportsCollection = collection(firebaseDB, 'supplyReports');
 
       // Create a query to filter where "isDispatched" is false
-      const q = query(supplyReportsCollection, limit(30));
+      const q = query(
+        supplyReportsCollection,
+        where('status', '==', 'Dispatched'),
+        limit(30),
+      );
 
       // Execute the query and get the documents
       const querySnapshot = await getDocs(q);

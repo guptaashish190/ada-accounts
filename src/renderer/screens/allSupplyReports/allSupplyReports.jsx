@@ -7,6 +7,12 @@ import './style.css';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 
+const statusColors = {
+  Completed: '#00A9A5',
+  Dispatched: '#FFD166',
+  'To Accounts': '#F25C54',
+};
+
 export default function AllSupplyReportsScreen() {
   const [supplyReports, setSupplyReports] = useState([]);
 
@@ -61,14 +67,6 @@ function SupplyReportRow({ data, index }) {
   useEffect(() => {
     getSupplyman();
   }, []);
-  const timeOptions = {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  };
   return (
     <>
       <Button
@@ -84,12 +82,18 @@ function SupplyReportRow({ data, index }) {
             {index + 1}.&nbsp;{data.timestamp}
           </Text>
           <Text className="sr-timestamp">
-            {new Date(data.timestamp).toLocaleTimeString('en-us', timeOptions)}
+            {globalUtils.getTimeFormat(data.timestamp, true)}
           </Text>
           <Text className="sr-parties-length">
             {data.orders.length + (data.attachedBills?.length || 0)} Bills{' '}
           </Text>
           <Text className="sr-supplyman">{supplyman?.username}</Text>
+          <Text
+            className="sr-status"
+            style={{ backgroundColor: statusColors[data.status] }}
+          >
+            {data?.status}
+          </Text>
         </div>
       </Button>
       <br />

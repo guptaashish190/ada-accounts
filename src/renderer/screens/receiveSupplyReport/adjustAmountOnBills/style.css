@@ -1,0 +1,17 @@
+.adjust-amount-dialog {
+  width: 100%;
+}
+
+.adjust-amount-dialog-bill-row {
+  cursor: pointer;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.adjust-amount-dialog-bill-row-2 {
+  cursor: pointer;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}

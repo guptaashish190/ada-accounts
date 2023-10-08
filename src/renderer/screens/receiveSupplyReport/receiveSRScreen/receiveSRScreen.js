@@ -1,3 +1,5 @@
+/* eslint-disable jsx-a11y/click-events-have-key-events */
+/* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable radix */
 /* eslint-disable no-restricted-syntax */
 
@@ -23,6 +25,7 @@ import {
   useId,
   useToastController,
 } from '@fluentui/react-components';
+import { Open12Filled } from '@fluentui/react-icons';
 import { getAuth } from 'firebase/auth';
 import math, { parse } from 'mathjs';
 import Loader from '../../../common/loader';
@@ -31,6 +34,7 @@ import globalUtils from '../../../services/globalUtils';
 import { showToast } from '../../../common/toaster';
 import './style.css';
 import firebaseApp, { firebaseDB } from '../../../firebaseInit';
+import AdjustAmountDialog from '../adjustAmountOnBills/adjustAmountDialog';
 
 export default function ReceiveSRScreen() {
   const { state } = useLocation();
@@ -38,6 +42,8 @@ export default function ReceiveSRScreen() {
   const { supplyReport } = state;
   const [allBills, setAllBills] = useState([]);
   const [receivedBills, setReceivedBills] = useState([]);
+  const [openAdjustAmountDialog, setOpenAdjustAmountDialog] = useState();
+  const [otherAdjustedBills, setOtherAdjustedBills] = useState([]);
 
   const [loading, setLoading] = useState(false);
 
@@ -47,6 +53,7 @@ export default function ReceiveSRScreen() {
       let fetchedOrders = await globalUtils.fetchOrdersByIds([
         ...supplyReport.orders,
         ...supplyReport.attachedBills,
+        ...supplyReport.supplementaryBills,
       ]);
 
       fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
@@ -101,6 +108,9 @@ export default function ReceiveSRScreen() {
               type: 'Received Bill',
             },
           ],
+          balance:
+            rb2.balance -
+            rb2.payments.reduce((acc, cur) => acc + cur.amount, 0),
           flowCompleted: true,
           orderStatus: 'Received Bill',
           with: rb2.with,
@@ -127,44 +137,69 @@ export default function ReceiveSRScreen() {
   const allBillsReceived = receivedBills.length === allBills.length;
 
   return (
-    <center>
-      <div className="receive-sr-container">
-        <h3>Receive Supply Report: {supplyReport.id}</h3>
-        <VerticalSpace1 />
+    <>
+      <AdjustAmountDialog
+        otherAdjustedBills={otherAdjustedBills}
+        setOtherAdjustedBills={setOtherAdjustedBills}
+        orderData={openAdjustAmountDialog?.orderData}
+        amountToAdjust={openAdjustAmountDialog?.amount}
+        setOpen={(x) => {
+          setOpenAdjustAmountDialog(x);
+        }}
+      />
+      <center>
+        <div className="receive-sr-container">
+          <h3>Receive Supply Report: {supplyReport.id}</h3>
+          <VerticalSpace1 />
 
-        {allBills.map((bill, i) => {
-          return (
-            <BillRow
-              onReceive={(x) => {
-                receiveBill(x);
-              }}
-              key={`rsr-${bill.id}`}
-              data={bill}
-              isReceived={
-                receivedBills.findIndex((x) => x.id === bill.id) !== -1
-              }
-              index={i}
-              onUndo={() => {
-                setReceivedBills((b) => b.filter((tb) => tb.id !== bill.id));
-              }}
-            />
-          );
-        })}
-      </div>
-      {allBillsReceived ? (
-        <Button onClick={() => onComplete()} size="large" appearance="primary">
-          COMPLETED
-        </Button>
-      ) : (
-        <Button onClick={() => onComplete(true)} size="large">
-          SAVE
-        </Button>
-      )}
-    </center>
+          {allBills.map((bill, i) => {
+            return (
+              <BillRow
+                onReceive={(x) => {
+                  receiveBill(x);
+                }}
+                key={`rsr-${bill.id}`}
+                data={bill}
+                isReceived={
+                  receivedBills.findIndex((x) => x.id === bill.id) !== -1
+                }
+                index={i}
+                onUndo={() => {
+                  setReceivedBills((b) => b.filter((tb) => tb.id !== bill.id));
+                }}
+                openAdjustDialog={(orderData, amount) => {
+                  setOpenAdjustAmountDialog({ orderData, amount });
+                }}
+              />
+            );
+          })}
+        </div>
+        {allBillsReceived ? (
+          <Button
+            onClick={() => onComplete()}
+            size="large"
+            appearance="primary"
+          >
+            COMPLETED
+          </Button>
+        ) : (
+          <Button onClick={() => onComplete(true)} size="large">
+            SAVE
+          </Button>
+        )}
+      </center>
+    </>
   );
 }
 
-function BillRow({ data, index, onReceive, isReceived, onUndo }) {
+function BillRow({
+  data,
+  index,
+  onReceive,
+  isReceived,
+  onUndo,
+  openAdjustDialog,
+}) {
   const [cash, setCash] = useState('');
   const [cheque, setCheque] = useState('');
   const [upi, setUpi] = useState('');
@@ -201,13 +236,6 @@ function BillRow({ data, index, onReceive, isReceived, onUndo }) {
     onReceive(tempBill);
   };
 
-  const getBalance = () => {
-    return (
-      data.orderAmount -
-      (data.payments?.reduce((acc, cur) => acc + parseInt(cur.amount), 0) || 0)
-    );
-  };
-
   return (
     <div className="bill-row">
       <center>
@@ -219,7 +247,7 @@ function BillRow({ data, index, onReceive, isReceived, onUndo }) {
           <Text>{data.fileNumber}</Text>
           <Text>{globalUtils.getCurrencyFormat(data.orderAmount)}</Text>
           <Text style={{ fontWeight: 'bold' }}>
-            BAL: {globalUtils.getCurrencyFormat(getBalance())}
+            BAL: {globalUtils.getCurrencyFormat(data.balance)}
           </Text>
           {isReceived ? (
             <Button onClick={() => onUndo()} appearance="subtle" size="large">
@@ -241,6 +269,15 @@ function BillRow({ data, index, onReceive, isReceived, onUndo }) {
             placeholder="Cash"
             contentBefore="₹"
             type="number"
+            contentAfter={
+              <div
+                onClick={() => {
+                  openAdjustDialog(data, cash);
+                }}
+              >
+                <Open12Filled />
+              </div>
+            }
           />
           <Input
             disabled={isReceived}

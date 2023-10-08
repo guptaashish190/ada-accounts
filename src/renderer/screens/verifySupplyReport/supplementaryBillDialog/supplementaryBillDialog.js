@@ -28,15 +28,17 @@ import {
   Spinner,
   Text,
 } from '@fluentui/react-components';
-import { firebaseDB } from '../../firebaseInit';
+import { firebaseDB } from '../../../firebaseInit';
 import './style.css';
-import Loader from '../../common/loader';
-import globalUtils, { useDebounce } from '../../services/globalUtils';
-import { VerticalSpace1 } from '../../common/verticalSpace';
-import BillDetailDialog from './billDetail/billDetail';
-import { useAuthUser } from '../../contexts/allUsersContext';
+import Loader from '../../../common/loader';
+import globalUtils, { useDebounce } from '../../../services/globalUtils';
+import { VerticalSpace1 } from '../../../common/verticalSpace';
+import { useAuthUser } from '../../../contexts/allUsersContext';
 
-export default function AllBillsScreen() {
+export default function SupplementaryBillDialog({
+  addSupplementaryBill,
+  currentBills,
+}) {
   const [partyDetails, setPartyDetails] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,9 +53,6 @@ export default function AllBillsScreen() {
   const [queryMR, setQueryMR] = useState('');
 
   const [filteredOrders, setFilteredOrders] = useState([]);
-  useEffect(() => {
-    fetchOrders();
-  }, []);
 
   const fetchOrders = async () => {
     try {
@@ -72,7 +71,7 @@ export default function AllBillsScreen() {
 
       setFilteredOrders(orderList);
     } catch (error) {
-      console.error('Error fetchisng parties: ', error);
+      console.error('Error fetchisng partiee: ', error);
     }
   };
 
@@ -84,12 +83,8 @@ export default function AllBillsScreen() {
 
     const filters = {
       partyId: queryPartyId,
-      with: queryWith,
       billNumber: queryBillNumber ? `T-${queryBillNumber}` : null,
-      mrId: queryMR,
     };
-
-    console.log(filters);
 
     for (const field in filters) {
       if (filters[field]) {
@@ -132,7 +127,6 @@ export default function AllBillsScreen() {
         const querySnapshot = await getDocs(q);
         const partyData = querySnapshot.docs.map((doc) => doc.data());
         setPartyDetails(partyData);
-        console.log(partyData);
       } catch (error) {
         console.error('Error fetching parties:', error);
       }
@@ -152,7 +146,7 @@ export default function AllBillsScreen() {
 
   return (
     <center>
-      <div className="all-bills-screen">
+      <div className="supplementary-bill-dialog">
         <h3>Search Bills</h3>
         <div className="all-bills-search-input-container">
           <Combobox
@@ -182,28 +176,6 @@ export default function AllBillsScreen() {
             )}
           </Combobox>
 
-          <Dropdown
-            onOptionSelect={(_, e) => setQueryWith(e.optionValue)}
-            className="dropdown"
-            placeholder="With"
-          >
-            <Option
-              text="Accounts"
-              value="Accounts"
-              key="accounts-with-dropdown"
-            >
-              Accounts
-            </Option>
-            <Option text={null} value={null} key="accounts-none-dropdown">
-              None
-            </Option>
-            {allUsers.map((user) => (
-              <Option text={user.username} value={user.uid} key={user.uid}>
-                {user.username}
-              </Option>
-            ))}
-          </Dropdown>
-
           <Input
             onChange={(_, e) => setQueryBillNumber(e.value)}
             contentBefore="T-"
@@ -211,17 +183,6 @@ export default function AllBillsScreen() {
             className="input"
             placeholder="Bill No."
           />
-          <Dropdown
-            onOptionSelect={(_, e) => setQueryMR(e.optionValue)}
-            className="dropdown"
-            placeholder="MR"
-          >
-            {allUsers.map((user) => (
-              <Option text={user.username} value={user.uid} key={user.uid}>
-                {user.username}
-              </Option>
-            ))}
-          </Dropdown>
         </div>
         <VerticalSpace1 />
         <Button
@@ -234,32 +195,28 @@ export default function AllBillsScreen() {
         <VerticalSpace1 />
         <div className="all-bills-row-header" />
         <VerticalSpace1 />
-        <div className="all-bills-header">
-          <div />
-          <div>Party Name</div>
-          <div>Bill No.</div>
-          <div>Date</div>
-          <div>With</div>
-          <div>MR</div>
-          <div>Amount</div>
-        </div>
-        {loading ? (
-          <Spinner />
-        ) : (
-          filteredOrders.map((sr, index) => {
-            return <BillRow data={sr} index={index} />;
-          })
-        )}
+        {filteredOrders.map((sr, index) => {
+          return (
+            <BillRow
+              key={`supp-diag-row-${sr.id}`}
+              addSupplementaryBill={() => addSupplementaryBill(sr)}
+              data={sr}
+              index={index}
+              isAttached={
+                currentBills.findIndex((fi) => fi.id === sr.id) !== -1
+              }
+            />
+          );
+        })}
       </div>
     </center>
   );
 }
 
-function BillRow({ data, index }) {
+function BillRow({ data, index, isAttached, addSupplementaryBill }) {
   const navigate = useNavigate();
   const [party, setParty] = useState();
   const [withUser, setWithUser] = useState();
-  const [mrUser, setMrUser] = useState();
 
   const getParty = async () => {
     const party1 = await globalUtils.fetchPartyInfo(data.partyId);
@@ -274,38 +231,38 @@ function BillRow({ data, index }) {
     setWithUser(user1.username);
   };
 
-  const getMrUser = async () => {
-    const user1 = await globalUtils.fetchUserById(data.mrId);
-    setMrUser(user1.username);
-  };
   useEffect(() => {
     getParty();
     getWithUser();
-    getMrUser();
   }, []);
   return (
-    <Dialog>
-      <DialogTrigger>
-        <div className="bill-row">
-          <Text style={{ color: '#aaa' }}>{index + 1}.</Text>
-          <Text>{party?.name || '--'}</Text>
-          <Text>
+    <div className="bill-row">
+      <div className="row-1">
+        <Text size={200}>{party?.name || '--'}</Text>
+        <Button
+          disabled={isAttached}
+          size="small"
+          appearance="subtle"
+          onClick={() => addSupplementaryBill()}
+          style={{ color: isAttached ? 'grey' : '#F25C54' }}
+        >
+          {isAttached ? 'Attached' : 'Attach Bill'}
+        </Button>
+      </div>
+      <div className="row-1">
+        <div>
+          <Text size={200}>
             <b>{data.billNumber?.toUpperCase() || '--'}</b>
           </Text>
-          <Text>{new Date(data.creationTime).toLocaleDateString()}</Text>
-          <Text>{withUser || '--'}</Text>
-          <Text>{mrUser || '--'}</Text>
-          <Text>{globalUtils.getCurrencyFormat(data.orderAmount)}</Text>
+          &nbsp;&nbsp;
+          <Text size={200}>
+            {globalUtils.getCurrencyFormat(data.orderAmount)}
+          </Text>
         </div>
-      </DialogTrigger>
-      <DialogSurface>
-        <BillDetailDialog
-          party={party}
-          withUser={withUser}
-          mrUser={mrUser}
-          order={data}
-        />
-      </DialogSurface>
-    </Dialog>
+        <Text style={{ color: 'grey', fontSize: '0.8em' }}>
+          <i>{`With ${withUser?.username || 'Accounts'}`}</i>
+        </Text>
+      </div>
+    </div>
   );
 }

@@ -3,11 +3,22 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Button,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
   Input,
+  Label,
+  Text,
   Tooltip,
   useId,
   useToastController,
 } from '@fluentui/react-components';
+
+import { DeleteRegular, Checkmark12Filled } from '@fluentui/react-icons';
 import {
   collection,
   doc,
@@ -27,6 +38,7 @@ import './style.css';
 import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
+import SupplementaryBillDialog from './supplementaryBillDialog/supplementaryBillDialog';
 
 // BALANCE WILL BE ADDED TO THE ORDER DOCUMENT BEFORE THIS SCREEN FOR A NEW ORDER(BILL)
 // BECAUSE OF THIS, AS THE OLD BILLS ARE FILTERED BASED ON BALANCE, THE NEW BILL SHOULD NOT
@@ -39,10 +51,13 @@ export default function VerifySupplyReport() {
   const locationState = location.state;
   const supplyReport = locationState?.supplyReport;
   const [attachedBills, setAttachedBills] = useState([]);
+  const [supplementaryBills, setSupplementaryBills] = useState([]);
   const [supplymanUser, setSupplymanUser] = useState();
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
   const navigate = useNavigate();
+  const [isSupplementBillAddDialogOpen, setIsSupplementBillAddDialogOpen] =
+    useState(false);
 
   const prefillState = async () => {
     setLoading(true);
@@ -82,13 +97,14 @@ export default function VerifySupplyReport() {
         status: 'Dispatched',
         dispatchTimestamp: new Date().getTime(),
         attachedBills: attachedBills.map((b) => b.id),
+        supplementaryBills: supplementaryBills.map((b) => b.id),
       });
 
       await bills.forEach(async (bill1) => {
         await updateOrder(bill1);
       });
 
-      await attachedBills.forEach(async (bill1) => {
+      await [...attachedBills, ...supplementaryBills].forEach(async (bill1) => {
         await updateOldOrder(bill1);
       });
       setLoading(false);
@@ -156,12 +172,46 @@ export default function VerifySupplyReport() {
             <PartySection
               attachedBills={attachedBills}
               setAttachedBills={setAttachedBills}
-              key={b.id}
+              key={`party-section-${b.id}`}
               index={i}
               bill={b}
             />
           );
         })}
+        <div>
+          <Label size="large" style={{ color: '#00A9A5' }}>
+            <b>Supplementary Bills</b>
+          </Label>
+          <VerticalSpace1 />
+          <Button onClick={() => setIsSupplementBillAddDialogOpen(true)}>
+            Add Supplementary Bill
+          </Button>{' '}
+          <VerticalSpace1 />
+          {supplementaryBills.map((b, i) => {
+            return (
+              <SupplementaryBillRow
+                key={`supp-${b.id}`}
+                oldbill={b}
+                saveBill={(newB) => {
+                  const updatedSuppBills = [...supplementaryBills];
+                  updatedSuppBills.map((x) => {
+                    if (x.id === newB.id) {
+                      return newB;
+                    }
+                    return x;
+                  });
+                  setSupplementaryBills(updatedSuppBills);
+                }}
+                removeAttachedBill={() => {
+                  setSupplementaryBills((sb) =>
+                    sb.filter((x) => x.id !== b.id),
+                  );
+                }}
+              />
+            );
+          })}
+        </div>
+        <VerticalSpace2 />
         <Button
           onClick={() => {
             onDispatch();
@@ -171,6 +221,34 @@ export default function VerifySupplyReport() {
           Dispatch
         </Button>
       </center>
+      <Dialog open={isSupplementBillAddDialogOpen}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Add Supplementary Bills</DialogTitle>
+            <DialogContent>
+              <SupplementaryBillDialog
+                currentBills={[
+                  ...attachedBills,
+                  ...bills,
+                  ...supplementaryBills,
+                ]}
+                addSupplementaryBill={(b) => {
+                  console.log('attached');
+                  setSupplementaryBills((ab) => [...ab, b]);
+                }}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setIsSupplementBillAddDialogOpen(false)}
+                appearance="secondary"
+              >
+                Close
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 }
@@ -279,7 +357,13 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
   );
 }
 
-function OldBillRow({ oldbill, attachBill, isAttached, removeAttachedBill }) {
+function OldBillRow({
+  oldbill,
+  attachBill,
+  isAttached,
+  removeAttachedBill,
+  saveBill,
+}) {
   const [newBalance, setNewBalance] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [scheduledData, setScheduledDate] = useState();
@@ -293,7 +377,7 @@ function OldBillRow({ oldbill, attachBill, isAttached, removeAttachedBill }) {
     return '--';
   };
 
-  const onAttachBill = () => {
+  const onAttachBill = (save) => {
     const modifiedBill = { ...oldbill };
     if (newNotes.length > 0) {
       modifiedBill.notes = newNotes;
@@ -381,5 +465,98 @@ function OldBillRow({ oldbill, attachBill, isAttached, removeAttachedBill }) {
         </Tooltip>
       )}
     </>
+  );
+}
+
+function SupplementaryBillRow({
+  oldbill,
+  isAttached,
+  removeAttachedBill,
+  saveBill,
+}) {
+  const [newBalance, setNewBalance] = useState('');
+  const [newNotes, setNewNotes] = useState('');
+  const [scheduledData, setScheduledDate] = useState();
+
+  const [party, setParty] = useState();
+
+  const getParty = async () => {
+    const party1 = await globalUtils.fetchPartyInfo(oldbill.partyId);
+    setParty(party1);
+  };
+  const scheduledForPaymentDate = () => {
+    if (oldbill.scheduledForPayment) {
+      const date = new Date(oldbill.scheduledForPayment);
+      return date.toLocaleDateString();
+    }
+    return '--';
+  };
+
+  const onSaveBill = (save) => {
+    const modifiedBill = { ...oldbill };
+    if (newNotes.length > 0) {
+      modifiedBill.notes = newNotes;
+    }
+    if (newBalance.length > 0) {
+      modifiedBill.balance = newBalance;
+    }
+    saveBill(modifiedBill);
+  };
+
+  useEffect(() => {
+    getParty();
+  }, []);
+  return (
+    <div className="supplementary-bill-row">
+      <Text size={200}>{party?.name}</Text>
+      <Text size={200} className="old-bill bill-number">
+        <b>{oldbill.billNumber}</b>
+      </Text>
+      <Text size={200} className="old-bill bill-number">
+        {new Date(oldbill.creationTime).toLocaleDateString()}
+      </Text>
+      <div className="old-bill amount">₹{oldbill.orderAmount}</div>
+
+      <Tooltip content={`₹${oldbill.balance}`}>
+        <Input
+          style={{ width: '100px' }}
+          size="small"
+          value={newBalance}
+          contentBefore="₹"
+          appearance="underline"
+          placeholder={`${oldbill.balance}`}
+          className="old-bill amount"
+          onChange={(_, d) => setNewBalance(d.value)}
+        />
+      </Tooltip>
+      <Tooltip content={oldbill.note}>
+        <Input
+          style={{ width: '100px' }}
+          size="small"
+          className="old-bill notes"
+          value={newNotes}
+          appearance="underline"
+          placeholder={oldbill.note || 'Notes'}
+          onChange={(_, t) => setNewNotes(t.value)}
+        />
+      </Tooltip>
+      <span style={{ display: 'flex' }}>
+        <Button
+          className="old-bill"
+          appearance="subtle"
+          style={{ color: '#00A9A5' }}
+          onClick={() => onSaveBill()}
+        >
+          <Checkmark12Filled />
+        </Button>
+        <Button
+          className="old-bill"
+          appearance="subtle"
+          onClick={() => removeAttachedBill()}
+        >
+          <DeleteRegular />
+        </Button>
+      </span>
+    </div>
   );
 }

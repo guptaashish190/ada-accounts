@@ -48,3 +48,17 @@
   padding: 5px 0;
   border-bottom: 1px solid rgba(128, 128, 128, 0.095);
 }
+
+.verify-supply-report .supplementary-bill-row {
+  display: grid;
+  width: 80%;
+  grid-template-columns: 3fr 2fr 2fr 2fr 2fr 1fr 1fr;
+  align-items: center;
+}
+
+.verify-supply-report .supplementary-bill-row * {
+  text-align: left;
+}
+
+.verify-supply-report .supplementary-bill-container .party-name {
+}
