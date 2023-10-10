@@ -120,8 +120,8 @@ export default function ViewSupplyReportScreen() {
           </div>
 
           <div className="vsrc-detail-items">
-            <div className="label">Notes: </div>
-            <div className="value">{supplyReport.note}</div>
+            <div className="label">Dispatch Notes: </div>
+            <div className="value">{supplyReport.note || '--'}</div>
           </div>
           <div className="vsrc-detail-items">
             <div className="label">Items: </div>
@@ -163,7 +163,9 @@ export default function ViewSupplyReportScreen() {
               <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell5">
                 SCHEDULED
               </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname">NOTES</TableHeaderCell>
+              <TableHeaderCell key="vsrc-thc-partyname">
+                ACC NOTES
+              </TableHeaderCell>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -340,7 +342,7 @@ function BillRow({ data, index, orderDetail }) {
           ? globalUtils?.getTimeFormat(orderDetail.schedulePaymentDate, true)
           : '--'}
       </TableCustomCell>
-      <TableCustomCell>{orderDetail?.notes || '--'}</TableCustomCell>
+      <TableCustomCell>{orderDetail?.accountsNotes || '--'}</TableCustomCell>
     </TableRow>
   );
 }

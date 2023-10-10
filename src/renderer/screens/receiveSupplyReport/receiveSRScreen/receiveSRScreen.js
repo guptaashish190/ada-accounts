@@ -80,9 +80,6 @@ export default function ReceiveSRScreen() {
 
   // update order details in the supplyreport and individual orders
   const onComplete = async () => {
-    console.log(receivedBills);
-    console.log(otherAdjustedBills);
-    return;
     setLoading(true);
     // Reference to the document in the "supplyReports" collection
     const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
@@ -93,7 +90,7 @@ export default function ReceiveSRScreen() {
         status: constants.firebase.supplyReportStatus.COMPLETED,
         orderDetails: receivedBills.map((rb) => ({
           billId: rb.id,
-          notes: rb.notes,
+          ...(rb.accountsNotes ? { accountsNotes: rb.accountsNotes } : {}),
           payments: rb.payments,
           ...(rb.schedulePaymentDate
             ? { schedulePaymentDate: rb.schedulePaymentDate }
@@ -337,6 +334,10 @@ function BillRow({
       with: 'Accounts',
     };
 
+    setCash(cash1);
+    setCheque(cheque1);
+    setUpi(upi1);
+
     onReceive(tempBill);
   };
 
@@ -493,6 +494,7 @@ function ContentAfterInputReceive({
         if (inputContent.length) {
           openAdjustDialog(data, `${inputContent}`, type);
         }
+        setInputContent('');
       }}
     >
       <Open12Filled />
