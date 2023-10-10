@@ -85,7 +85,10 @@ function SupplyReportRow({ data, index }) {
             {globalUtils.getTimeFormat(data.timestamp, true)}
           </Text>
           <Text className="sr-parties-length">
-            {data.orders.length + (data.attachedBills?.length || 0)} Bills{' '}
+            {data.orders.length +
+              (data.attachedBills?.length || 0) +
+              (data.supplementaryBills?.length || 0)}{' '}
+            Bills{' '}
           </Text>
           <Text className="sr-supplyman">{supplyman?.username}</Text>
           <Text

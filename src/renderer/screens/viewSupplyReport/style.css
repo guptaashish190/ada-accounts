@@ -58,8 +58,19 @@
 }
 
 .view-supply-report-container .vsrc-detail-items .label {
-  border-bottom: 1px solid #dddddd4e;
   font-weight: bold;
   color: #698fffc6;
   margin-right: 10px;
+}
+
+.view-supply-report-container .vsrc-detail-items-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0 20px;
+  border: 1px solid rgba(128, 128, 128, 0.323);
+  border-radius: 5px;
+}
+
+.view-supply-report-container .vsrc-detail-items-container :nth-child(even) {
+  justify-content: flex-end;
 }

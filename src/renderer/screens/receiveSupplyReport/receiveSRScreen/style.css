@@ -22,7 +22,7 @@
   margin: 0 10px;
 }
 .receive-sr-container .bill-row .receive-button {
-  color: #f25c54;
+  color: #f25c54 !important;
   font-weight: bold;
 }
 
@@ -31,6 +31,10 @@
 }
 
 .receive-sr-container .bill-row .undo-button {
-  color: #00a9a5;
+  color: #00a9a5 !important;
   font-weight: bold;
+}
+
+.receive-sr-container .bill-row.is-received * {
+  color: lightgray;
 }

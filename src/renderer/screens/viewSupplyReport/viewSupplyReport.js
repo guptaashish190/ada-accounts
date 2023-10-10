@@ -4,6 +4,7 @@
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   query,
@@ -18,6 +19,9 @@ import {
   Card,
   Field,
   Input,
+  Skeleton,
+  SkeletonItem,
+  Spinner,
   Table,
   TableBody,
   TableCell,
@@ -33,7 +37,7 @@ import {
 import { getAuth } from 'firebase/auth';
 import math, { parse } from 'mathjs';
 import Loader from '../../common/loader';
-import { VerticalSpace1 } from '../../common/verticalSpace';
+import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import globalUtils from '../../services/globalUtils';
 import { showToast } from '../../common/toaster';
 import './style.css';
@@ -61,6 +65,7 @@ export default function ViewSupplyReportScreen() {
     try {
       let fetchedOrders = await globalUtils.fetchOrdersByIds([
         ...supplyReport.orders,
+        ...(supplyReport.supplementaryBills || []),
         ...(supplyReport.attachedBills || []),
       ]);
 
@@ -88,30 +93,52 @@ export default function ViewSupplyReportScreen() {
       <div className="view-supply-report-container">
         <h3>Supply Report: {supplyReport.id}</h3>
         <VerticalSpace1 />
-        <div className="vsrc-detail-items">
-          <div className="label">Received By: </div>
-          <div className="value">
-            {allUsers.find((x) => x.uid === supplyReport.receivedBy)?.username}
+        <div className="vsrc-detail-items-container">
+          <div className="vsrc-detail-items">
+            <div className="label">Received By: </div>
+            <div className="value">
+              {
+                allUsers.find((x) => x.uid === supplyReport.receivedBy)
+                  ?.username
+              }
+            </div>
           </div>
-        </div>
-        <div className="vsrc-detail-items">
-          <div className="label">Supplyman: </div>
-          <div className="value">
-            {allUsers.find((x) => x.uid === supplyReport.supplymanId)?.username}
+          <div className="vsrc-detail-items">
+            <div className="label">Supplyman: </div>
+            <div className="value">
+              {
+                allUsers.find((x) => x.uid === supplyReport.supplymanId)
+                  ?.username
+              }
+            </div>
           </div>
-        </div>
-        <div className="vsrc-detail-items">
-          <div className="label">Dispatch Time: </div>
-          <div className="value">
-            {globalUtils.getTimeFormat(supplyReport.dispatchTimestamp)}
+          <div className="vsrc-detail-items">
+            <div className="label">Dispatch Time: </div>
+            <div className="value">
+              {globalUtils.getTimeFormat(supplyReport.dispatchTimestamp)}
+            </div>
           </div>
-        </div>
 
-        <div className="vsrc-detail-items">
-          <div className="label">Status </div>
-          <div className="value">{supplyReport.status}</div>
+          <div className="vsrc-detail-items">
+            <div className="label">Notes: </div>
+            <div className="value">{supplyReport.note}</div>
+          </div>
+          <div className="vsrc-detail-items">
+            <div className="label">Items: </div>
+            <div className="value">
+              {' '}
+              {supplyReport.numPolybags} Polybags, {supplyReport.numCases}{' '}
+              Cases, {supplyReport.numPackets} Packets
+            </div>
+          </div>
+
+          <div className="vsrc-detail-items">
+            <div className="label">Status </div>
+            <div className="value">{supplyReport.status}</div>
+          </div>
         </div>
         <VerticalSpace1 />
+        <h3 style={{ color: 'grey' }}>Received Bills</h3>
         <Table size="extra-small" className="vsrc-table">
           <TableHeader className="table-header-container">
             <TableRow>
@@ -124,16 +151,16 @@ export default function ViewSupplyReportScreen() {
               <TableHeaderCell key="vsrc-thc-amount vsrc-table-cell">
                 AMOUNT
               </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell">
+              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell2">
                 CASH
               </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell">
+              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell3">
                 CHEQUE
               </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell">
+              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell4">
                 UPI
               </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell">
+              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell5">
                 SCHEDULED
               </TableHeaderCell>
               <TableHeaderCell key="vsrc-thc-partyname">NOTES</TableHeaderCell>
@@ -155,8 +182,118 @@ export default function ViewSupplyReportScreen() {
             })}
           </TableBody>
         </Table>
+
+        {supplyReport.otherAdjustedBills?.length ? (
+          <>
+            <VerticalSpace2 />
+            <h3 style={{ color: 'grey' }}>Other Adjusted Bills</h3>
+            <OtherAdjustedBills
+              otherAdjustedBills={supplyReport.otherAdjustedBills}
+            />
+          </>
+        ) : null}
+        <VerticalSpace2 />
       </div>
     </center>
+  );
+}
+
+function OtherAdjustedBills({ otherAdjustedBills }) {
+  return (
+    <Table size="extra-small" className="vsrc-table">
+      <TableHeader className="table-header-container">
+        <TableRow>
+          <TableHeaderCell>BILL NO.</TableHeaderCell>
+          <TableHeaderCell>PARTY</TableHeaderCell>
+          <TableHeaderCell>CASH</TableHeaderCell>
+          <TableHeaderCell>CHEQUE</TableHeaderCell>
+          <TableHeaderCell>UPI</TableHeaderCell>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {otherAdjustedBills?.map((bill, i) => {
+          return <OtherAdjustedBillsRow data={bill} index={i} />;
+        })}
+      </TableBody>
+    </Table>
+  );
+}
+
+function OtherAdjustedBillsRow({ data, index }) {
+  const [order, setOrder] = useState();
+  const [party, setParty] = useState();
+
+  const [loading, setLoading] = useState(false);
+
+  const fetchOrderAndParty = async () => {
+    try {
+      setLoading(true);
+      // Fetch the order using orderId
+      const orderRef = doc(firebaseDB, 'orders', data.orderId);
+      const orderSnapshot = await getDoc(orderRef);
+      if (orderSnapshot.exists()) {
+        const fetchedOrder = orderSnapshot.data();
+        setOrder(fetchedOrder);
+
+        // Fetch party information using partyId from the fetched order
+        const partyRef = doc(firebaseDB, 'parties', fetchedOrder.partyId);
+        const partySnapshot = await getDoc(partyRef);
+        if (partySnapshot.exists()) {
+          const fetchedParty = partySnapshot.data();
+          setParty(fetchedParty);
+        } else {
+          console.log('Party not found');
+        }
+      } else {
+        console.log('Order not found');
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching order and party:', error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrderAndParty();
+  }, []);
+
+  if (loading) {
+    return (
+      <TableRow className="vsrc-table-row">
+        <TableCustomCell>
+          <Spinner />
+        </TableCustomCell>
+      </TableRow>
+    );
+  }
+  if (!order || !party) {
+    return <Text>Error Fetching Bill Details</Text>;
+  }
+
+  return (
+    <TableRow className="vsrc-table-row">
+      <TableCustomCell>
+        <b>{order.billNumber?.toUpperCase()}</b>
+      </TableCustomCell>
+      <TableCustomCell>{party.name}</TableCustomCell>
+      <TableCustomCell>
+        {globalUtils.getCurrencyFormat(
+          data.payments.find((x) => x.type === 'cash')?.amount,
+        ) || '--'}
+      </TableCustomCell>
+      <TableCustomCell>
+        {globalUtils.getCurrencyFormat(
+          data.payments.find((x) => x.type === 'cheque')?.amount,
+        ) || '--'}
+      </TableCustomCell>
+
+      <TableCustomCell>
+        {globalUtils.getCurrencyFormat(
+          data.payments.find((x) => x.type === 'upi')?.amount,
+        ) || '--'}
+      </TableCustomCell>
+    </TableRow>
   );
 }
 

@@ -70,6 +70,7 @@ export default function AllBillsScreen() {
         orderList.push(doc.data());
       });
 
+      console.log(orderList);
       setFilteredOrders(orderList);
     } catch (error) {
       console.error('Error fetchisng parties: ', error);

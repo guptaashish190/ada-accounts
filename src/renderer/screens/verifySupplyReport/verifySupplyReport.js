@@ -18,7 +18,11 @@ import {
   useToastController,
 } from '@fluentui/react-components';
 
-import { DeleteRegular, Checkmark12Filled } from '@fluentui/react-icons';
+import {
+  DeleteRegular,
+  Checkmark12Filled,
+  Edit12Filled,
+} from '@fluentui/react-icons';
 import {
   collection,
   doc,
@@ -39,6 +43,7 @@ import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import SupplementaryBillDialog from './supplementaryBillDialog/supplementaryBillDialog';
+import constants from '../../constants';
 
 // BALANCE WILL BE ADDED TO THE ORDER DOCUMENT BEFORE THIS SCREEN FOR A NEW ORDER(BILL)
 // BECAUSE OF THIS, AS THE OLD BILLS ARE FILTERED BASED ON BALANCE, THE NEW BILL SHOULD NOT
@@ -94,7 +99,7 @@ export default function VerifySupplyReport() {
       const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
 
       await updateDoc(supplyReportRef, {
-        status: 'Dispatched',
+        status: constants.firebase.supplyReportStatus.DISPATCHED,
         dispatchTimestamp: new Date().getTime(),
         attachedBills: attachedBills.map((b) => b.id),
         supplementaryBills: supplementaryBills.map((b) => b.id),
@@ -121,15 +126,17 @@ export default function VerifySupplyReport() {
 
       // Update the "orderStatus" field in the order document to "dispatched"
       await updateDoc(orderRef, {
-        balance: bill1.orderAmount,
+        balance: parseInt(bill1.orderAmount, 10),
         with: supplyReport.supplymanId,
         orderStatus: 'Dispatched',
+        supplyReportId: supplyReport.id,
         flow: [
           ...bill1.flow,
           {
             employeeId: getAuth(firebaseApp).currentUser.uid,
             timestamp: new Date().getTime(),
             type: 'Dispatched',
+            comment: bill1.notes || '',
           },
         ],
       });
@@ -146,9 +153,9 @@ export default function VerifySupplyReport() {
 
       // Update the "orderStatus" field in the order document to "dispatched"
       await updateDoc(orderRef, {
-        ...modifiedBill1,
+        accountsNotes: modifiedBill1.notes || '',
+        balance: parseInt(modifiedBill1.balance, 10),
         with: supplyReport.supplymanId,
-        supplyReport: supplyReport.id,
       });
 
       console.log(`Order status updated to "dispatched"`);
@@ -170,7 +177,7 @@ export default function VerifySupplyReport() {
         {bills.map((b, i) => {
           return (
             <PartySection
-              attachedBills={attachedBills}
+              attachedBills={[...attachedBills, ...supplementaryBills]}
               setAttachedBills={setAttachedBills}
               key={`party-section-${b.id}`}
               index={i}
@@ -268,6 +275,7 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
       );
 
       const querySnapshot = await getDocs(q);
+      console.log(querySnapshot.size);
       const ordersData = [];
       for await (const doc1 of querySnapshot.docs) {
         // Get data for each order
@@ -286,7 +294,7 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
         ordersData.push(orderData);
       }
       const sortedData = ordersData.sort(
-        (s1, s2) => s1.creationTime - s2.creationTime,
+        (s1, s2) => s2.creationTime - s1.creationTime,
       );
       setOldBills(sortedData);
       setLoading(false);
@@ -316,7 +324,7 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
         <div className="bill-number">{bill.billNumber.toUpperCase()}</div>
         <div className="file-number">{bill.party?.fileNumber}</div>
         <div className="amount">₹{bill.orderAmount}</div>
-        <div className="amount">O/S ₹{getOutstanding([...oldBills, bill])}</div>
+        <div className="amount">O/S ₹{getOutstanding(oldBills)}</div>
       </div>
       <div className="party-old-bills">
         <div className="party-old-bills-header">BILL NO.</div>
@@ -333,8 +341,8 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
               <OldBillRow
                 key={`ob-${ob.id}`}
                 oldbill={ob}
-                attachBill={() => {
-                  setAttachedBills((ab) => [...ab, ob]);
+                attachBill={(mod) => {
+                  setAttachedBills((ab) => [...ab, mod]);
                 }}
                 removeAttachedBill={() => {
                   if (bill.id === ob.id) {
@@ -368,14 +376,6 @@ function OldBillRow({
   const [newNotes, setNewNotes] = useState('');
   const [scheduledData, setScheduledDate] = useState();
   const [withUser, setWithUser] = useState();
-
-  const scheduledForPaymentDate = () => {
-    if (oldbill.scheduledForPayment) {
-      const date = new Date(oldbill.scheduledForPayment);
-      return date.toLocaleDateString();
-    }
-    return '--';
-  };
 
   const onAttachBill = (save) => {
     const modifiedBill = { ...oldbill };
@@ -424,7 +424,9 @@ function OldBillRow({
           onChange={(_, d) => setNewBalance(d.value)}
         />
       </Tooltip>
-      <div className="old-bill scheduled">{scheduledForPaymentDate()}</div>
+      <div className="old-bill scheduled">
+        {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true) || '--'}
+      </div>
       <Tooltip content={oldbill.note}>
         <Input
           disabled={disabled}
@@ -433,7 +435,7 @@ function OldBillRow({
           className="old-bill notes"
           value={newNotes}
           appearance="underline"
-          placeholder={oldbill.note || '--'}
+          placeholder={oldbill.accountsNotes || '--'}
           onChange={(_, t) => setNewNotes(t.value)}
         />
       </Tooltip>
@@ -475,8 +477,9 @@ function SupplementaryBillRow({
   saveBill,
 }) {
   const [newBalance, setNewBalance] = useState('');
-  const [newNotes, setNewNotes] = useState('');
+  const [newNotes, setNewNotes] = useState(oldbill.accountsNotes);
   const [scheduledData, setScheduledDate] = useState();
+  const [isSaved, setIsSaved] = useState(false);
 
   const [party, setParty] = useState();
 
@@ -500,6 +503,7 @@ function SupplementaryBillRow({
     if (newBalance.length > 0) {
       modifiedBill.balance = newBalance;
     }
+    console.log(modifiedBill);
     saveBill(modifiedBill);
   };
 
@@ -507,56 +511,78 @@ function SupplementaryBillRow({
     getParty();
   }, []);
   return (
-    <div className="supplementary-bill-row">
-      <Text size={200}>{party?.name}</Text>
-      <Text size={200} className="old-bill bill-number">
-        <b>{oldbill.billNumber}</b>
-      </Text>
-      <Text size={200} className="old-bill bill-number">
-        {new Date(oldbill.creationTime).toLocaleDateString()}
-      </Text>
-      <div className="old-bill amount">₹{oldbill.orderAmount}</div>
+    <div>
+      <VerticalSpace1 />
+      <div style={{ width: '80%', textAlign: 'left', marginBottom: '5px' }}>
+        {party?.name}
+      </div>
+      <div className="supplementary-bill-row">
+        <Text size={200} className="old-bill bill-number">
+          {oldbill.billNumber}
+        </Text>
+        <Text size={200} className="old-bill bill-number">
+          {new Date(oldbill.creationTime).toLocaleDateString()}
+        </Text>
+        <div className="old-bill amount">₹{oldbill.orderAmount}</div>
 
-      <Tooltip content={`₹${oldbill.balance}`}>
-        <Input
-          style={{ width: '100px' }}
-          size="small"
-          value={newBalance}
-          contentBefore="₹"
-          appearance="underline"
-          placeholder={`${oldbill.balance}`}
-          className="old-bill amount"
-          onChange={(_, d) => setNewBalance(d.value)}
-        />
-      </Tooltip>
-      <Tooltip content={oldbill.note}>
-        <Input
-          style={{ width: '100px' }}
-          size="small"
-          className="old-bill notes"
-          value={newNotes}
-          appearance="underline"
-          placeholder={oldbill.note || 'Notes'}
-          onChange={(_, t) => setNewNotes(t.value)}
-        />
-      </Tooltip>
-      <span style={{ display: 'flex' }}>
-        <Button
-          className="old-bill"
-          appearance="subtle"
-          style={{ color: '#00A9A5' }}
-          onClick={() => onSaveBill()}
-        >
-          <Checkmark12Filled />
-        </Button>
-        <Button
-          className="old-bill"
-          appearance="subtle"
-          onClick={() => removeAttachedBill()}
-        >
-          <DeleteRegular />
-        </Button>
-      </span>
+        <Tooltip content={`₹${oldbill.balance}`}>
+          <Input
+            disabled={isSaved}
+            style={{ width: '100px' }}
+            size="small"
+            value={newBalance}
+            contentBefore="₹"
+            appearance="underline"
+            placeholder={`${oldbill.balance}`}
+            className="old-bill amount"
+            onChange={(_, d) => setNewBalance(d.value)}
+          />
+        </Tooltip>
+        <Tooltip content={oldbill.accountsNotes}>
+          <Input
+            disabled={isSaved}
+            style={{ width: '100px' }}
+            size="small"
+            className="old-bill notes"
+            value={newNotes}
+            appearance="underline"
+            placeholder={oldbill.accountsNotes || 'Notes'}
+            onChange={(_, t) => setNewNotes(t.value)}
+          />
+        </Tooltip>
+        <span style={{ display: 'flex' }}>
+          {isSaved ? (
+            <Button
+              className="old-bill"
+              appearance="subtle"
+              onClick={() => {
+                setIsSaved(false);
+              }}
+            >
+              <Edit12Filled />
+            </Button>
+          ) : (
+            <Button
+              className="old-bill"
+              appearance="subtle"
+              style={{ color: '#00A9A5' }}
+              onClick={() => {
+                onSaveBill();
+                setIsSaved(true);
+              }}
+            >
+              <Checkmark12Filled />
+            </Button>
+          )}
+          <Button
+            className="old-bill"
+            appearance="subtle"
+            onClick={() => removeAttachedBill()}
+          >
+            <DeleteRegular />
+          </Button>
+        </span>
+      </div>
     </div>
   );
 }

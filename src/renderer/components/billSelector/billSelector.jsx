@@ -21,10 +21,12 @@ import {
   getDoc,
   doc,
   onSnapshot,
+  where,
 } from 'firebase/firestore';
 import shortid from 'shortid';
 import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
+import constants from '../../constants';
 
 export default function BillSelector({ onBillsAdded }) {
   const [ordersList, setOrdersList] = useState([]);
@@ -34,8 +36,15 @@ export default function BillSelector({ onBillsAdded }) {
 
   const getDispatchableBills = async () => {
     const ordersRef = collection(firebaseDB, 'orders');
-
-    const unsubscribe = onSnapshot(ordersRef, async (snapshot) => {
+    const q = query(
+      ordersRef,
+      where(
+        'orderStatus',
+        '==',
+        constants.firebase.billFlowTypes.BILL_MODIFIED,
+      ),
+    );
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const snapshotDocData = snapshot.docs.map((sn) => sn.data());
       const allOrders =
         await globalUtils.fetchPartyInfoForOrders(snapshotDocData);

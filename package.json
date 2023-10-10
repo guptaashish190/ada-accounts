@@ -100,6 +100,7 @@
     "@fluentui/react-datepicker-compat": "^0.3.15",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
+    "electron-store": "^8.1.0",
     "electron-updater": "^6.1.4",
     "firebase": "^10.4.0",
     "lodash": "^4.17.21",

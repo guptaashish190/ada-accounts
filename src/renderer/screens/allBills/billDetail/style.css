@@ -1,8 +1,7 @@
 .bill-detail-container {
   padding: 10px;
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
 .bill-detail-container .bill-detail-content-container {
@@ -14,7 +13,8 @@
   color: grey;
 }
 
-.bill-detail-container .bill-detail-content-container .value {
+.bill-detail-container .bill-detail-content-container.bill-flow {
+  grid-area: 5 / 1 / auto / span 2;
 }
 
 .bill-detail-content-container .pop-over-button-bill-detail {

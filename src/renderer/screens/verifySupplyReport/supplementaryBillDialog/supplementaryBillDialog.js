@@ -235,10 +235,24 @@ function BillRow({ data, index, isAttached, addSupplementaryBill }) {
     getParty();
     getWithUser();
   }, []);
+
+  const scheduledDateString = () => {
+    if (!data.schedulePaymentDate) return '';
+    return `(Scheduled: ${globalUtils.getTimeFormat(
+      data.schedulePaymentDate,
+      true,
+    )})`;
+  };
   return (
     <div className="bill-row">
       <div className="row-1">
-        <Text size={200}>{party?.name || '--'}</Text>
+        <Text size={200}>
+          {party?.name || '--'}
+          &nbsp;&nbsp;
+          <Text size={200}>
+            (BAL: {globalUtils.getCurrencyFormat(data.balance) || '--'})
+          </Text>
+        </Text>
         <Button
           disabled={isAttached}
           size="small"
@@ -260,7 +274,9 @@ function BillRow({ data, index, isAttached, addSupplementaryBill }) {
           </Text>
         </div>
         <Text style={{ color: 'grey', fontSize: '0.8em' }}>
-          <i>{`With ${withUser?.username || 'Accounts'}`}</i>
+          <i>
+            {`With ${withUser?.username || 'Accounts'}`} {scheduledDateString()}
+          </i>
         </Text>
       </div>
     </div>

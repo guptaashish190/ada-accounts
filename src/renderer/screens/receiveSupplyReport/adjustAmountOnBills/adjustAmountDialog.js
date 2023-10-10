@@ -26,9 +26,9 @@ function AdjustAmountDialog({
   onDone,
   orderData,
   amountToAdjust,
-  setOpen,
   otherAdjustedBills,
   setOtherAdjustedBills,
+  type,
 }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -40,7 +40,7 @@ function AdjustAmountDialog({
     const q = query(
       collection(firebaseDB, 'orders'),
       where('balance', '>', 0), // Filter by balance greater than zero
-      where('partyId', '==', orderData?.party?.id), // Filter by specific partyId
+      where('partyId', '==', orderData?.partyId), // Filter by specific partyId
     );
 
     try {
@@ -71,7 +71,7 @@ function AdjustAmountDialog({
   }
 
   return (
-    <Dialog open={orderData} setOpen={() => setOpen(null)}>
+    <Dialog open={orderData}>
       <DialogSurface>
         <DialogBody>
           <DialogTitle>
@@ -99,18 +99,18 @@ function AdjustAmountDialog({
                         -1
                       }
                       onAdjust={(amount) => {
-                        const newOrder = { ...o, tempAmountAdjusted: amount };
-                        setOtherAdjustedBills((b) => [...b, o]);
+                        const newOrder = {
+                          ...o,
+                          payments: [
+                            {
+                              type,
+                              amount,
+                            },
+                          ],
+                        };
+                        console.log(newOrder);
+                        setOtherAdjustedBills((b) => [...b, newOrder]);
                         setAmountLeft((al) => al - amount);
-                      }}
-                      unAdjust={(amount) => {
-                        console.log(`${amount} am`);
-                        setOtherAdjustedBills((other) =>
-                          other.filter((ot) => ot.id !== o.id),
-                        );
-                        setAmountLeft(
-                          (al) => parseInt(al, 10) + parseInt(amount, 10),
-                        );
                       }}
                       key={`adju-amount-${o.id}`}
                       bill={o}
@@ -124,9 +124,10 @@ function AdjustAmountDialog({
           <DialogActions>
             <DialogTrigger disableButtonEnhancement>
               <Button
+                disabled={amountLeft}
                 onClick={() => {
                   setLoading(true);
-                  setOpen();
+                  onDone(amountLeft);
                 }}
                 appearance="primary"
               >
@@ -142,13 +143,7 @@ function AdjustAmountDialog({
 
 export default AdjustAmountDialog;
 
-function AdjustAmountBillRow({
-  bill,
-  onAdjust,
-  adjusted,
-  unAdjust,
-  amountLeft,
-}) {
+function AdjustAmountBillRow({ bill, onAdjust, adjusted, amountLeft }) {
   const [amountToAdjust, setAmountToAdjust] = useState('');
   const [adjustedAmount, setAdjustedAmount] = useState();
 
@@ -157,7 +152,6 @@ function AdjustAmountBillRow({
       if (amountLeft > bill.balance) {
         setAmountToAdjust(bill.balance);
       } else {
-        console.log(amountLeft, amountLeft.toString());
         setAmountToAdjust(amountLeft.toString());
       }
     }
@@ -187,19 +181,15 @@ function AdjustAmountBillRow({
           placeholder={globalUtils.getCurrencyFormat(bill.orderAmount)}
         />
         {adjusted ? (
-          <Button
-            style={{ color: '#06D6A0' }}
-            onClick={() => {
-              unAdjust(adjustedAmount);
-              setAdjustedAmount();
-            }}
-          >
-            Adjusted
-          </Button>
+          <Button style={{ color: '#06D6A0' }}>Adjusted</Button>
         ) : (
           <Button
             style={{ color: '#F25C54' }}
-            disabled={amountToAdjust > bill.balance || amountToAdjust === '0'}
+            disabled={
+              parseInt(amountToAdjust, 10) > parseInt(amountLeft, 10) ||
+              parseInt(amountToAdjust, 10) > parseInt(bill.balance, 10) ||
+              amountToAdjust === '0'
+            }
             onClick={() => {
               onAdjust(amountToAdjust);
               setAdjustedAmount(amountToAdjust);

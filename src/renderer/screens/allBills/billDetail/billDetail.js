@@ -19,6 +19,7 @@ import { useAuthUser } from '../../../contexts/allUsersContext';
 
 function BillDetailDialog({ order, party, withUser, mrUser }) {
   const { allUsers } = useAuthUser();
+  console.log(order);
   return (
     <DialogBody>
       <DialogTitle>
@@ -28,6 +29,12 @@ function BillDetailDialog({ order, party, withUser, mrUser }) {
         <div className="bill-detail-content-container">
           <Text className="label">Party: </Text>
           <Text className="value">{party.name}</Text>
+        </div>
+        <div className="bill-detail-content-container">
+          <Text className="label">Bill Amount: </Text>
+          <Text className="value">
+            {globalUtils.getCurrencyFormat(order.orderAmount)}
+          </Text>
         </div>
 
         <div className="bill-detail-content-container">
@@ -53,7 +60,7 @@ function BillDetailDialog({ order, party, withUser, mrUser }) {
           <Text className="label">Supply Report: </Text>
           <Text className="value">{order.supplyReportId}</Text>
         </div>
-        <div className="bill-detail-content-container">
+        <div className="bill-detail-content-container bill-flow">
           <Text className="label">Flow: </Text>
           <div className="flow-container">
             {order.flow.map((fl) => {

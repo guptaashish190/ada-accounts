@@ -52,7 +52,7 @@
 .verify-supply-report .supplementary-bill-row {
   display: grid;
   width: 80%;
-  grid-template-columns: 3fr 2fr 2fr 2fr 2fr 1fr 1fr;
+  grid-template-columns: 2fr 2fr 2fr 1fr 1fr 0.5fr;
   align-items: center;
 }
 

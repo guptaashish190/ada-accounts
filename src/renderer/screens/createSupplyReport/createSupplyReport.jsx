@@ -60,7 +60,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       const supplymanUser = await globalUtils.fetchUserById(
         prefillSupplyReport.supplymanId,
       );
-      console.log(fetchedOrders, supplymanUser);
       setSelectedSupplyman(supplymanUser);
       setNotes(prefillSupplyReport.note);
       setEditable(false);
@@ -146,7 +145,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           orders: bills.map((b) => b.id),
           supplymanId: selectedSupplyman.uid,
           id: reportDocRef.id,
-          status: 'To Accounts',
+          status: constants.firebase.supplyReportStatus.TOACCOUNTS,
         };
       }
 

@@ -89,7 +89,7 @@ export default {
     }
   },
   getCurrencyFormat: (num) => {
-    if (!num || num === '') {
+    if (num !== 0 && (!num || num === '')) {
       return '--';
     }
     const formatter = new Intl.NumberFormat('en-IN', {
@@ -103,6 +103,7 @@ export default {
     return formatter.format(num);
   },
   getTimeFormat: (millisecondsSinceEpoch, dateOnly = false) => {
+    if (!millisecondsSinceEpoch) return null;
     if (dateOnly) {
       return new Date(millisecondsSinceEpoch).toLocaleDateString();
     }
