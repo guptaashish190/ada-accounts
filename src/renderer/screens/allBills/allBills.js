@@ -35,16 +35,13 @@ import globalUtils, { useDebounce } from '../../services/globalUtils';
 import { VerticalSpace1 } from '../../common/verticalSpace';
 import BillDetailDialog from './billDetail/billDetail';
 import { useAuthUser } from '../../contexts/allUsersContext';
+import PartySelector from '../../common/partySelector';
 
 export default function AllBillsScreen() {
-  const [partyDetails, setPartyDetails] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [queryPartyName, setQueryPartyName] = useState('');
   const [queryPartyId, setQueryPartyId] = useState('');
-
-  const debouncedValue = useDebounce(queryPartyName, 500);
   const [queryWith, setQueryWith] = useState();
   const [queryWithId, setQueryWithId] = useState();
   const [queryBillNumber, setQueryBillNumber] = useState('');
@@ -116,32 +113,6 @@ export default function AllBillsScreen() {
   };
 
   const { allUsers } = useAuthUser();
-  useEffect(() => {
-    if (!debouncedValue || debouncedValue.length < 3) return;
-    const fetchParties = async () => {
-      // Define a reference to the "parties" collection
-      const partiesRef = collection(firebaseDB, 'parties');
-
-      // Create a query with a "name" field filter
-      const q = query(
-        partiesRef,
-        where('name', '>=', debouncedValue.toUpperCase()),
-        limit(10),
-      );
-
-      try {
-        const querySnapshot = await getDocs(q);
-        const partyData = querySnapshot.docs.map((doc) => doc.data());
-        setPartyDetails(partyData);
-        console.log(partyData);
-      } catch (error) {
-        console.error('Error fetching parties:', error);
-      }
-    };
-
-    fetchParties();
-  }, [debouncedValue]);
-
   const options = [
     'Created',
     'Packed',
@@ -156,32 +127,7 @@ export default function AllBillsScreen() {
       <div className="all-bills-screen">
         <h3>Search Bills</h3>
         <div className="all-bills-search-input-container">
-          <Combobox
-            onInput={(e) => {
-              setQueryPartyName(e.target.value);
-            }}
-            freeform
-            value={queryPartyName}
-            onOptionSelect={(_, e) => {
-              setQueryPartyName(e.optionText);
-              setQueryPartyId(e.optionValue);
-            }}
-            placeholder="Party name"
-          >
-            {partyDetails?.length ? (
-              partyDetails.map((option1) => (
-                <Option
-                  value={option1.id}
-                  text={option1.name}
-                  key={`search-bill-${option1.id}`}
-                >
-                  {option1.name}
-                </Option>
-              ))
-            ) : (
-              <Option key="!212231">None</Option>
-            )}
-          </Combobox>
+          <PartySelector onPartySelected={(p) => setQueryPartyId(p.id)} />
 
           <Dropdown
             onOptionSelect={(_, e) => setQueryWith(e.optionValue)}

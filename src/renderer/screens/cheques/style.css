@@ -1,0 +1,8 @@
+.cheque-entry-dailog {
+  display: flex;
+  flex-direction: column;
+}
+
+.cheque-table-cell {
+  overflow: hidden;
+}

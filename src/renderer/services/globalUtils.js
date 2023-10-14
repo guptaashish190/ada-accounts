@@ -115,11 +115,32 @@ export default {
       hour: '2-digit',
       minute: '2-digit',
     };
+
     const date = new Date(millisecondsSinceEpoch).toLocaleTimeString(
       'en-us',
       timeOptions,
     );
     return date;
+  },
+  getNewCashReceiptNumber: async () => {
+    const cashReceiptsCollectionRef = collection(firebaseDB, '/cashReceipts');
+
+    const cashReceiptsDocs = await getDocs(cashReceiptsCollectionRef);
+
+    const newCashReceiptNumber = cashReceiptsDocs.size + 1;
+
+    // Use String.prototype.padStart to add leading zeros
+    return `CR-${String(newCashReceiptNumber).padStart(6, '0')}`;
+  },
+  getNewChequeEntryNumber: async () => {
+    const chequesCollectionRef = collection(firebaseDB, '/cheques');
+
+    const chequesCollectionDocs = await getDocs(chequesCollectionRef);
+
+    const newChequeNumber = chequesCollectionDocs.size + 1;
+
+    // Use String.prototype.padStart to add leading zeros
+    return `${String(newChequeNumber).padStart(6, '0')}`;
   },
 };
 

@@ -22,6 +22,7 @@ import {
   Field,
   Input,
   Text,
+  Toaster,
   Tooltip,
   makeStyles,
   useId,
@@ -177,6 +178,33 @@ export default function ReceiveSRScreen() {
   };
 
   const onSave = () => {};
+  const onCreateCashReceipt = () => {
+    const prItems = {};
+    [...receivedBills, ...otherAdjustedBills].forEach((cRBill) => {
+      if (cRBill.payments?.length) {
+        cRBill.payments.forEach((crBillP) => {
+          if (crBillP.type === 'cash') {
+            prItems[cRBill.partyId] =
+              (prItems[cRBill.partyId] || 0) + parseInt(crBillP.amount);
+          }
+        });
+      }
+    });
+    if (!Object.keys(prItems).length) {
+      showToast(dispatchToast, 'No Cash Received', 'error');
+      return;
+    }
+
+    const updatedModelPrItems = Object.keys(prItems).map((pri) => {
+      return {
+        partyId: pri,
+        amount: prItems[pri],
+      };
+    });
+    navigate('/createPaymentReceipts', {
+      state: { supplyReportId: supplyReport.id, prItems: updatedModelPrItems },
+    });
+  };
 
   useState(() => {
     getAllBills();
@@ -188,6 +216,7 @@ export default function ReceiveSRScreen() {
 
   return (
     <>
+      <Toaster toasterId={toasterId} />
       <AdjustAmountDialog
         otherAdjustedBills={otherAdjustedBills}
         setOtherAdjustedBills={setOtherAdjustedBills}
@@ -240,6 +269,16 @@ export default function ReceiveSRScreen() {
             SAVE
           </Button>
         )}
+
+        <Button
+          disabled={!allBillsReceived}
+          size="large"
+          onClick={() => {
+            onCreateCashReceipt();
+          }}
+        >
+          Create Cash Receipt
+        </Button>
       </center>
     </>
   );

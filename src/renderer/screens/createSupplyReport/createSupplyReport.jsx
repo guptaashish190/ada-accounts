@@ -110,6 +110,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 
     if (!selectedSupplyman) {
       showToast(dispatchToast, 'Please select a supplyman', 'error');
+      return;
     }
 
     try {

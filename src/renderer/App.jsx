@@ -25,6 +25,9 @@ import VerifySupplyReport from './screens/verifySupplyReport/verifySupplyReport'
 import ReceiveSupplyReportScreen from './screens/receiveSupplyReport/receiveSupplyReportList';
 import ReceiveSRScreen from './screens/receiveSupplyReport/receiveSRScreen/receiveSRScreen';
 import AllBillsScreen from './screens/allBills/allBills';
+import PaymentReceipts from './screens/paymentReceipts/paymentReceipts';
+import CreatePaymentReceiptDialog from './screens/paymentReceipts/createPaymentReceiptDialog/createPaymentReceiptDialog';
+import ChequesScreen from './screens/cheques/cheques';
 
 const myNewTheme = {
   10: '#010304',
@@ -96,6 +99,12 @@ export default function App() {
                 />
                 <Route path="/searchBills" element={<AllBillsScreen />} />
                 <Route path="/receiveSRScreen" element={<ReceiveSRScreen />} />
+                <Route path="/paymentReceipts" element={<PaymentReceipts />} />
+                <Route
+                  path="/createPaymentReceipts"
+                  element={<CreatePaymentReceiptDialog />}
+                />
+                <Route path="/chequesList" element={<ChequesScreen />} />
               </Routes>
             </TabNavigator>
           </Router>

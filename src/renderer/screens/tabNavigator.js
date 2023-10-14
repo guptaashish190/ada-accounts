@@ -31,6 +31,16 @@ export default function TabNavigator({ children }) {
       route: '/searchBills',
       key: 'tab-searchBills',
     },
+    {
+      name: 'Payment Receipts',
+      route: '/paymentReceipts',
+      key: 'tab-paymentreceipts',
+    },
+    {
+      name: 'Cheques',
+      route: '/chequesList',
+      key: 'tab-chequesList',
+    },
   ];
 
   return (
