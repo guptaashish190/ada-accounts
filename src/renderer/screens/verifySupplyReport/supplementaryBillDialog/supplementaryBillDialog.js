@@ -260,7 +260,7 @@ function BillRow({ data, index, isAttached, addSupplementaryBill }) {
           onClick={() => addSupplementaryBill()}
           style={{ color: isAttached ? 'grey' : '#F25C54' }}
         >
-          {isAttached ? 'Attached' : 'Attach Bill'}
+          {isAttached ? 'Added' : 'Add Bill'}
         </Button>
       </div>
       <div className="row-1">

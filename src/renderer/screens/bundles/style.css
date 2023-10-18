@@ -1,0 +1,35 @@
+.all-bundles-container .supply-report-row {
+  cursor: pointer;
+  padding: 10px 0;
+  width: 60vw;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.086);
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+}
+
+.all-bundles-container .supply-report-row .sr-id {
+  font-weight: bold;
+}
+
+.all-bundles-container .supply-report-row .sr-parties-length {
+  color: rgba(128, 128, 128, 0.816);
+}
+
+.all-bundles-container .supply-report-row .sr-supplyman {
+  color: var(--green);
+  margin-left: 10px;
+}
+
+.all-bundles-container .supply-report-row .sr-status {
+  font-size: 0.7em;
+  padding: 2px;
+  border-radius: 4px;
+  color: white;
+  text-align: center;
+}
+
+.menu-button {
+  position: absolute;
+  left: 5px;
+  top: 0;
+}

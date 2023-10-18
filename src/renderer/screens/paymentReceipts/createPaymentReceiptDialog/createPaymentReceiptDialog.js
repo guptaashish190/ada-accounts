@@ -40,6 +40,7 @@ import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import './style.css';
 import { showToast } from '../../../common/toaster';
 import globalUtils from '../../../services/globalUtils';
+import constants from '../../../constants';
 
 export default function CreatePaymentReceiptDialog({
   open,
@@ -83,7 +84,9 @@ export default function CreatePaymentReceiptDialog({
           firebaseDB,
           '/cashReceipts',
         );
-        const newReceiptNumber = await globalUtils.getNewCashReceiptNumber();
+        const newReceiptNumber = await globalUtils.getNewReceiptNumber(
+          constants.newReceiptCounters.CASHRECEIPTS,
+        );
 
         // Add a new document with a generated ID to the "cashReceipts" collection
         const docRef = await addDoc(cashReceiptsCollectionRef, {
@@ -97,11 +100,14 @@ export default function CreatePaymentReceiptDialog({
         await transaction.update(docRef, {
           cashReceiptNumber: newReceiptNumber,
         });
+        globalUtils.incrementReceiptCounter(
+          constants.newReceiptCounters.CASHRECEIPTS,
+        );
       });
 
       setLoading(false);
       showToast(dispatchToast, 'Created Payment Receipt', 'success');
-      navigate('/paymentRecipts');
+      navigate('/paymentReceipts');
     } catch (error) {
       showToast(dispatchToast, 'Error Creating Receipt', 'error');
       console.error('Error adding document: ', error);
@@ -120,8 +126,10 @@ export default function CreatePaymentReceiptDialog({
 
   const getCurrentReceiptNumber = async () => {
     try {
-      const newRN = await globalUtils.getNewCashReceiptNumber();
-      console.log(newRN);
+      const newRN = await globalUtils.getNewReceiptNumber(
+        constants.newReceiptCounters.CASHRECEIPTS,
+      );
+
       setCurrentReceiptNumber(newRN);
     } catch (e) {
       console.log(e);

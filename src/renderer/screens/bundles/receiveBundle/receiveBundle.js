@@ -38,39 +38,19 @@ import globalUtils from '../../../services/globalUtils';
 import { showToast } from '../../../common/toaster';
 import './style.css';
 import firebaseApp, { firebaseDB } from '../../../firebaseInit';
-import AdjustAmountDialog from '../adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../../constants';
+import AdjustAmountDialog from '../../receiveSupplyReport/adjustAmountOnBills/adjustAmountDialog';
 
-export default function ReceiveSRScreen() {
+export default function ReceiveBundle() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { supplyReport } = state;
-  const [allBills, setAllBills] = useState([]);
+  const { bundle, bills } = state;
+  const [allBills, setAllBills] = useState(bills);
   const [receivedBills, setReceivedBills] = useState([]);
   const [openAdjustAmountDialog, setOpenAdjustAmountDialog] = useState();
   const [otherAdjustedBills, setOtherAdjustedBills] = useState([]);
 
   const [loading, setLoading] = useState(false);
-
-  const getAllBills = async () => {
-    setLoading(true);
-    try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds([
-        ...supplyReport.orders,
-        ...supplyReport.attachedBills,
-        ...supplyReport.supplementaryBills,
-      ]);
-
-      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
-      setAllBills(fetchedOrders);
-
-      setLoading(false);
-    } catch (e) {
-      setLoading(false);
-      console.error(e);
-    }
-  };
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
@@ -79,16 +59,16 @@ export default function ReceiveSRScreen() {
     setReceivedBills((r) => [...r, bi]);
   };
 
-  // update order details in the supplyreport and individual orders
+  // update order details in the bundle and individual orders
   const onComplete = async () => {
     setLoading(true);
-    // Reference to the document in the "supplyReports" collection
-    const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
+    // Reference to the document in the "bundles" collection
+    const bundleRef = doc(firebaseDB, 'billBundles', bundle.id);
 
     try {
       // update supply report for all the bill rec details
-      await updateDoc(supplyReportRef, {
-        status: constants.firebase.supplyReportStatus.COMPLETED,
+      await updateDoc(bundleRef, {
+        status: constants.firebase.billBundleFlowStatus.RECEIVED,
         orderDetails: receivedBills.map((rb) => ({
           billId: rb.id,
           ...(rb.accountsNotes ? { accountsNotes: rb.accountsNotes } : {}),
@@ -112,19 +92,9 @@ export default function ReceiveSRScreen() {
         const orderRef = doc(firebaseDB, 'orders', rb2.id);
 
         await updateDoc(orderRef, {
-          flow: [
-            ...rb2.flow,
-            {
-              employeeId: getAuth(firebaseApp).currentUser.uid,
-              timestamp: new Date().getTime(),
-              type: 'Received Bill',
-            },
-          ],
           balance:
             rb2.balance -
             rb2.payments.reduce((acc, cur) => acc + cur.amount, 0),
-          flowCompleted: true,
-          orderStatus: 'Received Bill',
           with: rb2.with,
           ...(rb2.schedulePaymentDate
             ? { schedulePaymentDate: rb2.schedulePaymentDate }
@@ -156,7 +126,7 @@ export default function ReceiveSRScreen() {
           const addedPayments = oab1.payments.map((oab1p) => ({
             ...oab1p,
             timestamp: new Date().getTime(),
-            supplyReportId: supplyReport.id,
+            bundleId: bundle.id,
             orderId: oab1.id,
           }));
 
@@ -202,13 +172,11 @@ export default function ReceiveSRScreen() {
       };
     });
     navigate('/createPaymentReceipts', {
-      state: { supplyReportId: supplyReport.id, prItems: updatedModelPrItems },
+      state: { bundleId: bundle.id, prItems: updatedModelPrItems },
     });
   };
 
-  useState(() => {
-    getAllBills();
-  }, []);
+  useState(() => {}, []);
 
   if (loading) return <Loader />;
 
@@ -229,7 +197,7 @@ export default function ReceiveSRScreen() {
       />
       <center>
         <div className="receive-sr-container">
-          <h3>Receive Supply Report: {supplyReport.id}</h3>
+          <h3>Receive Bundle: {bundle.id}</h3>
           <VerticalSpace1 />
 
           {allBills.map((bill, i) => {
@@ -271,7 +239,7 @@ export default function ReceiveSRScreen() {
         )}
 
         <Button
-          // disabled={!allBillsReceived}
+          disabled={!allBillsReceived}
           size="large"
           onClick={() => {
             // createBrowserWindow();

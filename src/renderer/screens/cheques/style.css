@@ -4,5 +4,35 @@
 }
 
 .cheque-table-cell {
+  padding: 10px;
   overflow: hidden;
+}
+
+.filter-section-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+  row-gap: 10px;
+  width: 60%;
+  padding: 10px;
+  padding-bottom: 20px;
+}
+.cheques-table {
+  box-shadow: 3px 3px 5px rgba(146, 146, 146, 0.302);
+  border: 1px solid rgba(146, 146, 146, 0.302);
+  border-radius: 10px;
+}
+
+.cheques-table .table-header-container {
+  background-color: #698fffc6;
+}
+
+.cheques-table .table-header-container * {
+  color: white;
+  font-weight: bold;
+}
+
+.filter-section-container .filter-section-item {
+  display: flex;
+  flex-direction: column;
 }

@@ -28,6 +28,12 @@ import AllBillsScreen from './screens/allBills/allBills';
 import PaymentReceipts from './screens/paymentReceipts/paymentReceipts';
 import CreatePaymentReceiptDialog from './screens/paymentReceipts/createPaymentReceiptDialog/createPaymentReceiptDialog';
 import ChequesScreen from './screens/cheques/cheques';
+import AssignBillScreen from './screens/assignBills/assignBillsScreen';
+import SettingsScreen from './screens/settings/settings';
+import SettingsContext from './contexts/settingsContext';
+import AllBundlesScreen from './screens/bundles/bundlesScreen';
+import ViewBundleScreen from './screens/bundles/viewBundle/viewBundle';
+import ReceiveBundle from './screens/bundles/receiveBundle/receiveBundle';
 
 const myNewTheme = {
   10: '#010304',
@@ -73,41 +79,54 @@ export default function App() {
     <FluentProvider theme={lightTheme}>
       <AllUsersContext>
         <UserContext>
-          <Router>
-            <TabNavigator>
-              <Routes>
-                <Route path="/" element={<CreateSupplyReportScreen />} />
-                <Route
-                  path="/viewSupplyReport"
-                  element={<ViewSupplyReportScreen />}
-                />
-                <Route
-                  path="/allSupplyReports"
-                  element={<AllSupplyReportsScreen />}
-                />
-                <Route
-                  path="/pendingSupplyReports"
-                  element={<PendingSupplyReports />}
-                />
-                <Route
-                  path="/verifySupplyReport"
-                  element={<VerifySupplyReport />}
-                />
-                <Route
-                  path="/receiveSupplyReports"
-                  element={<ReceiveSupplyReportScreen />}
-                />
-                <Route path="/searchBills" element={<AllBillsScreen />} />
-                <Route path="/receiveSRScreen" element={<ReceiveSRScreen />} />
-                <Route path="/paymentReceipts" element={<PaymentReceipts />} />
-                <Route
-                  path="/createPaymentReceipts"
-                  element={<CreatePaymentReceiptDialog />}
-                />
-                <Route path="/chequesList" element={<ChequesScreen />} />
-              </Routes>
-            </TabNavigator>
-          </Router>
+          <SettingsContext>
+            <Router>
+              <TabNavigator>
+                <Routes>
+                  <Route path="/" element={<CreateSupplyReportScreen />} />
+                  <Route
+                    path="/viewSupplyReport"
+                    element={<ViewSupplyReportScreen />}
+                  />
+                  <Route
+                    path="/allSupplyReports"
+                    element={<AllSupplyReportsScreen />}
+                  />
+                  <Route
+                    path="/pendingSupplyReports"
+                    element={<PendingSupplyReports />}
+                  />
+                  <Route
+                    path="/verifySupplyReport"
+                    element={<VerifySupplyReport />}
+                  />
+                  <Route
+                    path="/receiveSupplyReports"
+                    element={<ReceiveSupplyReportScreen />}
+                  />
+                  <Route path="/searchBills" element={<AllBillsScreen />} />
+                  <Route
+                    path="/receiveSRScreen"
+                    element={<ReceiveSRScreen />}
+                  />
+                  <Route
+                    path="/paymentReceipts"
+                    element={<PaymentReceipts />}
+                  />
+                  <Route
+                    path="/createPaymentReceipts"
+                    element={<CreatePaymentReceiptDialog />}
+                  />
+                  <Route path="/chequesList" element={<ChequesScreen />} />
+                  <Route path="/assignBills" element={<AssignBillScreen />} />
+                  <Route path="/settings" element={<SettingsScreen />} />
+                  <Route path="/bundles" element={<AllBundlesScreen />} />
+                  <Route path="/viewBundle" element={<ViewBundleScreen />} />
+                  <Route path="/receiveBundle" element={<ReceiveBundle />} />
+                </Routes>
+              </TabNavigator>
+            </Router>
+          </SettingsContext>
         </UserContext>
       </AllUsersContext>
     </FluentProvider>

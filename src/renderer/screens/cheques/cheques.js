@@ -27,6 +27,7 @@ import {
   limit,
   orderBy,
   query,
+  where,
 } from 'firebase/firestore';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import React, { useEffect, useState } from 'react';
@@ -35,41 +36,63 @@ import './style.css';
 import { VerticalSpace1 } from '../../common/verticalSpace';
 import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
+import constants from '../../constants';
 
 export default function ChequesScreen() {
   const [chequeList, setChequeList] = useState([]);
+  const [filteredCheques, setFilteredCheques] = useState();
+
+  const fetchCheques = async () => {
+    const chequeCollection = collection(firebaseDB, 'cheques');
+
+    try {
+      const qs = query(
+        chequeCollection,
+        orderBy('entryNumber', 'desc'),
+        limit(10),
+      );
+      const querySnapshot = await getDocs(qs);
+      const chequesData = [];
+
+      querySnapshot.forEach((doc) => {
+        chequesData.push(doc.data());
+      });
+
+      const newData = await globalUtils.fetchPartyInfoForOrders(chequesData);
+      setChequeList(newData);
+    } catch (error) {
+      console.error('Error fetching documents: ', error);
+    }
+  };
+
+  const getFilteredTotal = () => {
+    if (!filteredCheques) return 0;
+
+    return filteredCheques.reduce(
+      (acc, cur) => acc + parseInt(cur.amount, 10),
+      0,
+    );
+  };
 
   useEffect(() => {
-    const fetchCheques = async () => {
-      const chequeCollection = collection(firebaseDB, 'cheques');
-
-      try {
-        const qs = query(
-          chequeCollection,
-          orderBy('entryNumber', 'desc'),
-          limit(10),
-        );
-        const querySnapshot = await getDocs(qs);
-        const chequesData = [];
-
-        querySnapshot.forEach((doc) => {
-          chequesData.push(doc.data());
-        });
-
-        const newData = await globalUtils.fetchPartyInfoForOrders(chequesData);
-        setChequeList(newData);
-      } catch (error) {
-        console.error('Error fetching documents: ', error);
-      }
-    };
-
     fetchCheques();
   }, []);
   return (
     <div className="cheques-screen">
       <center>
         <h3>Cheques</h3>
-        <ChequeEntryDialog />
+        <ChequeEntryDialog
+          onClose={() => {
+            fetchCheques();
+          }}
+        />
+        <VerticalSpace1 />
+        <FilterSection
+          setFilteredCheques={setFilteredCheques}
+          clearFilters={() => {
+            setFilteredCheques();
+          }}
+        />
         <VerticalSpace1 />
         <Table size="extra-small" className="cheques-table">
           <TableHeader className="table-header-container">
@@ -84,12 +107,134 @@ export default function ChequesScreen() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {chequeList.map((ch, i) => {
+            {(filteredCheques || chequeList).map((ch, i) => {
               return <ChequeTableRow data={ch} index={i} />;
             })}
+            {filteredCheques ? (
+              <TableRow>
+                <TableCustomCell />
+                <TableCustomCell />
+                <TableCustomCell />
+                <TableCustomCell>Total Amount</TableCustomCell>
+                <TableCustomCell>
+                  <b>{globalUtils.getCurrencyFormat(getFilteredTotal())}</b>
+                </TableCustomCell>
+                <TableCustomCell />
+                <TableCustomCell />
+              </TableRow>
+            ) : null}
           </TableBody>
         </Table>
       </center>
+    </div>
+  );
+}
+
+function FilterSection({ setFilteredCheques, clearFilters }) {
+  const [party, setParty] = useState();
+  const [chequeNumber, setChequeNumber] = useState('');
+  const [dateFrom, setDateFrom] = useState();
+  const [dateTo, setDateTo] = useState();
+
+  const onFilter = async () => {
+    try {
+      const chequesRef = collection(firebaseDB, 'cheques');
+
+      let dynamicQuery = chequesRef;
+
+      if (party) {
+        dynamicQuery = query(dynamicQuery, where('partyId', '==', party.id));
+      }
+      if (chequeNumber.length) {
+        dynamicQuery = query(
+          dynamicQuery,
+          where('chequeNumber', '==', chequeNumber),
+        );
+      }
+      if (dateFrom && dateTo) {
+        dynamicQuery = query(
+          dynamicQuery,
+          where('chequeDate', '>=', dateFrom.getTime()),
+          where('chequeDate', '<=', dateTo.getTime()),
+        );
+      }
+
+      if (dateFrom && dateTo) {
+        dynamicQuery = query(
+          dynamicQuery,
+          orderBy('chequeDate', 'desc'),
+          limit(10),
+        );
+      } else {
+        dynamicQuery = query(
+          dynamicQuery,
+          orderBy('entryNumber', 'desc'),
+          limit(10),
+        );
+      }
+
+      const newItems = await getDocs(dynamicQuery);
+
+      const chequesData = [];
+
+      newItems.forEach((doc) => {
+        chequesData.push(doc.data());
+      });
+
+      const newData = await globalUtils.fetchPartyInfoForOrders(chequesData);
+      setFilteredCheques(newData);
+    } catch (e) {
+      // eslint-disable-next-line no-alert
+      alert('Error filtering');
+      console.log(e);
+    }
+  };
+
+  return (
+    <div className="filter-section-container">
+      <div className="filter-section-item">
+        <PartySelector onPartySelected={setParty} />
+      </div>
+      <div className="filter-section-item">
+        <Input
+          value={chequeNumber}
+          onChange={(e) => setChequeNumber(e.target.value)}
+          placeholder="Cheque Number"
+        />
+      </div>
+      <div className="filter-section-item">
+        <DatePicker
+          placeholder="Date From"
+          value={dateFrom}
+          onSelectDate={setDateFrom}
+        />
+      </div>
+      <div className="filter-section-item">
+        <DatePicker
+          placeholder="Date To"
+          value={dateTo}
+          onSelectDate={setDateTo}
+        />
+      </div>
+
+      <Button
+        onClick={() => {
+          onFilter();
+        }}
+      >
+        Filter
+      </Button>
+      <Button
+        onClick={() => {
+          setParty();
+          setChequeNumber('');
+          setDateFrom();
+          setDateTo();
+          clearFilters();
+        }}
+      >
+        Clear Filters
+      </Button>
     </div>
   );
 }
@@ -120,13 +265,13 @@ function TableCustomCell({ children }) {
   return (
     <Tooltip content={children}>
       <TableCell className="cheque-table-cell">
-        <TableCellLayout>{children}</TableCellLayout>
+        <TableCellLayout>{children || '--'}</TableCellLayout>
       </TableCell>
     </Tooltip>
   );
 }
 
-function ChequeEntryDialog() {
+function ChequeEntryDialog({ onClose }) {
   const [showChequeEntryDialog, setShowChequeEntryDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [chequeNumber, setChequeNumber] = useState('');
@@ -145,7 +290,9 @@ function ChequeEntryDialog() {
     const chequeCollection = collection(firebaseDB, 'cheques');
 
     try {
-      const newEntryNumber = await globalUtils.getNewChequeEntryNumber();
+      const newEntryNumber = await globalUtils.getNewReceiptNumber(
+        constants.newReceiptCounters.CHEQUES,
+      );
       await addDoc(chequeCollection, {
         chequeNumber,
         partyId: party.id,
@@ -155,6 +302,8 @@ function ChequeEntryDialog() {
         timestamp: new Date().getTime(),
         entryNumber: newEntryNumber,
       });
+      globalUtils.incrementReceiptCounter(constants.newReceiptCounters.CHEQUES);
+      onClose();
       setShowChequeEntryDialog(false);
       setLoading(false);
     } catch (error) {
@@ -167,7 +316,10 @@ function ChequeEntryDialog() {
   return (
     <Dialog open={showChequeEntryDialog}>
       <DialogTrigger disableButtonEnhancement>
-        <Button onClick={() => setShowChequeEntryDialog(true)}>
+        <Button
+          appearance="primary"
+          onClick={() => setShowChequeEntryDialog(true)}
+        >
           Cheque Entry
         </Button>
       </DialogTrigger>
@@ -220,7 +372,9 @@ function ChequeEntryDialog() {
             <DialogTrigger disableButtonEnhancement>
               <Button
                 appearance="secondary"
-                onClick={() => setShowChequeEntryDialog(false)}
+                onClick={() => {
+                  setShowChequeEntryDialog(false);
+                }}
               >
                 Close
               </Button>

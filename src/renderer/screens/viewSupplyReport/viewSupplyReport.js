@@ -30,6 +30,7 @@ import {
   TableHeaderCell,
   TableRow,
   Text,
+  Tooltip,
   makeStyles,
   useId,
   useToastController,
@@ -349,8 +350,10 @@ function BillRow({ data, index, orderDetail }) {
 
 function TableCustomCell({ children }) {
   return (
-    <TableCell className="vsrc-table-cell">
-      <TableCellLayout>{children}</TableCellLayout>
-    </TableCell>
+    <Tooltip content={children}>
+      <TableCell className="vsrc-table-cell">
+        <TableCellLayout>{children}</TableCellLayout>
+      </TableCell>
+    </Tooltip>
   );
 }

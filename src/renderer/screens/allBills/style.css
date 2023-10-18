@@ -10,15 +10,10 @@
 }
 
 .all-bills-screen .all-bills-search-input-container {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-}
-
-.all-bills-screen .all-bills-search-input-container .input {
-  margin: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+  row-gap: 10px;
 }
 
 .all-bills-screen .bill-row {

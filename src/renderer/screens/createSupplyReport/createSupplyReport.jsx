@@ -21,7 +21,7 @@ import {
 } from '@fluentui/react-icons';
 import shortid from 'shortid';
 import { useLocation } from 'react-router-dom';
-import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, setDoc, updateDoc } from 'firebase/firestore';
 import BillSelector from '../../components/billSelector/billSelector';
 import AllUsersContext, { useAuthUser } from '../../contexts/allUsersContext';
 import constants from '../../constants';
@@ -30,6 +30,8 @@ import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import { firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
+import { useSettingsContext } from '../../contexts/settingsContext';
+import SelectUserDropdown from '../../common/selectUser';
 
 export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const location = useLocation();
@@ -149,6 +151,15 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           status: constants.firebase.supplyReportStatus.TOACCOUNTS,
         };
       }
+      // update party info
+      modifiedBills.forEach((b) => {
+        if (b.party.fileNumber) {
+          const partyRef = doc(firebaseDB, 'parties', b.partyId);
+          updateDoc(partyRef, {
+            fileNumber: b.party.fileNumber,
+          });
+        }
+      });
 
       const docRef = await setDoc(reportDocRef, supplyReport);
       showToast(dispatchToast, 'Forwarded to accounts', 'success');
@@ -231,10 +242,11 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
                 packet={getTotalPackets()}
               />
               <VerticalSpace2 />
-              <SelectSupplyMan
-                editable={editable}
-                supplyman={selectedSupplyman}
-                setSupplyman={setSelectedSupplyman}
+              <SelectUserDropdown
+                placeholder="Select a supplyman"
+                disabled={!editable}
+                user={selectedSupplyman}
+                setUser={setSelectedSupplyman}
               />
               <VerticalSpace2 />
               <Textarea
@@ -285,37 +297,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   );
 }
 
-function SelectSupplyMan({ supplyman, setSupplyman, editable }) {
-  const { allUsers } = useAuthUser();
-  if (!allUsers) {
-    return <div>Error loading all users</div>;
-  }
-  return (
-    <Dropdown
-      disabled={!editable}
-      size="large"
-      placeholder="Select a Supplyman"
-      style={{ width: '50%' }}
-      value={supplyman?.username || ''}
-      onOptionSelect={(ev, data) => {
-        setSupplyman(data.optionValue);
-      }}
-    >
-      {allUsers.map((option) => (
-        <Option value={option} key={option.id}>
-          <Image
-            src={option.profilePicture}
-            style={{ width: '30px', marginRight: '10px' }}
-            shape="circular"
-          />
-
-          {option.username}
-        </Option>
-      ))}
-    </Dropdown>
-  );
-}
-
 function TotalBagsComponent({ cases, polybags, packet }) {
   return (
     <div className="bag-row-total">
@@ -342,17 +323,36 @@ function TotalBagsComponent({ cases, polybags, packet }) {
 }
 
 function BillRow({ bill, updatedBill, remove, editable }) {
+  const { settings } = useSettingsContext();
+
   return (
     <>
       <Text className="party-name">{bill.party?.name}</Text>
       <Text className="bill-number">{bill.billNumber?.toUpperCase()}</Text>
+
+      <Dropdown
+        defaultValue={bill.party.fileNumber}
+        placeholder="File"
+        onOptionSelect={(_, e) => {
+          // bill has party object which will be updated
+          const newBill = { ...bill };
+          newBill.party = { ...bill.party, fileNumber: e.optionValue };
+          console.log(newBill);
+          updatedBill(newBill);
+        }}
+      >
+        {settings?.fileNumbers?.data.map((option) => (
+          <Option text={option} value={option} key={option}>
+            {option}
+          </Option>
+        ))}
+      </Dropdown>
       <Input
-        disabled={!editable}
+        disabled
+        value={bill.party.area}
         className="field"
-        width="100px"
-        placeholder="File..."
+        placeholder="Area..."
       />
-      <Input disabled={!editable} className="field" placeholder="Area..." />
 
       <SpinButton
         disabled={!editable}

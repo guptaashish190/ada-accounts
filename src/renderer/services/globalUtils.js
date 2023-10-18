@@ -5,6 +5,7 @@ import {
   onSnapshot,
   doc,
   getDoc,
+  updateDoc,
 } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import firebaseApp, { firebaseDB } from '../firebaseInit';
@@ -122,25 +123,36 @@ export default {
     );
     return date;
   },
-  getNewCashReceiptNumber: async () => {
-    const cashReceiptsCollectionRef = collection(firebaseDB, '/cashReceipts');
+  getNewReceiptNumber: async (counter) => {
+    const cashReceiptsRef = doc(firebaseDB, '/counters', counter.name);
 
-    const cashReceiptsDocs = await getDocs(cashReceiptsCollectionRef);
+    const cashReceiptsDoc = await getDoc(cashReceiptsRef);
+    let counter1;
 
-    const newCashReceiptNumber = cashReceiptsDocs.size + 1;
+    if (!cashReceiptsDoc.exists()) {
+      counter1 = 1;
+    } else {
+      counter1 = cashReceiptsDoc.data().counter + 1;
+    }
 
     // Use String.prototype.padStart to add leading zeros
-    return `CR-${String(newCashReceiptNumber).padStart(6, '0')}`;
+    return `${counter.prefix}-${String(counter).padStart(6, '0')}`;
   },
-  getNewChequeEntryNumber: async () => {
-    const chequesCollectionRef = collection(firebaseDB, '/cheques');
+  incrementReceiptCounter: async (counter) => {
+    const cashReceiptsRef = doc(firebaseDB, '/counters', counter.name);
 
-    const chequesCollectionDocs = await getDocs(chequesCollectionRef);
+    const cashReceiptsDoc = await getDoc(cashReceiptsRef);
+    let counter1;
 
-    const newChequeNumber = chequesCollectionDocs.size + 1;
-
-    // Use String.prototype.padStart to add leading zeros
-    return `${String(newChequeNumber).padStart(6, '0')}`;
+    if (!cashReceiptsDoc.exists()) {
+      updateDoc(cashReceiptsRef, {
+        counter: 1,
+      });
+    } else {
+      updateDoc(cashReceiptsRef, {
+        counter: cashReceiptsDoc.data().counter + 1,
+      });
+    }
   },
 };
 

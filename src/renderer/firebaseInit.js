@@ -2,6 +2,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
 import {
+  disableNetwork,
   getFirestore,
   initializeFirestore,
   persistentLocalCache,
@@ -25,10 +26,9 @@ const firebaseConfig = {
 // Initialize Firebase
 
 const firebaseApp = initializeApp(firebaseConfig);
+
 initializeFirestore(firebaseApp, {
-  localCache: persistentLocalCache(
-    /* settings */ { tabManager: persistentMultipleTabManager() },
-  ),
+  localCache: persistentLocalCache(/* settings */ {}),
 });
 
 export default firebaseApp;
