@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "ashishdrugagencies-e5b9a",
+  "private_key_id": "cbcba4b7694ef61f36535f0a2c441e633eeceb2f",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDLGID8kKYGXaiq\ntcYUmK6kjUT7WNv2F9U0ORtWzs/xAvUaoMkpo0MSQ40K/nbW9DT0mWXOQv7hTw8x\nufnxsvyRnE5nffK3eXiccwr6CbK74pAQGrcHkQmP2kLHzKDkab+ntvaGGxwHsXG3\n7tusunaFsterDc5ppE2xHSO4H8F/uikBgv3u+ZgxsaJJSfo6c3hS7fBmigPKrJfA\nP/SLP6pF60ZAX2CYWd0OmOhiX7rarx10h+egFr7qmZSwKwUzkOO0cZoQYh70Bg8/\nTDivIa0NH2o1XM01fdxOXwW5tDKVHQu0tf2uj7gwcUFntxEqs+6nruWDeAIX0nCm\npf0jI/vZAgMBAAECggEADHBtxgpeANnPsNT9UtmfKLj2Vqa0ojgHePFeeUylc8+I\nj571czVqsD2u79NyF+xRKgITODTmQ4qCFbucUW9zBMAcFT6jlRU9i+eH7pSVe+h+\nhl38g9wgR81IddBUsmi/slgEdWZHqzj1DBz3G3c4NywjBXkNAW9sysJMI8TeJyJ1\nsuCOfBcM1AiYQMVx7HIBS8bLIDVtqH1dIaBl56EsGCO/Ufyp/Q6NwkrpElaKsFZz\n0gvT+sq5qcdbGsuO4rOOzGkr9rb5p+p5hKH4U+lFIK3aWPTe+9iLmhZY0cwRCPLp\ntrauegrBdAwbWPf2YzHFh4mIySnfpD4/9ZvTmKyaWQKBgQD+d2J9MPOV6OPsbdrj\nZwemg5CmiTxoBVhvOIEQoSyFoVwcMx/fSzGTxiQ/P2hVmhiCsgZDrpVRp/cWEY0n\nP02BHm3hsiA1KUbhQaZN0Rhk85nhppCC0zDSQc3clL7CqCmi41HM2QciAuhkGfS4\nqdIPC1GVgAS7FyLKeG5zwrHbBwKBgQDMUdwMHfkx65lEgKKTlIq0O0TeRdyawW/c\nkp4jj9NiS4l1c+3/+tnJ7juOp0ObaA6fUeYmpXBOO43m8uMmIgbUPPvqYF2yP9Un\nq4lIwRt0nn9YayICpzW7b41GukR3pD+k62MYK424kO1Jp9sh1jScDS5607QF8WL5\n/gPtmhZaHwKBgHm2utostuYmbhaheQg6OLORzHeLvuP2YpVYTouYvAXy527pmT4h\n5kXLiXzjJFGFkmG5KzvmXq+fCpV4sa5rHfQ7jM1eeP9Ujf2ifBxOfj+TMTB4jji1\nMW3wYbo3P4M2EixCVNcJm9rNz0BKFf7Z44qknFJI2Hpwl4iG0DX4kz+zAoGAWfyz\nraKF3jalikYdVGJXtIlmC385ae9IFR1+CKuPrfsWz2P/rn4M7aK/GFUSsZ9i0UiA\n1QSIMeyI0u6mnGTgHRm+2bsXiSoT9yTVkfV64iHsdES69fAu+h5nWn8vKIJuhXQm\ncL697EvoNkh3eq+c/B3SGsaiwvtNXE1D7aGvtoECgYBDMr8o3a2vmxRPvah8QCWx\nTfH8diI6nB/FDgV9uFeAERspG2PoPpJFgvKVq81YH0i3a2JZ/uvuVTofKY9oeZiX\nrRZVuKIlf7FLhP0GUQnOFEVWJ3gWJOlrWxq4h+UfqY7Cqwa3xsEUfFln+SXGETgx\n5OYiJe44Q+B4yS/FL9gvCg==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-vcgq7@ashishdrugagencies-e5b9a.iam.gserviceaccount.com",
+  "client_id": "106610856451344896688",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-vcgq7%40ashishdrugagencies-e5b9a.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
