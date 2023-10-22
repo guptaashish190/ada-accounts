@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Text } from '@fluentui/react-components';
@@ -23,6 +23,7 @@ export default function PendingSupplyReports() {
       const q = query(
         supplyReportsCollection,
         where('status', '==', 'To Accounts'),
+        orderBy('timestamp', 'desc'),
       );
 
       // Execute the query and get the documents
@@ -77,7 +78,7 @@ function SupplyReportRow({ data }) {
       <div className="supply-report-row">
         <div style={{ width: '100%' }}>
           <div className="top-row">
-            <Text className="sr-id">{data.timestamp}</Text>
+            <Text className="sr-id">{data.receiptNumber}</Text>
             <Text className="sr-timestamp">
               {new Date(data.timestamp).toLocaleString()}
             </Text>

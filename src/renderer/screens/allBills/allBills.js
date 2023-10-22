@@ -64,10 +64,9 @@ export default function AllBillsScreen() {
 
       const orderList = [];
       querySnapshot.forEach((doc) => {
-        orderList.push(doc.data());
+        orderList.push({ ...doc.data(), id: doc.id });
       });
 
-      console.log(orderList);
       setFilteredOrders(orderList);
     } catch (error) {
       console.error('Error fetchisng parties: ', error);
@@ -87,8 +86,6 @@ export default function AllBillsScreen() {
       mrId: queryMR,
     };
 
-    console.log(filters);
-
     for (const field in filters) {
       if (filters[field]) {
         dynamicQuery = query(dynamicQuery, where(field, '==', filters[field]));
@@ -100,7 +97,10 @@ export default function AllBillsScreen() {
       setLoading(true);
       try {
         const querySnapshot = await getDocs(dynamicQuery);
-        const orderData = querySnapshot.docs.map((doc) => doc.data());
+        const orderData = querySnapshot.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
         console.log(orderData.length);
         setFilteredOrders(orderData);
       } catch (error) {
@@ -127,11 +127,11 @@ export default function AllBillsScreen() {
       <div className="all-bills-screen">
         <h3>Search Bills</h3>
         <div className="all-bills-search-input-container">
-          <PartySelector onPartySelected={(p) => setQueryPartyId(p.id)} />
+          <PartySelector onPartySelected={(p) => setQueryPartyId(p?.id)} />
 
           <Dropdown
             onOptionSelect={(_, e) => setQueryWith(e.optionValue)}
-            className="dropdown"
+            className="dropdown filter-input"
             placeholder="With"
           >
             <Option
@@ -155,12 +155,12 @@ export default function AllBillsScreen() {
             onChange={(_, e) => setQueryBillNumber(e.value)}
             contentBefore="T-"
             type="number"
-            className="input"
+            className="filter-input"
             placeholder="Bill No."
           />
           <Dropdown
             onOptionSelect={(_, e) => setQueryMR(e.optionValue)}
-            className="dropdown"
+            className="dropdown filter-input"
             placeholder="MR"
           >
             {allUsers.map((user) => (
@@ -181,22 +181,24 @@ export default function AllBillsScreen() {
         <VerticalSpace1 />
         <div className="all-bills-row-header" />
         <VerticalSpace1 />
-        <div className="all-bills-header">
-          <div />
-          <div>Party Name</div>
-          <div>Bill No.</div>
-          <div>Date</div>
-          <div>With</div>
-          <div>MR</div>
-          <div>Amount</div>
-        </div>
-        {loading ? (
-          <Spinner />
-        ) : (
-          filteredOrders.map((sr, index) => {
-            return <BillRow data={sr} index={index} />;
-          })
-        )}
+        <table className="all-bills-header">
+          <tr>
+            <th>Party Name</th>
+            <th>Bill No.</th>
+            <th>Date</th>
+            <th>With</th>
+            <th>MR</th>
+            <th>Amount</th>
+            <th>Balance</th>
+          </tr>
+          {loading ? (
+            <Spinner />
+          ) : (
+            filteredOrders.map((sr, index) => {
+              return <BillRow data={sr} index={index} />;
+            })
+          )}
+        </table>
       </div>
     </center>
   );
@@ -222,6 +224,7 @@ function BillRow({ data, index }) {
   };
 
   const getMrUser = async () => {
+    if (!data.mrId) return;
     const user1 = await globalUtils.fetchUserById(data.mrId);
     setMrUser(user1.username);
   };
@@ -233,17 +236,17 @@ function BillRow({ data, index }) {
   return (
     <Dialog>
       <DialogTrigger>
-        <div className="bill-row">
-          <Text style={{ color: '#aaa' }}>{index + 1}.</Text>
-          <Text>{party?.name || '--'}</Text>
-          <Text>
+        <tr className="bill-row">
+          <td>{party?.name || '--'}</td>
+          <td>
             <b>{data.billNumber?.toUpperCase() || '--'}</b>
-          </Text>
-          <Text>{new Date(data.creationTime).toLocaleDateString()}</Text>
-          <Text>{withUser || '--'}</Text>
-          <Text>{mrUser || '--'}</Text>
-          <Text>{globalUtils.getCurrencyFormat(data.orderAmount)}</Text>
-        </div>
+          </td>
+          <td>{new Date(data.creationTime).toLocaleDateString()}</td>
+          <td>{withUser || '--'}</td>
+          <td>{mrUser || '--'}</td>
+          <td>{globalUtils.getCurrencyFormat(data.orderAmount)}</td>
+          <td>{globalUtils.getCurrencyFormat(data.balance)}</td>
+        </tr>
       </DialogTrigger>
       <DialogSurface>
         <BillDetailDialog

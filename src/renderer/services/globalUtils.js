@@ -6,6 +6,8 @@ import {
   doc,
   getDoc,
   updateDoc,
+  addDoc,
+  setDoc,
 } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import firebaseApp, { firebaseDB } from '../firebaseInit';
@@ -103,6 +105,17 @@ export default {
     });
     return formatter.format(num);
   },
+  getDaysPassed: (time) => {
+    // Get the current time in milliseconds since the epoch
+    const currentTimeMillis = Date.now();
+
+    // Calculate the time difference in milliseconds
+    const timeDifferenceMillis = currentTimeMillis - time;
+
+    // Convert the time difference to the number of days
+    const daysPassed = Math.floor(timeDifferenceMillis / (1000 * 60 * 60 * 24));
+    return daysPassed;
+  },
   getTimeFormat: (millisecondsSinceEpoch, dateOnly = false) => {
     if (!millisecondsSinceEpoch) return null;
     if (dateOnly) {
@@ -136,16 +149,15 @@ export default {
     }
 
     // Use String.prototype.padStart to add leading zeros
-    return `${counter.prefix}-${String(counter).padStart(6, '0')}`;
+    return `${counter.prefix}-${String(counter1).padStart(6, '0')}`;
   },
   incrementReceiptCounter: async (counter) => {
     const cashReceiptsRef = doc(firebaseDB, '/counters', counter.name);
 
     const cashReceiptsDoc = await getDoc(cashReceiptsRef);
-    let counter1;
 
     if (!cashReceiptsDoc.exists()) {
-      updateDoc(cashReceiptsRef, {
+      setDoc(cashReceiptsRef, {
         counter: 1,
       });
     } else {

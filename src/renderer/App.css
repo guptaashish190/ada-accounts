@@ -13,3 +13,31 @@ body {
 :root {
   --green: #06d6a0;
 }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table tr:nth-child(1) {
+  background-color: #698fffc6;
+  color: white;
+}
+
+table tr:not(:nth-child(1)):hover {
+  background-color: #a6bcff1f;
+}
+
+table * {
+  padding: 10px;
+  font-size: 13px;
+  width: 100%;
+  text-wrap: nowrap;
+}
+table td {
+  border: 1px solid #547fff36;
+}
+
+.filter-input {
+  border: 1px solid #ddd !important;
+}

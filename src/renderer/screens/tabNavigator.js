@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import './tabNavigator.css';
 import { Tab, TabList, Text } from '@fluentui/react-components';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function TabNavigator({ children }) {
   const navigate = useNavigate();
   const [currentMenu, setCurrentMenu] = useState(0);
+  const location = useLocation();
+  const { pathname, search, hash } = location;
+
+  console.log(pathname);
   const tabs = [
     {
       name: 'Supply Report',
@@ -68,8 +72,37 @@ export default function TabNavigator({ children }) {
     },
     {
       name: 'Settings',
-      route: '/settings',
+      route: '/partyListSettings',
       key: 'tab-settings',
+      submenu: [
+        {
+          name: 'Parties',
+          route: '/partyListSettings',
+          key: 'tab-settings',
+        },
+        {
+          name: 'File Numbers',
+          route: '/settings',
+          key: 'tab-settings-filen',
+        },
+      ],
+    },
+    {
+      name: 'Credit Notes',
+      route: '/creditNotes',
+      key: 'tab-creditNotes',
+      submenu: [
+        {
+          name: 'Credit Notes',
+          route: '/creditNotes',
+          key: 'tab-creditNotes',
+        },
+        {
+          name: 'Create C/N',
+          route: '/createCreditNotes',
+          key: 'tab-createcreditNotes',
+        },
+      ],
     },
   ];
 

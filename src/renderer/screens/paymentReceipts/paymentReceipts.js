@@ -34,7 +34,6 @@ export default function PaymentReceipts() {
           return (
             <Card
               onClick={() => {
-                console.log(rc);
                 navigate('/createPaymentReceipts', {
                   state: { ...rc, view: true },
                 });

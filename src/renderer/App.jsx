@@ -34,6 +34,10 @@ import SettingsContext from './contexts/settingsContext';
 import AllBundlesScreen from './screens/bundles/bundlesScreen';
 import ViewBundleScreen from './screens/bundles/viewBundle/viewBundle';
 import ReceiveBundle from './screens/bundles/receiveBundle/receiveBundle';
+import CreditNoteScreen from './screens/creditNote/creditNoteScreen';
+import CreateCreditNoteScreen from './screens/creditNote/createCreditNotes/createCNScreen';
+import PartyListScreen from './screens/settings/partyList/partyList';
+import PartyDetailsScreen from './screens/settings/partyList/partyDetails/partyDetails';
 
 const myNewTheme = {
   10: '#010304',
@@ -62,7 +66,7 @@ const darkTheme = {
   ...createDarkTheme(myNewTheme),
 };
 
-export default function App() {
+export default function App({ routeProps, startRoute }) {
   const testLogin = async () => {
     try {
       const auth = getAuth();
@@ -73,6 +77,7 @@ export default function App() {
   };
   useEffect(() => {
     testLogin();
+    console.log(startRoute, routeProps);
   }, []);
 
   return (
@@ -123,6 +128,19 @@ export default function App() {
                   <Route path="/bundles" element={<AllBundlesScreen />} />
                   <Route path="/viewBundle" element={<ViewBundleScreen />} />
                   <Route path="/receiveBundle" element={<ReceiveBundle />} />
+                  <Route path="/creditNotes" element={<CreditNoteScreen />} />
+                  <Route
+                    path="/partyListSettings"
+                    element={<PartyListScreen />}
+                  />
+                  <Route
+                    path="/createCreditNotes"
+                    element={<CreateCreditNoteScreen />}
+                  />
+                  <Route
+                    path="/partyDetails"
+                    element={<PartyDetailsScreen />}
+                  />
                 </Routes>
               </TabNavigator>
             </Router>

@@ -43,6 +43,7 @@ export default function PartySelector({
 
   return (
     <Combobox
+      className="filter-input"
       onInput={(e) => {
         setQueryPartyName(e.target.value);
       }}

@@ -45,7 +45,10 @@ export default function BillSelector({ onBillsAdded }) {
       ),
     );
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const snapshotDocData = snapshot.docs.map((sn) => sn.data());
+      const snapshotDocData = snapshot.docs.map((sn) => ({
+        ...sn.data(),
+        id: sn.id,
+      }));
       const allOrders =
         await globalUtils.fetchPartyInfoForOrders(snapshotDocData);
       setOrdersList(allOrders);

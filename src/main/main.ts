@@ -25,6 +25,7 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let childWindow: BrowserWindow | null = null;
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -56,6 +57,10 @@ const installExtensions = async () => {
     )
     .catch(console.log);
 };
+
+ipcMain.on('create-child-window', (event, arg) => {
+  createChildWindow('cashReceiptWindow');
+});
 
 const createWindow = async () => {
   if (isDebug) {
@@ -95,6 +100,8 @@ const createWindow = async () => {
     }
   });
 
+  ipcMain.emit('main-window-route');
+
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -113,9 +120,53 @@ const createWindow = async () => {
   new AppUpdater();
 };
 
-/**
- * Add event listeners...
- */
+const createChildWindow = async (arg) => {
+  const RESOURCES_PATH = app.isPackaged
+    ? path.join(process.resourcesPath, 'assets')
+    : path.join(__dirname, '../../assets');
+
+  const getAssetPath = (...paths: string[]): string => {
+    return path.join(RESOURCES_PATH, ...paths);
+  };
+
+  childWindow = new BrowserWindow({
+    show: false,
+    width: 800,
+    height: 600,
+    icon: getAssetPath('icon.png'),
+    webPreferences: {
+      preload: app.isPackaged
+        ? path.join(__dirname, 'preload.js')
+        : path.join(__dirname, '../../.erb/dll/preload.js'),
+    },
+  });
+
+  childWindow.loadURL(resolveHtmlPath(`${arg}/index.html`));
+
+  childWindow.on('ready-to-show', () => {
+    if (!childWindow) {
+      throw new Error('"mainWindow" is not defined');
+    }
+    if (process.env.START_MINIMIZED) {
+      childWindow.minimize();
+    } else {
+      childWindow.show();
+    }
+  });
+
+  childWindow.on('closed', () => {
+    childWindow = null;
+  });
+
+  const menuBuilder = new MenuBuilder(childWindow);
+  menuBuilder.buildMenu();
+
+  // Open urls in the user's browser
+  childWindow.webContents.setWindowOpenHandler((edata) => {
+    shell.openExternal(edata.url);
+    return { action: 'deny' };
+  });
+};
 
 app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even

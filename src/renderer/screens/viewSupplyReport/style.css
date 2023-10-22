@@ -26,30 +26,6 @@
   font-weight: bold;
   color: rgb(102, 205, 188);
 }
-.view-supply-report-container .table-header-container {
-  background-color: #698fffc6;
-}
-
-.view-supply-report-container .vsrc-table-cell {
-  padding: 10px;
-}
-.view-supply-report-container .table-header-container * {
-  color: rgb(255, 255, 255);
-  font-weight: bold;
-}
-.view-supply-report-container .vsrc-table {
-  box-shadow: 3px 3px 5px rgba(146, 146, 146, 0.302);
-  border: 1px solid rgba(146, 146, 146, 0.302);
-  border-radius: 10px;
-}
-
-.view-supply-report-container .vsrc-table-row {
-  border-bottom: 1px solid #dddddd4e;
-  text-overflow: ellipsis;
-  background-color: white;
-  text-wrap: nowrap;
-  width: 100%;
-}
 
 .view-supply-report-container .vsrc-detail-items {
   display: flex;

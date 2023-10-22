@@ -46,6 +46,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [editable, setEditable] = useState(true);
+  const [srNumber, setSrNumber] = useState();
 
   const prefillState = async () => {
     setLoading(true);
@@ -76,10 +77,18 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     }
   };
 
+  const getNewSupplyReportNumber = async () => {
+    const srNumber1 = await globalUtils.getNewReceiptNumber(
+      constants.newReceiptCounters.SUPPLYREPORTS,
+    );
+    setSrNumber(srNumber1);
+  };
+
   useEffect(() => {
     if (prefillSupplyReport) {
       prefillState();
     }
+    getNewSupplyReportNumber();
   }, []);
 
   const addBills = (b) => {
@@ -149,6 +158,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           supplymanId: selectedSupplyman.uid,
           id: reportDocRef.id,
           status: constants.firebase.supplyReportStatus.TOACCOUNTS,
+          receiptNumber: srNumber,
         };
       }
       // update party info
@@ -162,6 +172,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       });
 
       const docRef = await setDoc(reportDocRef, supplyReport);
+      await globalUtils.incrementReceiptCounter(
+        constants.newReceiptCounters.SUPPLYREPORTS,
+      );
       showToast(dispatchToast, 'Forwarded to accounts', 'success');
       if (!save) {
         resetScreenState();

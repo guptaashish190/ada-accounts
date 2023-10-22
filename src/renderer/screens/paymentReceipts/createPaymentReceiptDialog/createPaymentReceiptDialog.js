@@ -41,6 +41,7 @@ import './style.css';
 import { showToast } from '../../../common/toaster';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
+import { useAuthUser } from '../../../contexts/allUsersContext';
 
 export default function CreatePaymentReceiptDialog({
   open,
@@ -56,6 +57,7 @@ export default function CreatePaymentReceiptDialog({
   const [editable, setEditable] = useState(inputsEnabled || !state?.view);
   const { dispatchToast } = useToastController(toasterId);
   const [currentReceiptNumber, setCurrentReceiptNumber] = useState();
+  const { allUsers } = useAuthUser();
 
   const getTotal = () => {
     return prItems.reduce(
@@ -159,6 +161,38 @@ export default function CreatePaymentReceiptDialog({
           ) : (
             <h3>Cash Receipt: {state.cashReceiptNumber}</h3>
           )}
+          {state.view ? (
+            <div className="vsrc-detail-items-container">
+              <div className="vsrc-detail-items">
+                <div className="label">Created At: </div>
+                <div className="value">
+                  {globalUtils.getTimeFormat(state?.timestamp)}
+                </div>
+              </div>
+              <div className="vsrc-detail-items">
+                <div className="label">Created By: </div>
+                <div className="value">
+                  {
+                    allUsers.find((x) => x.uid === state.createdByUserId)
+                      ?.username
+                  }
+                </div>
+              </div>
+              <div className="vsrc-detail-items">
+                <Button
+                  className="label"
+                  onClick={() => {
+                    navigate('/viewSupplyReport', {
+                      state: { supplyReportId: state.supplyReportId },
+                    });
+                  }}
+                >
+                  Supply Report{' '}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
           <VerticalSpace1 />
           {!editable && !state?.view ? (
             <>
@@ -191,7 +225,7 @@ export default function CreatePaymentReceiptDialog({
           <VerticalSpace1 />
 
           <table size="extra-small" className="vsrc-table">
-            <tr className="table-header-container">
+            <tr style={{ width: '100%' }} className="table-header-container">
               <th>Party</th>
               <th>Area</th>
               <th>File</th>
@@ -240,27 +274,17 @@ export default function CreatePaymentReceiptDialog({
 function PaymentReceiptRow({ pr, setAmount, amount, editable, onDelete }) {
   return (
     <tr className="vsrc-table-row" key={`pri-${pr.party?.id}`}>
-      <td>
-        <Text style={{ textWrap: 'nowrap', width: '200px' }}>
-          {pr.party?.name}
-        </Text>
-      </td>{' '}
-      <td>
-        <Text>{pr.party?.area || '--'}</Text>
-      </td>
-      <td>
-        <Text>{pr.party?.fileNumber || '--'}</Text>
-      </td>
+      <td>{pr.party?.name}</td> <td>{pr.party?.area || '--'}</td>
+      <td>{pr.party?.fileNumber || '--'}</td>
       <td>
         <Input
           disabled={!editable}
           size="large"
           value={amount}
-          style={{ fontWeight: 'bold' }}
+          style={{ fontWeight: 'bold', width: '150px' }}
           appearance="filled-lighter-shadow"
           onChange={(e, v) => setAmount(e.target.value)}
           type="number"
-          contentBefore="₹"
         />
       </td>
       <td>
@@ -274,13 +298,5 @@ function PaymentReceiptRow({ pr, setAmount, amount, editable, onDelete }) {
         </Button>
       </td>
     </tr>
-  );
-}
-
-function td({ children }) {
-  return (
-    <TableCell width={100} className="vsrc-table-cell">
-      <TableCellLayout>{children}</TableCellLayout>
-    </TableCell>
   );
 }

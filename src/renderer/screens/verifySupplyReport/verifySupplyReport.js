@@ -169,7 +169,7 @@ export default function VerifySupplyReport() {
       <center>
         {loading ? <Loader /> : null}
         <h3>Verify Supply Report</h3>
-        ID: {supplyReport?.id}{' '}
+        ID: {supplyReport?.receiptNumber || '--'}{' '}
         <span style={{ color: 'grey' }}>
           (Supplyman: {supplymanUser?.username})
         </span>
@@ -459,7 +459,7 @@ function OldBillRow({
             disabled={disabled}
             className="old-bill"
             appearance="subtle"
-            style={{ color: '#F25C54' }}
+            style={{ color: disabled ? '#dddddd' : '#F25C54' }}
             onClick={() => onAttachBill()}
           >
             Attach Bill

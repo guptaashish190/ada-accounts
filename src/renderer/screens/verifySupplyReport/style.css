@@ -26,7 +26,7 @@
   text-align: left;
 }
 .verify-supply-report .party-old-bills {
-  width: 80%;
+  width: 90%;
 }
 
 .verify-supply-report .party-old-bills-header {
@@ -51,7 +51,7 @@
 
 .verify-supply-report .supplementary-bill-row {
   display: grid;
-  width: 80%;
+  width: 90%;
   grid-template-columns: 2fr 2fr 2fr 1fr 1fr 0.5fr;
   align-items: center;
 }

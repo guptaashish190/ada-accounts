@@ -27,8 +27,8 @@ import {
   TableCell,
   TableCellLayout,
   TableHeader,
-  TableHeaderCell,
-  TableRow,
+  th,
+  tr,
   Text,
   Tooltip,
   makeStyles,
@@ -49,7 +49,9 @@ export default function ViewSupplyReportScreen() {
   const { allUsers } = useAuthUser();
   const { state } = useLocation();
   const navigate = useNavigate();
-  const supplyReport = state.prefillSupplyReport;
+  const supplyReportState = state.prefillSupplyReport;
+  const supplyReportIdState = state.supplyReportId;
+  const [supplyReport, setSupplyReport] = useState(supplyReportState);
   const [allBills, setAllBills] = useState([]);
   const [receivedBills, setReceivedBills] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,8 +59,38 @@ export default function ViewSupplyReportScreen() {
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
+  // Fetch the document data
+  const fetchSupplyReport = async () => {
+    try {
+      setLoading(true);
+      const supplyReportRef = doc(
+        firebaseDB,
+        'supplyReports',
+        supplyReportIdState,
+      );
+      const docSnapshot = await getDoc(supplyReportRef);
+      if (docSnapshot.exists()) {
+        setSupplyReport(docSnapshot.data());
+      } else {
+        console.log('Document not found.');
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching document:', error);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    getAllBills();
+    if (supplyReport) {
+      getAllBills();
+    }
+  }, [supplyReport]);
+
+  useEffect(() => {
+    if (supplyReportIdState) {
+      fetchSupplyReport();
+    }
   }, []);
 
   const getAllBills = async () => {
@@ -92,7 +124,7 @@ export default function ViewSupplyReportScreen() {
   return (
     <center>
       <div className="view-supply-report-container">
-        <h3>Supply Report: {supplyReport.id}</h3>
+        <h3>Supply Report: {supplyReport.receiptNumber}</h3>
         <VerticalSpace1 />
         <div className="vsrc-detail-items-container">
           <div className="vsrc-detail-items">
@@ -140,51 +172,31 @@ export default function ViewSupplyReportScreen() {
         </div>
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>Received Bills</h3>
-        <Table size="extra-small" className="vsrc-table">
-          <TableHeader className="table-header-container">
-            <TableRow>
-              <TableHeaderCell key="vsrc-thc-billnumber">
-                BILL NO.
-              </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell">
-                PARTY
-              </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-amount vsrc-table-cell">
-                AMOUNT
-              </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell2">
-                CASH
-              </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell3">
-                CHEQUE
-              </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell4">
-                UPI
-              </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell5">
-                SCHEDULED
-              </TableHeaderCell>
-              <TableHeaderCell key="vsrc-thc-partyname">
-                ACC NOTES
-              </TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {allBills.map((bill, i) => {
-              return (
-                <BillRow
-                  orderDetail={
-                    supplyReport.orderDetails &&
-                    supplyReport.orderDetails.find((x) => x.billId === bill.id)
-                  }
-                  key={`rsr-${bill.id}`}
-                  data={bill}
-                  index={i}
-                />
-              );
-            })}
-          </TableBody>
-        </Table>
+        <table>
+          <tr>
+            <th>BILL NO.</th>
+            <th>PARTY</th>
+            <th>AMOUNT</th>
+            <th>CASH</th>
+            <th>CHEQUE</th>
+            <th>UPI</th>
+            <th>SCHEDULED</th>
+            <th>ACC NOTES</th>
+          </tr>
+          {allBills.map((bill, i) => {
+            return (
+              <BillRow
+                orderDetail={
+                  supplyReport.orderDetails &&
+                  supplyReport.orderDetails.find((x) => x.billId === bill.id)
+                }
+                key={`rsr-${bill.id}`}
+                data={bill}
+                index={i}
+              />
+            );
+          })}
+        </table>
 
         {supplyReport.otherAdjustedBills?.length ? (
           <>
@@ -195,6 +207,14 @@ export default function ViewSupplyReportScreen() {
             />
           </>
         ) : null}
+
+        {supplyReport.returnedBills?.length ? (
+          <>
+            <VerticalSpace2 />
+            <h3 style={{ color: 'grey' }}>Returned Goods Bills</h3>
+            <ReturnedBillsTable returnedBills={supplyReport.returnedBills} />
+          </>
+        ) : null}
         <VerticalSpace2 />
       </div>
     </center>
@@ -203,22 +223,19 @@ export default function ViewSupplyReportScreen() {
 
 function OtherAdjustedBills({ otherAdjustedBills }) {
   return (
-    <Table size="extra-small" className="vsrc-table">
-      <TableHeader className="table-header-container">
-        <TableRow>
-          <TableHeaderCell>BILL NO.</TableHeaderCell>
-          <TableHeaderCell>PARTY</TableHeaderCell>
-          <TableHeaderCell>CASH</TableHeaderCell>
-          <TableHeaderCell>CHEQUE</TableHeaderCell>
-          <TableHeaderCell>UPI</TableHeaderCell>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {otherAdjustedBills?.map((bill, i) => {
-          return <OtherAdjustedBillsRow data={bill} index={i} />;
-        })}
-      </TableBody>
-    </Table>
+    <table size="extra-small">
+      <tr>
+        <th>BILL NO.</th>
+        <th>PARTY</th>
+        <th>CASH</th>
+        <th>CHEQUE</th>
+        <th>UPI</th>
+      </tr>
+
+      {otherAdjustedBills?.map((bill, i) => {
+        return <OtherAdjustedBillsRow data={bill} index={i} />;
+      })}
+    </table>
   );
 }
 
@@ -263,11 +280,11 @@ function OtherAdjustedBillsRow({ data, index }) {
 
   if (loading) {
     return (
-      <TableRow className="vsrc-table-row">
+      <tr>
         <TableCustomCell>
           <Spinner />
         </TableCustomCell>
-      </TableRow>
+      </tr>
     );
   }
   if (!order || !party) {
@@ -275,7 +292,7 @@ function OtherAdjustedBillsRow({ data, index }) {
   }
 
   return (
-    <TableRow className="vsrc-table-row">
+    <tr>
       <TableCustomCell>
         <b>{order.billNumber?.toUpperCase()}</b>
       </TableCustomCell>
@@ -296,7 +313,7 @@ function OtherAdjustedBillsRow({ data, index }) {
           data.payments.find((x) => x.type === 'upi')?.amount,
         ) || '--'}
       </TableCustomCell>
-    </TableRow>
+    </tr>
   );
 }
 
@@ -311,14 +328,12 @@ function BillRow({ data, index, orderDetail }) {
   };
 
   return (
-    <TableRow className="vsrc-table-row">
+    <tr>
       <TableCustomCell>
         <b>{data.billNumber?.toUpperCase()}</b>
       </TableCustomCell>
       <TableCustomCell>
-        <div style={{ color: 'grey', fontSize: '0.9em' }}>
-          {data.party.name}
-        </div>
+        <div>{data.party.name}</div>
       </TableCustomCell>
       <TableCustomCell>
         <b>{globalUtils.getCurrencyFormat(data.orderAmount)}</b>
@@ -344,16 +359,95 @@ function BillRow({ data, index, orderDetail }) {
           : '--'}
       </TableCustomCell>
       <TableCustomCell>{orderDetail?.accountsNotes || '--'}</TableCustomCell>
-    </TableRow>
+    </tr>
   );
 }
 
 function TableCustomCell({ children }) {
   return (
     <Tooltip content={children}>
-      <TableCell className="vsrc-table-cell">
-        <TableCellLayout>{children}</TableCellLayout>
-      </TableCell>
+      <td>{children}</td>
     </Tooltip>
+  );
+}
+
+function ReturnedBillsTable({ returnedBills }) {
+  return (
+    <table size="extra-small" className="vsrc-table">
+      <tr className="table-header-container">
+        <th>BILL NO.</th>
+        <th>PARTY</th>
+        <th>AMOUNT</th>
+        <th>REMARKS</th>
+      </tr>
+      {returnedBills?.map((bill, i) => {
+        return <ReturnedBillRow data={bill} index={i} />;
+      })}
+    </table>
+  );
+}
+function ReturnedBillRow({ data, index }) {
+  const [order, setOrder] = useState();
+  const [party, setParty] = useState();
+
+  const [loading, setLoading] = useState(false);
+
+  const fetchOrderAndParty = async () => {
+    try {
+      setLoading(true);
+      // Fetch the order using orderId
+      const orderRef = doc(firebaseDB, 'orders', data.billId);
+      const orderSnapshot = await getDoc(orderRef);
+      if (orderSnapshot.exists()) {
+        const fetchedOrder = orderSnapshot.data();
+        setOrder(fetchedOrder);
+
+        // Fetch party information using partyId from the fetched order
+        const partyRef = doc(firebaseDB, 'parties', fetchedOrder.partyId);
+        const partySnapshot = await getDoc(partyRef);
+        if (partySnapshot.exists()) {
+          const fetchedParty = partySnapshot.data();
+          setParty(fetchedParty);
+        } else {
+          console.log('Party not found');
+        }
+      } else {
+        console.log('Order not found');
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching order and party:', error);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrderAndParty();
+  }, []);
+
+  if (loading) {
+    return (
+      <tr className="vsrc-table-row">
+        <TableCustomCell>
+          <Spinner />
+        </TableCustomCell>
+      </tr>
+    );
+  }
+  if (!order || !party) {
+    return <Text>Error Fetching Bill Details</Text>;
+  }
+
+  return (
+    <tr className="vsrc-table-row">
+      <TableCustomCell>
+        <b>{order.billNumber?.toUpperCase()}</b>
+      </TableCustomCell>
+      <TableCustomCell>{party.name}</TableCustomCell>
+      <TableCustomCell>
+        {globalUtils.getCurrencyFormat(order.orderAmount) || '--'}
+      </TableCustomCell>
+      <TableCustomCell>{data.remarks || '--'}</TableCustomCell>
+    </tr>
   );
 }

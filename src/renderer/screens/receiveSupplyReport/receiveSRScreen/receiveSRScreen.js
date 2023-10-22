@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 /* eslint-disable radix */
@@ -47,6 +48,7 @@ export default function ReceiveSRScreen() {
   const { supplyReport } = state;
   const [allBills, setAllBills] = useState([]);
   const [receivedBills, setReceivedBills] = useState([]);
+  const [returnedBills, setReturnedBills] = useState([]);
   const [openAdjustAmountDialog, setOpenAdjustAmountDialog] = useState();
   const [otherAdjustedBills, setOtherAdjustedBills] = useState([]);
 
@@ -104,6 +106,10 @@ export default function ReceiveSRScreen() {
             payments: oab1.payments,
           };
         }),
+        returnedBills: returnedBills.map((x) => ({
+          billId: x.id,
+          remarks: x.notes || '',
+        })),
         receivedBy: getAuth(firebaseApp).currentUser.uid,
       });
 
@@ -122,7 +128,10 @@ export default function ReceiveSRScreen() {
           ],
           balance:
             rb2.balance -
-            rb2.payments.reduce((acc, cur) => acc + cur.amount, 0),
+            rb2.payments.reduce(
+              (acc, cur) => acc + parseInt(cur.amount, 10),
+              0,
+            ),
           flowCompleted: true,
           orderStatus: 'Received Bill',
           with: rb2.with,
@@ -133,6 +142,25 @@ export default function ReceiveSRScreen() {
         });
       }
 
+      // update returned bills
+      for await (const rb2 of returnedBills) {
+        const orderRef = doc(firebaseDB, 'orders', rb2.id);
+
+        await updateDoc(orderRef, {
+          flow: [
+            ...rb2.flow,
+            {
+              employeeId: getAuth(firebaseApp).currentUser.uid,
+              timestamp: new Date().getTime(),
+              type: 'Goods Returned',
+            },
+          ],
+          balance: 0,
+          flowCompleted: true,
+          orderStatus: 'Goods Returned',
+          accountsNotes: rb2.notes || '',
+        });
+      }
       // Update  balance of other bills adjusted
       for await (const oab of otherAdjustedBills) {
         const orderRef = doc(firebaseDB, 'orders', oab.id);
@@ -140,7 +168,10 @@ export default function ReceiveSRScreen() {
         await updateDoc(orderRef, {
           balance:
             oab.balance -
-            oab.payments.reduce((acc, cur) => acc + cur.amount, 0),
+            oab.payments.reduce(
+              (acc, cur) => acc + parseInt(cur.amount, 10),
+              0,
+            ),
         });
       }
 
@@ -169,7 +200,8 @@ export default function ReceiveSRScreen() {
 
       showToast(dispatchToast, 'All Bills Received', 'success');
       setLoading(false);
-      navigate(-1);
+
+      onCreateCashReceipt();
     } catch (error) {
       console.error('Error updating document: ', error);
       showToast(dispatchToast, 'An error occured', 'error');
@@ -180,6 +212,7 @@ export default function ReceiveSRScreen() {
   const onSave = () => {};
   const onCreateCashReceipt = () => {
     const prItems = {};
+
     [...receivedBills, ...otherAdjustedBills].forEach((cRBill) => {
       if (cRBill.payments?.length) {
         cRBill.payments.forEach((crBillP) => {
@@ -190,6 +223,7 @@ export default function ReceiveSRScreen() {
         });
       }
     });
+
     if (!Object.keys(prItems).length) {
       showToast(dispatchToast, 'No Cash Received', 'error');
       return;
@@ -202,6 +236,7 @@ export default function ReceiveSRScreen() {
       };
     });
     navigate('/createPaymentReceipts', {
+      replace: true,
       state: { supplyReportId: supplyReport.id, prItems: updatedModelPrItems },
     });
   };
@@ -212,7 +247,8 @@ export default function ReceiveSRScreen() {
 
   if (loading) return <Loader />;
 
-  const allBillsReceived = receivedBills.length === allBills.length;
+  const allBillsReceived =
+    receivedBills.length + returnedBills.length === allBills.length;
 
   return (
     <>
@@ -229,12 +265,18 @@ export default function ReceiveSRScreen() {
       />
       <center>
         <div className="receive-sr-container">
-          <h3>Receive Supply Report: {supplyReport.id}</h3>
+          <h3>Receive Supply Report: {supplyReport.receiptNumber}</h3>
           <VerticalSpace1 />
 
           {allBills.map((bill, i) => {
             return (
               <BillRow
+                isReturned={
+                  returnedBills.findIndex((x) => x.id === bill.id) !== -1
+                }
+                onReturn={() => {
+                  setReturnedBills((x) => [...x, bill]);
+                }}
                 onReceive={(x) => {
                   receiveBill(x);
                 }}
@@ -246,6 +288,7 @@ export default function ReceiveSRScreen() {
                 index={i}
                 onUndo={() => {
                   setReceivedBills((b) => b.filter((tb) => tb.id !== bill.id));
+                  setReturnedBills((b) => b.filter((tb) => tb.id !== bill.id));
                 }}
                 openAdjustDialog={(orderData, amount, type) => {
                   setOpenAdjustAmountDialog({ orderData, amount, type });
@@ -269,17 +312,6 @@ export default function ReceiveSRScreen() {
             SAVE
           </Button>
         )}
-
-        <Button
-          // disabled={!allBillsReceived}
-          size="large"
-          onClick={() => {
-            // createBrowserWindow();
-            onCreateCashReceipt();
-          }}
-        >
-          Create Cash Receipt
-        </Button>
       </center>
     </>
   );
@@ -290,6 +322,8 @@ function BillRow({
   index,
   onReceive,
   isReceived,
+  isReturned,
+  onReturn,
   onUndo,
   openAdjustDialog,
   otherAdjustedBills,
@@ -304,6 +338,23 @@ function BillRow({
   const [notes, setNotes] = useState();
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const paytemp = data.flow[data.flow.length - 1].payload?.payments;
+    if (paytemp) {
+      paytemp.forEach((fetched) => {
+        if (fetched.type === 'Cash') {
+          setCash(fetched.amount);
+        }
+        if (fetched.type === 'Cheque') {
+          setCheque(fetched.amount);
+        }
+        if (fetched.type === 'UPI') {
+          setUpi(fetched.amount);
+        }
+      });
+    }
+  }, []);
 
   const cashOtherBills = otherAdjustedBills.filter(
     (o) => o.partyId === data.partyId && o.payments[0].type === 'cash',
@@ -380,6 +431,7 @@ function BillRow({
 
     onReceive(tempBill);
   };
+  const disabled = isReceived || isReturned;
 
   return (
     <div className="bill-row">
@@ -394,22 +446,38 @@ function BillRow({
           <Text style={{ fontWeight: 'bold' }}>
             BAL: {globalUtils.getCurrencyFormat(data.balance)}
           </Text>
-          {isReceived ? (
+          {disabled ? (
             <Button onClick={() => onUndo()} appearance="subtle" size="large">
-              <Text className="undo-button">UNDO</Text>
+              <Text
+                className={`undo-button ${
+                  isReceived ? 'received' : 'returned'
+                }`}
+              >
+                UNDO ({isReceived ? 'Received' : 'Returned'})
+              </Text>
             </Button>
           ) : (
-            <Button onClick={() => receive()} appearance="subtle" size="large">
-              <Text className="receive-button">RECEIVE</Text>
-            </Button>
+            <>
+              <Button onClick={onReturn} appearance="subtle">
+                RETURN
+              </Button>
+
+              <Button
+                onClick={() => receive()}
+                appearance="subtle"
+                size="large"
+              >
+                <Text className="receive-button">RECEIVE</Text>
+              </Button>
+            </>
           )}
         </div>
       </center>
       <center>
         <div className="bill-row-bottom">
           <Input
-            disabled={isReceived || cashOtherBills.length}
-            className={`input ${isReceived ? '' : 'payment'}`}
+            disabled={disabled || cashOtherBills.length}
+            className={`input ${disabled ? '' : 'payment'}`}
             onChange={(_, e) => setCash(e.value)}
             placeholder="Cash"
             value={cash}
@@ -428,8 +496,8 @@ function BillRow({
             }
           />
           <Input
-            disabled={isReceived || chequeOtherBills.length}
-            className={`input ${isReceived ? '' : 'payment'}`}
+            disabled={disabled || chequeOtherBills.length}
+            className={`input ${disabled ? '' : 'payment'}`}
             onChange={(_, e) => setCheque(e.value)}
             placeholder="Cheque"
             contentBefore="₹"
@@ -448,8 +516,8 @@ function BillRow({
             }
           />
           <Input
-            disabled={isReceived || upiOtherBills.length}
-            className={`input ${isReceived ? '' : 'payment'}`}
+            disabled={disabled || upiOtherBills.length}
+            className={`input ${disabled ? '' : 'payment'}`}
             onChange={(_, e) => setUpi(e.value)}
             placeholder="UPI"
             value={upi}
@@ -469,7 +537,7 @@ function BillRow({
           />
           <Tooltip content="Scheduled for payment">
             <DatePicker
-              disabled={isReceived}
+              disabled={disabled}
               onSelectDate={setScheduleDate}
               placeholder="Schedule"
               value={scheduleDate}
@@ -477,7 +545,7 @@ function BillRow({
           </Tooltip>
           <Tooltip content={data.accountsNotes}>
             <Input
-              disabled={isReceived}
+              disabled={disabled}
               value={notes}
               onChange={(_, e) => setNotes(e.value)}
               className="input"

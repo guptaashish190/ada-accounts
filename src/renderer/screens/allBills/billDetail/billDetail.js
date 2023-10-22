@@ -13,13 +13,15 @@ import {
 
 import { ArrowExportLtr16Filled } from '@fluentui/react-icons';
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import globalUtils from '../../../services/globalUtils';
 import './style.css';
 import { useAuthUser } from '../../../contexts/allUsersContext';
+import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 
 function BillDetailDialog({ order, party, withUser, mrUser }) {
   const { allUsers } = useAuthUser();
-  console.log(order);
+  const navigate = useNavigate();
   return (
     <DialogBody>
       <DialogTitle>
@@ -55,12 +57,19 @@ function BillDetailDialog({ order, party, withUser, mrUser }) {
           <Text className="label">With: </Text>
           <Text className="value">{withUser}</Text>
         </div>
-
-        <div className="bill-detail-content-container">
-          <Text className="label">Supply Report: </Text>
-          <Text className="value">{order.supplyReportId}</Text>
-        </div>
+        {order.supplyReportId ? (
+          <Button
+            onClick={() => {
+              navigate('/viewSupplyReport', {
+                state: { supplyReportId: order.supplyReportId },
+              });
+            }}
+          >
+            Supply Report
+          </Button>
+        ) : null}
         <div className="bill-detail-content-container bill-flow">
+          <VerticalSpace1 />
           <Text className="label">Flow: </Text>
           <div className="flow-container">
             {order.flow.map((fl) => {

@@ -27,3 +27,12 @@
   color: white;
   text-align: center;
 }
+
+.all-supply-reports-container .all-bills-search-input-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+  width: 70%;
+  row-gap: 10px;
+  margin: 30px 0;
+}

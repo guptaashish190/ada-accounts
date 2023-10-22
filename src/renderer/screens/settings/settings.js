@@ -17,6 +17,8 @@ import {
   DialogActions,
   DialogContent,
   Input,
+  CardHeader,
+  Card,
 } from '@fluentui/react-components';
 import { firebaseDB } from '../../firebaseInit';
 
@@ -43,16 +45,16 @@ export default function SettingsScreen() {
   }, []);
 
   return (
-    <div>
+    <center>
       <h3>Settings</h3>
-
-      <h4>File Numbers</h4>
-      {fileNumbers.map((fn, index) => {
-        return <div key={`fn-item-${fn}`}>{fn}</div>;
-      })}
-
+      <Card>
+        <CardHeader>File Numbers</CardHeader>
+        {fileNumbers.map((fn, index) => {
+          return <div key={`fn-item-${fn}`}>{fn}</div>;
+        })}
+      </Card>
       <AddFileNumberDialog />
-    </div>
+    </center>
   );
 }
 

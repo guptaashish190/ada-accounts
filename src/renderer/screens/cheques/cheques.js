@@ -16,7 +16,7 @@ import {
   TableCell,
   TableCellLayout,
   TableHeader,
-  TableHeaderCell,
+  th,
   TableRow,
   Tooltip,
 } from '@fluentui/react-components';
@@ -78,9 +78,10 @@ export default function ChequesScreen() {
     fetchCheques();
   }, []);
   return (
-    <div className="cheques-screen">
-      <center>
-        <h3>Cheques</h3>
+    <center>
+      <div className="cheques-screen">
+        <h2>Cheques</h2>
+        <VerticalSpace1 />
         <ChequeEntryDialog
           onClose={() => {
             fetchCheques();
@@ -94,39 +95,35 @@ export default function ChequesScreen() {
           }}
         />
         <VerticalSpace1 />
-        <Table size="extra-small" className="cheques-table">
-          <TableHeader className="table-header-container">
-            <TableRow>
-              <TableHeaderCell>Entry No.</TableHeaderCell>
-              <TableHeaderCell>Party Name</TableHeaderCell>
-              <TableHeaderCell>Cheque Number</TableHeaderCell>
-              <TableHeaderCell>Cheque Date</TableHeaderCell>
-              <TableHeaderCell>Amount</TableHeaderCell>
-              <TableHeaderCell>Notes</TableHeaderCell>
-              <TableHeaderCell>Received On</TableHeaderCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(filteredCheques || chequeList).map((ch, i) => {
-              return <ChequeTableRow data={ch} index={i} />;
-            })}
-            {filteredCheques ? (
-              <TableRow>
-                <TableCustomCell />
-                <TableCustomCell />
-                <TableCustomCell />
-                <TableCustomCell>Total Amount</TableCustomCell>
-                <TableCustomCell>
-                  <b>{globalUtils.getCurrencyFormat(getFilteredTotal())}</b>
-                </TableCustomCell>
-                <TableCustomCell />
-                <TableCustomCell />
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </center>
-    </div>
+        <table style={{ width: '100%' }}>
+          <tr className="table-header-container">
+            <th>Entry No.</th>
+            <th style={{ width: '80%' }}>Party Name</th>
+            <th>Cheque Number</th>
+            <th>Cheque Date</th>
+            <th>Amount</th>
+            <th>Notes</th>
+            <th>Received On</th>
+          </tr>
+          {(filteredCheques || chequeList).map((ch, i) => {
+            return <ChequeTableRow data={ch} index={i} />;
+          })}
+          {filteredCheques ? (
+            <tr>
+              <TableCustomCell />
+              <TableCustomCell />
+              <TableCustomCell />
+              <TableCustomCell>Total Amount</TableCustomCell>
+              <TableCustomCell>
+                <b>{globalUtils.getCurrencyFormat(getFilteredTotal())}</b>
+              </TableCustomCell>
+              <TableCustomCell />
+              <TableCustomCell />
+            </tr>
+          ) : null}
+        </table>
+      </div>
+    </center>
   );
 }
 
@@ -197,6 +194,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
       </div>
       <div className="filter-section-item">
         <Input
+          className=" filter-input"
           value={chequeNumber}
           onChange={(e) => setChequeNumber(e.target.value)}
           placeholder="Cheque Number"
@@ -204,6 +202,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
       </div>
       <div className="filter-section-item">
         <DatePicker
+          className=" filter-input"
           placeholder="Date From"
           value={dateFrom}
           onSelectDate={setDateFrom}
@@ -211,6 +210,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
       </div>
       <div className="filter-section-item">
         <DatePicker
+          className=" filter-input"
           placeholder="Date To"
           value={dateTo}
           onSelectDate={setDateTo}
@@ -241,11 +241,9 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
 
 function ChequeTableRow({ data, index }) {
   return (
-    <TableRow className="cheque-data-row">
-      <TableCustomCell>
-        <b>{data.entryNumber}</b>
-      </TableCustomCell>
-      <TableCustomCell>{data.party.name}</TableCustomCell>
+    <tr className="cheque-data-row">
+      <TableCustomCell>{data.entryNumber}</TableCustomCell>
+      <TableCustomCell>{data.party?.name}</TableCustomCell>
       <TableCustomCell>{data.chequeNumber}</TableCustomCell>
       <TableCustomCell>
         {globalUtils.getTimeFormat(data.chequeDate, true)}
@@ -257,18 +255,12 @@ function ChequeTableRow({ data, index }) {
       <TableCustomCell>
         {globalUtils.getTimeFormat(data.timestamp, true)}
       </TableCustomCell>
-    </TableRow>
+    </tr>
   );
 }
 
 function TableCustomCell({ children }) {
-  return (
-    <Tooltip content={children}>
-      <TableCell className="cheque-table-cell">
-        <TableCellLayout>{children || '--'}</TableCellLayout>
-      </TableCell>
-    </Tooltip>
-  );
+  return <td>{children || '--'}</td>;
 }
 
 function ChequeEntryDialog({ onClose }) {
@@ -316,10 +308,7 @@ function ChequeEntryDialog({ onClose }) {
   return (
     <Dialog open={showChequeEntryDialog}>
       <DialogTrigger disableButtonEnhancement>
-        <Button
-          appearance="primary"
-          onClick={() => setShowChequeEntryDialog(true)}
-        >
+        <Button onClick={() => setShowChequeEntryDialog(true)}>
           Cheque Entry
         </Button>
       </DialogTrigger>
@@ -340,7 +329,6 @@ function ChequeEntryDialog({ onClose }) {
             <DatePicker
               onSelectDate={setChequeDate}
               value={chequeDate}
-              onChange={(e) => setChequeNumber(e.target.value)}
               placeholder="Cheque Date"
             />
             <VerticalSpace1 />

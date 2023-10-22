@@ -39,5 +39,9 @@ export default {
       name: 'CHEQUES',
       prefix: 'CH',
     },
+    CREDITNOTE: {
+      name: 'CREDITNOTE',
+      prefix: 'CN',
+    },
   },
 };

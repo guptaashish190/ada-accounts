@@ -97,6 +97,7 @@ export default function SupplementaryBillDialog({
       setLoading(true);
       try {
         const querySnapshot = await getDocs(dynamicQuery);
+        console.log();
         const orderData = querySnapshot.docs.map((doc) => doc.data());
         console.log(orderData.length);
         setFilteredOrders(orderData);

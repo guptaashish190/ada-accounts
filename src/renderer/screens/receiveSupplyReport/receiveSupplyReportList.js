@@ -23,7 +23,7 @@ export default function ReceiveSupplyReportScreen() {
       // Create a query to filter where "isDispatched" is false
       const q = query(
         supplyReportsCollection,
-        where('status', '==', 'Dispatched'),
+        where('status', '==', 'Delivered'),
         limit(30),
       );
 
@@ -95,33 +95,23 @@ function SupplyReportRow({ data }) {
   }, []);
   return (
     <div className="supply-report-row">
-      <Text className="sr-id">{data.timestamp}</Text>
+      <Text className="sr-id">{data.receiptNumber}</Text>
       <Text className="sr-timestamp">
         {new Date(data.timestamp).toLocaleDateString()}
       </Text>
       <Text className="sr-parties-length">{supplyman?.username}</Text>
       <Text>{data.status}</Text>
-      {data.status === 'Dispatched' ? (
-        <Button
-          appearance="subtle"
-          className="verify-button"
-          onClick={() => {
-            navigate('/receiveSRScreen', {
-              state: { supplyReport: data },
-            });
-          }}
-        >
-          <span style={{ color: '#F25C54' }}>Receive</span>
-        </Button>
-      ) : (
-        <Button
-          className="verify-button"
-          style={{ color: '00A9A5' }}
-          appearance="subtle"
-        >
-          View
-        </Button>
-      )}
+      <Button
+        appearance="subtle"
+        className="verify-button"
+        onClick={() => {
+          navigate('/receiveSRScreen', {
+            state: { supplyReport: data },
+          });
+        }}
+      >
+        <span style={{ color: '#F25C54' }}>Receive</span>
+      </Button>
     </div>
   );
 }
