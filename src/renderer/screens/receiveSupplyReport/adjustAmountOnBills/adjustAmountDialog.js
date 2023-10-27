@@ -39,7 +39,7 @@ function AdjustAmountDialog({
     setLoading(true);
     const q = query(
       collection(firebaseDB, 'orders'),
-      where('balance', '>', 0), // Filter by balance greater than zero
+      where('balance', '!=', 0), // Filter by balance greater than zero
       where('partyId', '==', orderData?.partyId), // Filter by specific partyId
     );
 

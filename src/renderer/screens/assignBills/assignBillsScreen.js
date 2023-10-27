@@ -23,11 +23,11 @@ import {
   Divider,
   Table,
   TableHeader,
-  TableCell,
+  td,
   TableRow,
   TableBody,
   Tooltip,
-  TableCellLayout,
+  tdLayout,
   Spinner,
 } from '@fluentui/react-components';
 import PartySelector from '../../common/partySelector';
@@ -163,11 +163,15 @@ function AddPartySectionsDialog({ addParties }) {
   const [addedParties, setAddedParties] = useState([]);
 
   const getFileNumbers = async () => {
-    const settingsCollection = collection(firebaseDB, 'settings');
-    const fileNumbersDoc = doc(firebaseDB, 'settings', 'fileNumbers');
+    try {
+      const settingsCollection = collection(firebaseDB, 'settings');
+      const fileNumbersDoc = doc(firebaseDB, 'settings', 'fileNumbers');
 
-    const document = await getDoc(fileNumbersDoc);
-    setFileNumbers(document.data()?.data || []);
+      const document = await getDoc(fileNumbersDoc);
+      setFileNumbers(document.data()?.data || []);
+    } catch (e) {
+      console.log(e);
+    }
   };
 
   useEffect(() => {
@@ -279,34 +283,31 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
           <DialogBody>
             <DialogContent>
               <VerticalSpace1 />
-              <Table className="assign-bills-confirm-table">
-                <TableHeader>
-                  <TableRow>
-                    <TableCell>Bill Number</TableCell>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Party Name</TableCell>
-                    <TableCell>Amount</TableCell>
-                    <TableCell>Balance</TableCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {addedBills.map((ab) => (
-                    <TableRow>
-                      <TableCustomCell>{ab.billNumber}</TableCustomCell>
-                      <TableCustomCell>
-                        {globalUtils.getTimeFormat(ab.creationTime, true)}
-                      </TableCustomCell>
-                      <TableCustomCell>{ab.party?.name}</TableCustomCell>
-                      <TableCustomCell>
-                        {globalUtils.getCurrencyFormat(ab.orderAmount)}
-                      </TableCustomCell>
-                      <TableCustomCell>
-                        {globalUtils.getCurrencyFormat(ab.balance)}
-                      </TableCustomCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <table className="assign-bills-confirm-table">
+                <tr>
+                  <td>Bill Number</td>
+                  <td>Date</td>
+                  <td>Party Name</td>
+                  <td>Amount</td>
+                  <td>Balance</td>
+                </tr>
+
+                {addedBills.map((ab) => (
+                  <tr>
+                    <TableCustomCell>{ab.billNumber}</TableCustomCell>
+                    <TableCustomCell>
+                      {globalUtils.getTimeFormat(ab.creationTime, true)}
+                    </TableCustomCell>
+                    <TableCustomCell>{ab.party?.name}</TableCustomCell>
+                    <TableCustomCell>
+                      {globalUtils.getCurrencyFormat(ab.orderAmount)}
+                    </TableCustomCell>
+                    <TableCustomCell>
+                      {globalUtils.getCurrencyFormat(ab.balance)}
+                    </TableCustomCell>
+                  </tr>
+                ))}
+              </table>
               <VerticalSpace1 />
               <Card>
                 <div>
@@ -343,9 +344,7 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
 function TableCustomCell({ children }) {
   return (
     <Tooltip content={children}>
-      <TableCell>
-        <TableCellLayout>{children || '--'}</TableCellLayout>
-      </TableCell>
+      <td>{children || '--'}</td>
     </Tooltip>
   );
 }

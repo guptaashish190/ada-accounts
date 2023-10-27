@@ -23,6 +23,8 @@ import {
   useId,
   Toaster,
   Spinner,
+  Dropdown,
+  Option,
 } from '@fluentui/react-components';
 import {
   addDoc,
@@ -57,12 +59,13 @@ export default function CreatePaymentReceiptDialog({
   const [editable, setEditable] = useState(inputsEnabled || !state?.view);
   const { dispatchToast } = useToastController(toasterId);
   const [currentReceiptNumber, setCurrentReceiptNumber] = useState();
+  const [paymentFrom, setPaymentFrom] = useState();
   const { allUsers } = useAuthUser();
 
   const getTotal = () => {
-    return prItems.reduce(
-      (acc, cur) => acc + parseInt(cur.amount || '0', 10),
-      0,
+    return (
+      prItems &&
+      prItems.reduce((acc, cur) => acc + parseInt(cur.amount || '0', 10), 0)
     );
   };
 
@@ -71,6 +74,7 @@ export default function CreatePaymentReceiptDialog({
       showToast(dispatchToast, 'Enter amount for all the parties', 'error');
       return;
     }
+    if (!paymentFrom) return;
 
     try {
       setLoading(true);
@@ -92,10 +96,11 @@ export default function CreatePaymentReceiptDialog({
 
         // Add a new document with a generated ID to the "cashReceipts" collection
         const docRef = await addDoc(cashReceiptsCollectionRef, {
-          supplyReportId: state?.supplyReportId,
+          supplyReportId: state?.supplyReportId || '',
           prItems: updatedPrItems,
           timestamp: new Date().getTime(),
           createdByUserId: getAuth().currentUser.uid,
+          paymentFromUserId: paymentFrom,
         });
 
         // Update the roll number in the transaction
@@ -122,7 +127,7 @@ export default function CreatePaymentReceiptDialog({
     const prItemsFetched = await globalUtils.fetchPartyInfoForOrders(
       state?.prItems,
     );
-    setPrItems(prItemsFetched);
+    setPrItems(prItemsFetched || []);
     setLoading(false);
   };
 
@@ -138,6 +143,10 @@ export default function CreatePaymentReceiptDialog({
     }
   };
 
+  const onPrint = () => {
+    window.electron.ipcRenderer.sendMessage('new-window', { test: 'sd' });
+  };
+
   useEffect(() => {
     getPartyDetails();
     getCurrentReceiptNumber();
@@ -145,10 +154,6 @@ export default function CreatePaymentReceiptDialog({
 
   if (loading) {
     return <Spinner />;
-  }
-
-  if (!prItems?.length) {
-    return <div>Error getting party info</div>;
   }
 
   return (
@@ -159,9 +164,9 @@ export default function CreatePaymentReceiptDialog({
           {state?.viewOnly ? (
             <h3>Create Cash Receipt - {currentReceiptNumber}</h3>
           ) : (
-            <h3>Cash Receipt: {state.cashReceiptNumber}</h3>
+            <h3>Cash Receipt: {state?.cashReceiptNumber}</h3>
           )}
-          {state.view ? (
+          {state?.view ? (
             <div className="vsrc-detail-items-container">
               <div className="vsrc-detail-items">
                 <div className="label">Created At: </div>
@@ -173,23 +178,34 @@ export default function CreatePaymentReceiptDialog({
                 <div className="label">Created By: </div>
                 <div className="value">
                   {
-                    allUsers.find((x) => x.uid === state.createdByUserId)
+                    allUsers.find((x) => x.uid === state?.createdByUserId)
                       ?.username
                   }
                 </div>
               </div>
               <div className="vsrc-detail-items">
-                <Button
-                  className="label"
-                  onClick={() => {
-                    navigate('/viewSupplyReport', {
-                      state: { supplyReportId: state.supplyReportId },
-                    });
-                  }}
-                >
-                  Supply Report{' '}
-                </Button>
+                <div className="label">Username: </div>
+                <div className="value">
+                  {
+                    allUsers.find((x) => x.uid === state?.paymentFromUserId)
+                      ?.username
+                  }
+                </div>
               </div>
+              {state?.supplyReportId && state.supplyReportId.length && (
+                <div className="vsrc-detail-items">
+                  <Button
+                    className="label"
+                    onClick={() => {
+                      navigate('/viewSupplyReport', {
+                        state: { supplyReportId: state?.supplyReportId },
+                      });
+                    }}
+                  >
+                    Supply Report{' '}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -201,26 +217,40 @@ export default function CreatePaymentReceiptDialog({
             </>
           ) : null}
           {editable && !state?.view ? (
-            <PartySelector
-              clearOnSelect
-              descriptive
-              onPartySelected={(selected) => {
-                if (
-                  selected &&
-                  selected.id &&
-                  prItems.findIndex((pri) => pri.party?.id === selected.id) ===
-                    -1 &&
-                  editable
-                ) {
-                  setPrItems((p) => [
-                    ...p,
-                    { party: selected, partyId: selected.id },
-                  ]);
-                } else {
-                  showToast(dispatchToast, 'Cannot add party', 'error');
-                }
-              }}
-            />
+            <>
+              <Dropdown
+                onOptionSelect={(_, e) => setPaymentFrom(e.optionValue)}
+                className="dropdown filter-input"
+                placeholder="Username"
+              >
+                {allUsers.map((user) => (
+                  <Option text={user.username} value={user.uid} key={user.uid}>
+                    {user.username}
+                  </Option>
+                ))}
+              </Dropdown>
+              <PartySelector
+                clearOnSelect
+                descriptive
+                onPartySelected={(selected) => {
+                  if (
+                    selected &&
+                    selected.id &&
+                    prItems?.findIndex(
+                      (pri) => pri.party?.id === selected.id,
+                    ) === -1 &&
+                    editable
+                  ) {
+                    setPrItems((p) => [
+                      ...p,
+                      { party: selected, partyId: selected.id },
+                    ]);
+                  } else {
+                    showToast(dispatchToast, 'Cannot add party', 'error');
+                  }
+                }}
+              />
+            </>
           ) : null}
           <VerticalSpace1 />
 
@@ -232,28 +262,29 @@ export default function CreatePaymentReceiptDialog({
               <th>Amount</th>
               <th>Actions</th>
             </tr>
-            {prItems.map((pri) => (
-              <PaymentReceiptRow
-                editable={editable && !state?.view}
-                amount={pri.amount}
-                setAmount={(val) => {
-                  setPrItems((newPr) =>
-                    newPr.map((newprc) => {
-                      if (newprc.party?.id === pri.party?.id) {
-                        return { ...newprc, amount: val };
-                      }
-                      return newprc;
-                    }),
-                  );
-                }}
-                onDelete={() => {
-                  setPrItems((x) =>
-                    x.filter((x1) => x1.party.id !== pri.party.id),
-                  );
-                }}
-                pr={pri}
-              />
-            ))}
+            {prItems &&
+              prItems.map((pri) => (
+                <PaymentReceiptRow
+                  editable={editable && !state?.view}
+                  amount={pri.amount}
+                  setAmount={(val) => {
+                    setPrItems((newPr) =>
+                      newPr.map((newprc) => {
+                        if (newprc.party?.id === pri.party?.id) {
+                          return { ...newprc, amount: val };
+                        }
+                        return newprc;
+                      }),
+                    );
+                  }}
+                  onDelete={() => {
+                    setPrItems((x) =>
+                      x.filter((x1) => x1.party.id !== pri.party.id),
+                    );
+                  }}
+                  pr={pri}
+                />
+              ))}
           </table>
 
           <div className="total-amount">
@@ -266,6 +297,9 @@ export default function CreatePaymentReceiptDialog({
             Create
           </Button>
         ) : null}
+        <Button onClick={() => onPrint()} size="large">
+          Print
+        </Button>
       </center>
     </>
   );

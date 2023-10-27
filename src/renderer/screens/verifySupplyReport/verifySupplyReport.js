@@ -271,7 +271,7 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
       const q = query(
         ordersCollection,
         where('partyId', '==', bill.partyId),
-        where('balance', '>', 0),
+        where('balance', '!=', 0),
       );
 
       const querySnapshot = await getDocs(q);
@@ -332,6 +332,7 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
         <div className="party-old-bills-header">WITH</div>
         <div className="party-old-bills-header">AMOUNT</div>
         <div className="party-old-bills-header">BALANCE</div>
+        <div className="party-old-bills-header">DAYS</div>
         <div className="party-old-bills-header">SCHEDULED</div>
         <div className="party-old-bills-header">NOTE</div>
         <div className="party-old-bills-header" />
@@ -424,6 +425,8 @@ function OldBillRow({
           onChange={(_, d) => setNewBalance(d.value)}
         />
       </Tooltip>
+
+      <div>{globalUtils.getDaysPassed(oldbill.creationTime)}</div>
       <div className="old-bill scheduled">
         {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true) || '--'}
       </div>

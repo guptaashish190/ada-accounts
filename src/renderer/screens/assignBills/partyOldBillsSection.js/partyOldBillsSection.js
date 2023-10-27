@@ -41,7 +41,7 @@ export default function PartySection({
       const q = query(
         ordersCollection,
         where('partyId', '==', party.id),
-        where('balance', '>', 0),
+        where('balance', '!=', 0),
       );
 
       const querySnapshot = await getDocs(q);

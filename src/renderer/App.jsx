@@ -66,7 +66,7 @@ const darkTheme = {
   ...createDarkTheme(myNewTheme),
 };
 
-export default function App({ routeProps, startRoute }) {
+export default function App({ routeProps, startRoute, printData }) {
   const testLogin = async () => {
     try {
       const auth = getAuth();
@@ -76,8 +76,7 @@ export default function App({ routeProps, startRoute }) {
     }
   };
   useEffect(() => {
-    testLogin();
-    console.log(startRoute, routeProps);
+    console.log(printData);
   }, []);
 
   return (

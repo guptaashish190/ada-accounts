@@ -38,7 +38,7 @@
 .verify-supply-report .party-old-bills {
   display: grid;
   text-align: left;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
 }
 
 .verify-supply-report .old-bill.amount {
