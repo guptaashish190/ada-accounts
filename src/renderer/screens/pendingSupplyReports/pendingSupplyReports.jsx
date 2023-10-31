@@ -54,7 +54,9 @@ export default function PendingSupplyReports() {
       <div className="pending-supply-reports-container">
         <h3>Pending Supply Reports</h3>
         {supplyReports.map((sr) => {
-          return <SupplyReportRow data={sr} />;
+          return (
+            <SupplyReportRow key={`pending-supply-report-${sr.id}`} data={sr} />
+          );
         })}
       </div>
     </center>

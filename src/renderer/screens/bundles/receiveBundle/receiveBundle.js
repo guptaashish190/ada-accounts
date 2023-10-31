@@ -67,7 +67,7 @@ export default function ReceiveBundle() {
 
     try {
       // update supply report for all the bill rec details
-      await updateDoc(bundleRef, {
+      updateDoc(bundleRef, {
         status: constants.firebase.billBundleFlowStatus.RECEIVED,
         orderDetails: receivedBills.map((rb) => ({
           billId: rb.id,
@@ -91,7 +91,7 @@ export default function ReceiveBundle() {
       for await (const rb2 of receivedBills) {
         const orderRef = doc(firebaseDB, 'orders', rb2.id);
 
-        await updateDoc(orderRef, {
+        updateDoc(orderRef, {
           balance:
             rb2.balance -
             rb2.payments.reduce((acc, cur) => acc + cur.amount, 0),
@@ -107,7 +107,7 @@ export default function ReceiveBundle() {
       for await (const oab of otherAdjustedBills) {
         const orderRef = doc(firebaseDB, 'orders', oab.id);
 
-        await updateDoc(orderRef, {
+        updateDoc(orderRef, {
           balance:
             oab.balance -
             oab.payments.reduce((acc, cur) => acc + cur.amount, 0),
@@ -131,7 +131,7 @@ export default function ReceiveBundle() {
           }));
 
           newPayments = [...newPayments, ...addedPayments];
-          await updateDoc(partyRef, {
+          updateDoc(partyRef, {
             payments: newPayments,
           });
         }

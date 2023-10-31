@@ -98,7 +98,7 @@ export default function VerifySupplyReport() {
     try {
       const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
 
-      await updateDoc(supplyReportRef, {
+      updateDoc(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
         dispatchTimestamp: new Date().getTime(),
         attachedBills: attachedBills.map((b) => b.id),
@@ -125,7 +125,7 @@ export default function VerifySupplyReport() {
       const orderRef = doc(firebaseDB, 'orders', bill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
-      await updateDoc(orderRef, {
+      updateDoc(orderRef, {
         balance: parseInt(bill1.orderAmount, 10),
         with: supplyReport.supplymanId,
         orderStatus: 'Dispatched',
@@ -152,7 +152,7 @@ export default function VerifySupplyReport() {
       const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
-      await updateDoc(orderRef, {
+      updateDoc(orderRef, {
         accountsNotes: modifiedBill1.notes || '',
         balance: parseInt(modifiedBill1.balance, 10),
         with: supplyReport.supplymanId,

@@ -65,7 +65,7 @@ export default function AssignBillScreen() {
     try {
       const billBundlesRef = collection(firebaseDB, 'billBundles');
 
-      await addDoc(billBundlesRef, {
+      addDoc(billBundlesRef, {
         status: constants.firebase.billBundleFlowStatus.CREATED,
         timestamp: new Date().getTime(),
         assignedTo: selectedUser.uid,
@@ -92,7 +92,7 @@ export default function AssignBillScreen() {
       const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
-      await updateDoc(orderRef, {
+      updateDoc(orderRef, {
         accountsNotes: modifiedBill1.notes || '',
         balance: parseInt(modifiedBill1.balance, 10),
         with: selectedUser.uid,

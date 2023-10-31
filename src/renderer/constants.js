@@ -1,5 +1,8 @@
 export default {
   toasterId: 'toaster',
+  printConstants: {
+    PRINT_CASHRECEIPT: 'PRINT_CASH_RECEIPT',
+  },
   firebase: {
     supplyReportStatus: {
       COMPLETED: 'Completed',
@@ -43,5 +46,10 @@ export default {
       name: 'CREDITNOTE',
       prefix: 'CN',
     },
+  },
+  colors: {
+    success: '#66bb6a',
+    error: '#f44336',
+    warning: '#ffa726',
   },
 };

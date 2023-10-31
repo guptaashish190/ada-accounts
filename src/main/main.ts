@@ -94,7 +94,7 @@ const createWindow = async () => {
           fullscreenable: false,
           backgroundColor: 'white',
           webPreferences: {
-            preload: path.join(__dirname, 'child-preload.js'),
+            preload: path.join(__dirname, 'preload.js'),
           },
         },
       };
@@ -154,7 +154,10 @@ ipcMain.on('new-window', (event, args) => {
       height: 600,
       webPreferences: {
         nodeIntegration: true,
-        contextIsolation: false,
+        contextIsolation: true,
+        preload: app.isPackaged
+          ? path.join(__dirname, 'preload.js')
+          : path.join(__dirname, '../../.erb/dll/preload.js'),
       },
     });
     childWindow.loadURL(resolveHtmlPath('childindex.html'));

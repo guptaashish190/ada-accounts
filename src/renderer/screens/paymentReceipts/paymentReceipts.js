@@ -24,6 +24,7 @@ export default function PaymentReceipts() {
         ...doc.data(),
       });
     });
+    receiptData.sort((x, y) => y.timestamp - x.timestamp);
     setReceipts(receiptData);
   };
 
@@ -54,6 +55,7 @@ export default function PaymentReceipts() {
           {receipts.map((rc, i) => {
             return (
               <tr
+                key={`receipt-list-${rc.cashReceiptNumber}`}
                 onClick={() => {
                   navigate('/createPaymentReceipts', {
                     state: { ...rc, view: true },

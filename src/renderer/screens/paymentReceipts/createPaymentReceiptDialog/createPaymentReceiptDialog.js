@@ -36,7 +36,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { firebaseDB } from '../../../firebaseInit';
+import firebaseApp, { firebaseDB } from '../../../firebaseInit';
 import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import './style.css';
@@ -114,6 +114,7 @@ export default function CreatePaymentReceiptDialog({
 
       setLoading(false);
       showToast(dispatchToast, 'Created Payment Receipt', 'success');
+      onPrint();
       navigate('/paymentReceipts');
     } catch (error) {
       showToast(dispatchToast, 'Error Creating Receipt', 'error');
@@ -136,7 +137,6 @@ export default function CreatePaymentReceiptDialog({
       const newRN = await globalUtils.getNewReceiptNumber(
         constants.newReceiptCounters.CASHRECEIPTS,
       );
-
       setCurrentReceiptNumber(newRN);
     } catch (e) {
       console.log(e);
@@ -144,7 +144,33 @@ export default function CreatePaymentReceiptDialog({
   };
 
   const onPrint = () => {
-    window.electron.ipcRenderer.sendMessage('new-window', { test: 'sd' });
+    let printDataNew = {};
+    if (state?.view) {
+      printDataNew = {
+        time: globalUtils.getTimeFormat(state?.timestamp),
+        createdBy: allUsers.find((x) => x.uid === state?.createdByUserId)
+          ?.username,
+        user: allUsers.find((x) => x.uid === state?.paymentFromUserId)
+          ?.username,
+        items: prItems,
+        total: getTotal(),
+        receiptNumber: state?.cashReceiptNumber,
+      };
+    } else {
+      printDataNew = {
+        time: globalUtils.getTimeFormat(new Date()),
+        createdBy: allUsers.find((x) => x.uid === getAuth().currentUser.uid)
+          ?.username,
+        user: allUsers.find((x) => x.uid === paymentFrom)?.username,
+        items: prItems,
+        receiptNumber: currentReceiptNumber,
+        total: getTotal(),
+      };
+    }
+    window.electron.ipcRenderer.sendMessage('new-window', {
+      type: constants.printConstants.PRINT_CASHRECEIPT,
+      printData: printDataNew,
+    });
   };
 
   useEffect(() => {
@@ -161,10 +187,10 @@ export default function CreatePaymentReceiptDialog({
       <Toaster toasterId={toasterId} />
       <center>
         <div className="create-payment-receipt-container">
-          {state?.viewOnly ? (
-            <h3>Create Cash Receipt - {currentReceiptNumber}</h3>
-          ) : (
+          {state?.view ? (
             <h3>Cash Receipt: {state?.cashReceiptNumber}</h3>
+          ) : (
+            <h3>Create Cash Receipt - {currentReceiptNumber}</h3>
           )}
           {state?.view ? (
             <div className="vsrc-detail-items-container">
@@ -229,6 +255,7 @@ export default function CreatePaymentReceiptDialog({
                   </Option>
                 ))}
               </Dropdown>
+              <VerticalSpace1 />
               <PartySelector
                 clearOnSelect
                 descriptive
@@ -265,6 +292,7 @@ export default function CreatePaymentReceiptDialog({
             {prItems &&
               prItems.map((pri) => (
                 <PaymentReceiptRow
+                  key={`paymentreceiptrow-${pri.id}`}
                   editable={editable && !state?.view}
                   amount={pri.amount}
                   setAmount={(val) => {
@@ -296,10 +324,11 @@ export default function CreatePaymentReceiptDialog({
           <Button onClick={() => onSubmit()} size="large">
             Create
           </Button>
-        ) : null}
-        <Button onClick={() => onPrint()} size="large">
-          Print
-        </Button>
+        ) : (
+          <Button onClick={() => onPrint()} size="large">
+            Print
+          </Button>
+        )}
       </center>
     </>
   );

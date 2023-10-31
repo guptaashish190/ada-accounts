@@ -45,7 +45,7 @@ export default function CreateCreditNoteScreen() {
       );
       setCreatingLoading(true);
       const cnCollRef = collection(firebaseDB, 'creditNotes');
-      await addDoc(cnCollRef, {
+      addDoc(cnCollRef, {
         timestamp: new Date().getTime(),
         amount,
         remarks,
@@ -56,7 +56,7 @@ export default function CreateCreditNoteScreen() {
 
       const orderRef = doc(firebaseDB, 'orders', bill.id);
 
-      await updateDoc(orderRef, {
+      updateDoc(orderRef, {
         balance: (bill.balance || 0) - amount,
       });
       await globalUtils.incrementReceiptCounter(

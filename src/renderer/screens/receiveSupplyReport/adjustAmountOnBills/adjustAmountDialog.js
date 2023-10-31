@@ -24,23 +24,24 @@ import { showToast } from '../../../common/toaster';
 
 function AdjustAmountDialog({
   onDone,
-  orderData,
   amountToAdjust,
-  otherAdjustedBills,
-  setOtherAdjustedBills,
+  adjustedBills,
+  setAdjustedBills,
+  party,
   type,
+  closeable,
 }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [amountLeft, setAmountLeft] = useState(amountToAdjust);
 
   const fetchData = async () => {
-    if (!orderData) return;
+    if (!party?.id) return;
     setLoading(true);
     const q = query(
       collection(firebaseDB, 'orders'),
       where('balance', '!=', 0), // Filter by balance greater than zero
-      where('partyId', '==', orderData?.partyId), // Filter by specific partyId
+      where('partyId', '==', party?.id), // Filter by specific partyId
     );
 
     try {
@@ -64,14 +65,14 @@ function AdjustAmountDialog({
   useEffect(() => {
     fetchData();
     setAmountLeft(amountToAdjust);
-  }, [orderData]);
+  }, [party]);
 
-  if (!orderData) {
+  if (!party?.id) {
     return null;
   }
 
   return (
-    <Dialog open={orderData}>
+    <Dialog open={party}>
       <DialogSurface>
         <DialogBody>
           <DialogTitle>
@@ -80,7 +81,7 @@ function AdjustAmountDialog({
           <DialogContent>
             <div className="adjust-amount-dialog">
               <h4>
-                <u>{orderData.party?.name}</u>
+                <u>{party?.name}</u>
               </h4>
               <div>
                 Amount Left - {globalUtils.getCurrencyFormat(amountLeft)}
@@ -95,8 +96,7 @@ function AdjustAmountDialog({
                   return (
                     <AdjustAmountBillRow
                       adjusted={
-                        otherAdjustedBills.findIndex((f) => f.id === o.id) !==
-                        -1
+                        adjustedBills.findIndex((f) => f.id === o.id) !== -1
                       }
                       onAdjust={(amount) => {
                         const newOrder = {
@@ -109,7 +109,7 @@ function AdjustAmountDialog({
                           ],
                         };
                         console.log(newOrder);
-                        setOtherAdjustedBills((b) => [...b, newOrder]);
+                        setAdjustedBills((b) => [...b, newOrder]);
                         setAmountLeft((al) => al - amount);
                       }}
                       key={`adju-amount-${o.id}`}
@@ -122,18 +122,24 @@ function AdjustAmountDialog({
             </div>
           </DialogContent>
           <DialogActions>
-            <DialogTrigger disableButtonEnhancement>
-              <Button
-                disabled={amountLeft}
-                onClick={() => {
-                  setLoading(true);
-                  onDone(amountLeft);
-                }}
-                appearance="primary"
-              >
-                Done
-              </Button>
-            </DialogTrigger>
+            <Button
+              disabled={!closeable}
+              onClick={() => {
+                onDone();
+              }}
+            >
+              Close
+            </Button>
+            <Button
+              disabled={amountLeft}
+              onClick={() => {
+                setLoading(true);
+                onDone(amountLeft);
+              }}
+              appearance="primary"
+            >
+              Done
+            </Button>
           </DialogActions>
         </DialogBody>
       </DialogSurface>

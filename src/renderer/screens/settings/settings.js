@@ -65,7 +65,7 @@ function AddFileNumberDialog() {
   const onAdd = async () => {
     const settingsDocRef = doc(firebaseDB, 'settings', 'fileNumbers');
     try {
-      await updateDoc(settingsDocRef, {
+      updateDoc(settingsDocRef, {
         data: arrayUnion(file),
       });
       console.log('Document updated successfully.');

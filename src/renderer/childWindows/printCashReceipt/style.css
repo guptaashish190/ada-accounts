@@ -1,0 +1,26 @@
+.print-area-table {
+  margin-top: 30px;
+}
+.print-area-table tr {
+  margin-top: 10px;
+}
+.print-area {
+  width: 96%;
+  margin-top: 50px;
+  border: 1px solid #ddd;
+  padding: 10px;
+}
+
+.print-area-table td,
+.print-area-table th {
+  background-color: white;
+  border: 1px solid #547fff36;
+  color: black;
+  padding: 6px;
+}
+.print-details div {
+  font-size: 14px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}

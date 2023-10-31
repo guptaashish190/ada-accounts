@@ -23,6 +23,9 @@ table tr:nth-child(1) {
   background-color: #698fffc6;
   color: white;
 }
+table tr:not(:nth-child(1)) {
+  background-color: white;
+}
 
 table tr:not(:nth-child(1)):hover {
   background-color: #a6bcff1f;

@@ -106,7 +106,13 @@ export default function ChequesScreen() {
             <th>Received On</th>
           </tr>
           {(filteredCheques || chequeList).map((ch, i) => {
-            return <ChequeTableRow data={ch} index={i} />;
+            return (
+              <ChequeTableRow
+                key={`checque-list-${ch.entryNumber}`}
+                data={ch}
+                index={i}
+              />
+            );
           })}
           {filteredCheques ? (
             <tr>
@@ -285,7 +291,7 @@ function ChequeEntryDialog({ onClose }) {
       const newEntryNumber = await globalUtils.getNewReceiptNumber(
         constants.newReceiptCounters.CHEQUES,
       );
-      await addDoc(chequeCollection, {
+      addDoc(chequeCollection, {
         chequeNumber,
         partyId: party.id,
         amount,

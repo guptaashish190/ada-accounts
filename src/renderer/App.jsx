@@ -38,6 +38,8 @@ import CreditNoteScreen from './screens/creditNote/creditNoteScreen';
 import CreateCreditNoteScreen from './screens/creditNote/createCreditNotes/createCNScreen';
 import PartyListScreen from './screens/settings/partyList/partyList';
 import PartyDetailsScreen from './screens/settings/partyList/partyDetails/partyDetails';
+import LoginWrapper from './loginWrapper';
+import UpiScreen from './screens/upi/upiScreen';
 
 const myNewTheme = {
   10: '#010304',
@@ -67,85 +69,76 @@ const darkTheme = {
 };
 
 export default function App({ routeProps, startRoute, printData }) {
-  const testLogin = async () => {
-    try {
-      const auth = getAuth();
-      await signInWithEmailAndPassword(auth, 'pintu@gmail.com', 'password');
-    } catch (e) {
-      console.log(e);
-    }
-  };
-  useEffect(() => {
-    console.log(printData);
-  }, []);
-
   return (
     <FluentProvider theme={lightTheme}>
-      <AllUsersContext>
-        <UserContext>
-          <SettingsContext>
-            <Router>
-              <TabNavigator>
-                <Routes>
-                  <Route path="/" element={<CreateSupplyReportScreen />} />
-                  <Route
-                    path="/viewSupplyReport"
-                    element={<ViewSupplyReportScreen />}
-                  />
-                  <Route
-                    path="/allSupplyReports"
-                    element={<AllSupplyReportsScreen />}
-                  />
-                  <Route
-                    path="/pendingSupplyReports"
-                    element={<PendingSupplyReports />}
-                  />
-                  <Route
-                    path="/verifySupplyReport"
-                    element={<VerifySupplyReport />}
-                  />
-                  <Route
-                    path="/receiveSupplyReports"
-                    element={<ReceiveSupplyReportScreen />}
-                  />
-                  <Route path="/searchBills" element={<AllBillsScreen />} />
-                  <Route
-                    path="/receiveSRScreen"
-                    element={<ReceiveSRScreen />}
-                  />
-                  <Route
-                    path="/paymentReceipts"
-                    element={<PaymentReceipts />}
-                  />
-                  <Route
-                    path="/createPaymentReceipts"
-                    element={<CreatePaymentReceiptDialog />}
-                  />
-                  <Route path="/chequesList" element={<ChequesScreen />} />
-                  <Route path="/assignBills" element={<AssignBillScreen />} />
-                  <Route path="/settings" element={<SettingsScreen />} />
-                  <Route path="/bundles" element={<AllBundlesScreen />} />
-                  <Route path="/viewBundle" element={<ViewBundleScreen />} />
-                  <Route path="/receiveBundle" element={<ReceiveBundle />} />
-                  <Route path="/creditNotes" element={<CreditNoteScreen />} />
-                  <Route
-                    path="/partyListSettings"
-                    element={<PartyListScreen />}
-                  />
-                  <Route
-                    path="/createCreditNotes"
-                    element={<CreateCreditNoteScreen />}
-                  />
-                  <Route
-                    path="/partyDetails"
-                    element={<PartyDetailsScreen />}
-                  />
-                </Routes>
-              </TabNavigator>
-            </Router>
-          </SettingsContext>
-        </UserContext>
-      </AllUsersContext>
+      <LoginWrapper>
+        <AllUsersContext>
+          <UserContext>
+            <SettingsContext>
+              <Router>
+                <TabNavigator>
+                  <Routes>
+                    <Route path="/" element={<CreateSupplyReportScreen />} />
+                    <Route
+                      path="/viewSupplyReport"
+                      element={<ViewSupplyReportScreen />}
+                    />
+                    <Route
+                      path="/allSupplyReports"
+                      element={<AllSupplyReportsScreen />}
+                    />
+                    <Route
+                      path="/pendingSupplyReports"
+                      element={<PendingSupplyReports />}
+                    />
+                    <Route
+                      path="/verifySupplyReport"
+                      element={<VerifySupplyReport />}
+                    />
+                    <Route
+                      path="/receiveSupplyReports"
+                      element={<ReceiveSupplyReportScreen />}
+                    />
+                    <Route path="/searchBills" element={<AllBillsScreen />} />
+                    <Route
+                      path="/receiveSRScreen"
+                      element={<ReceiveSRScreen />}
+                    />
+                    <Route
+                      path="/paymentReceipts"
+                      element={<PaymentReceipts />}
+                    />
+                    <Route
+                      path="/createPaymentReceipts"
+                      element={<CreatePaymentReceiptDialog />}
+                    />
+                    <Route path="/chequesList" element={<ChequesScreen />} />
+                    <Route path="/assignBills" element={<AssignBillScreen />} />
+                    <Route path="/settings" element={<SettingsScreen />} />
+                    <Route path="/bundles" element={<AllBundlesScreen />} />
+                    <Route path="/viewBundle" element={<ViewBundleScreen />} />
+                    <Route path="/receiveBundle" element={<ReceiveBundle />} />
+                    <Route path="/creditNotes" element={<CreditNoteScreen />} />
+                    <Route
+                      path="/partyListSettings"
+                      element={<PartyListScreen />}
+                    />
+                    <Route
+                      path="/createCreditNotes"
+                      element={<CreateCreditNoteScreen />}
+                    />
+                    <Route
+                      path="/partyDetails"
+                      element={<PartyDetailsScreen />}
+                    />
+                    <Route path="/upi" element={<UpiScreen />} />
+                  </Routes>
+                </TabNavigator>
+              </Router>
+            </SettingsContext>
+          </UserContext>
+        </AllUsersContext>
+      </LoginWrapper>
     </FluentProvider>
   );
 }

@@ -89,7 +89,7 @@ export default function ReceiveSRScreen() {
 
     try {
       // update supply report for all the bill rec details
-      await updateDoc(supplyReportRef, {
+      updateDoc(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.COMPLETED,
         orderDetails: receivedBills.map((rb) => ({
           billId: rb.id,
@@ -117,7 +117,7 @@ export default function ReceiveSRScreen() {
       for await (const rb2 of receivedBills) {
         const orderRef = doc(firebaseDB, 'orders', rb2.id);
 
-        await updateDoc(orderRef, {
+        updateDoc(orderRef, {
           flow: [
             ...rb2.flow,
             {
@@ -146,7 +146,7 @@ export default function ReceiveSRScreen() {
       for await (const rb2 of returnedBills) {
         const orderRef = doc(firebaseDB, 'orders', rb2.id);
 
-        await updateDoc(orderRef, {
+        updateDoc(orderRef, {
           flow: [
             ...rb2.flow,
             {
@@ -165,7 +165,7 @@ export default function ReceiveSRScreen() {
       for await (const oab of otherAdjustedBills) {
         const orderRef = doc(firebaseDB, 'orders', oab.id);
 
-        await updateDoc(orderRef, {
+        updateDoc(orderRef, {
           balance:
             oab.balance -
             oab.payments.reduce(
@@ -176,7 +176,6 @@ export default function ReceiveSRScreen() {
       }
 
       // update party payments
-      // Update  balance of other bills adjusted
       for await (const oab1 of [...receivedBills, ...otherAdjustedBills]) {
         if (oab1.payments?.length) {
           const partyRef = doc(firebaseDB, 'parties', oab1.partyId);
@@ -192,7 +191,7 @@ export default function ReceiveSRScreen() {
           }));
 
           newPayments = [...newPayments, ...addedPayments];
-          await updateDoc(partyRef, {
+          updateDoc(partyRef, {
             payments: newPayments,
           });
         }
@@ -254,9 +253,9 @@ export default function ReceiveSRScreen() {
     <>
       <Toaster toasterId={toasterId} />
       <AdjustAmountDialog
-        otherAdjustedBills={otherAdjustedBills}
-        setOtherAdjustedBills={setOtherAdjustedBills}
-        orderData={openAdjustAmountDialog?.orderData}
+        adjustedBills={otherAdjustedBills}
+        setAdjustedBills={setOtherAdjustedBills}
+        party={openAdjustAmountDialog?.orderData.party}
         amountToAdjust={openAdjustAmountDialog?.amount}
         type={openAdjustAmountDialog?.type}
         onDone={() => {

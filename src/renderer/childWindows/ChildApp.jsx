@@ -11,11 +11,17 @@ import {
   createDarkTheme,
 } from '@fluentui/react-components';
 import { useEffect } from 'react';
+import constants from '../constants';
+import PrintCashReceipt from './printCashReceipt/printCasheReceipt';
 
-export default function App({ printData }) {
+export default function App({ args }) {
   useEffect(() => {
-    console.log(printData);
+    window.print();
   }, []);
 
-  return <div>Test di</div>;
+  if (args.type === constants.printConstants.PRINT_CASHRECEIPT) {
+    return <PrintCashReceipt data={args.printData} />;
+  }
+
+  return <div>Type not found</div>;
 }

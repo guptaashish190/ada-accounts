@@ -151,8 +151,8 @@ const configuration: webpack.Configuration = {
     new ReactRefreshWebpackPlugin(),
 
     new HtmlWebpackPlugin({
-      filename: path.join('childindex.html'),
-      template: path.join(webpackPaths.srcChildRendererPath, 'childindex.ejs'),
+      filename: path.join('index.html'),
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -164,8 +164,8 @@ const configuration: webpack.Configuration = {
       nodeModules: webpackPaths.appNodeModulesPath,
     }),
     new HtmlWebpackPlugin({
-      filename: path.join('index.html'),
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      filename: path.join('childindex.html'),
+      template: path.join(webpackPaths.srcChildRendererPath, 'childindex.ejs'),
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,

@@ -94,7 +94,7 @@ export default function ViewBundleScreen() {
     try {
       const billBundleRef = doc(firebaseDB, 'billBundles', bundleId);
 
-      await updateDoc(billBundleRef, {
+      updateDoc(billBundleRef, {
         status: constants.firebase.billBundleFlowStatus.HANDOVER,
       });
 
@@ -119,7 +119,7 @@ export default function ViewBundleScreen() {
       const orderRef = doc(firebaseDB, 'orders', bill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
-      await updateDoc(orderRef, {
+      updateDoc(orderRef, {
         with: user.uid,
       });
 

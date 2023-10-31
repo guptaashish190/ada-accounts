@@ -1,3 +1,5 @@
-1. Show packing notes on modify screen of the bill
 2. Show supply report notes on delivery app
 3. Disable multiple submits when pressing button multiple times
+4. Create UPI interface to adjust later in party balance
+5. Create Cash Interface to adjust later in party balance
+6. Supply report rreceiving ddoesnt navigate back
