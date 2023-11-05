@@ -22,6 +22,7 @@ import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 function BillDetailDialog({ order, party, withUser, mrUser }) {
   const { allUsers } = useAuthUser();
   const navigate = useNavigate();
+  console.log(order.id);
   return (
     <DialogBody>
       <DialogTitle>

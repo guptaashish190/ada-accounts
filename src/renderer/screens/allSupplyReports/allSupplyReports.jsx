@@ -231,9 +231,7 @@ function SupplyReportRow({ data, index }) {
         }}
       >
         <div className="supply-report-row">
-          <Text className="sr-id">
-            {index + 1}.&nbsp;{data.receiptNumber}
-          </Text>
+          <Text className="sr-id">{data.receiptNumber}</Text>
           <Text className="sr-timestamp">
             {globalUtils.getTimeFormat(data.timestamp, true)}
           </Text>

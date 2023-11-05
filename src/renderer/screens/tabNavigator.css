@@ -36,4 +36,16 @@
 .tab-navigator .menu-container {
   width: 100%;
   background-color: aliceblue;
+  display: flex;
+  justify-content: space-between;
+}
+
+.tab-navigator .tab-options {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.tab-navigator .tab-options.right-options {
+  margin-right: 20px;
 }

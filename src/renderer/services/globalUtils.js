@@ -116,8 +116,18 @@ export default {
     const daysPassed = Math.floor(timeDifferenceMillis / (1000 * 60 * 60 * 24));
     return daysPassed;
   },
-  getTimeFormat: (millisecondsSinceEpoch, dateOnly = false) => {
+  getTimeFormat: (
+    millisecondsSinceEpoch,
+    dateOnly = false,
+    shortForm = false,
+  ) => {
     if (!millisecondsSinceEpoch) return null;
+    if (shortForm && isToday(millisecondsSinceEpoch)) {
+      return 'Today';
+    }
+    if (shortForm && isTomorrow(millisecondsSinceEpoch)) {
+      return 'Tomorrow';
+    }
     if (dateOnly) {
       return new Date(millisecondsSinceEpoch).toLocaleDateString();
     }
@@ -181,4 +191,26 @@ export const useDebounce = (value, delay = 500) => {
   }, [value, delay]);
 
   return debouncedValue;
+};
+
+// Check if the date matches today's date in the current time zone
+const isToday = (mssie) => {
+  const currentDate = new Date();
+  const date = new Date(mssie);
+  return (
+    date.getDate() === currentDate.getDate() &&
+    date.getMonth() === currentDate.getMonth() &&
+    date.getFullYear() === currentDate.getFullYear()
+  );
+};
+
+// Check if the date matches today's date in the current time zone
+const isTomorrow = (mssie) => {
+  const currentDate = new Date();
+  const date = new Date(mssie);
+  return (
+    date.getDate() === currentDate.getDate() + 1 &&
+    date.getMonth() === currentDate.getMonth() &&
+    date.getFullYear() === currentDate.getFullYear()
+  );
 };

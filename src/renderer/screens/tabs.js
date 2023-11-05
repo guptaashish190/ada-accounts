@@ -1,0 +1,111 @@
+import constants from '../constants';
+
+export default [
+  {
+    name: 'Supply Report',
+    key: 'tab-supply-report',
+    submenu: [
+      {
+        name: 'All Supply Reports',
+        route: '/',
+        key: 'tab-allSupplyReports',
+        allowJob: [
+          constants.firebaseIds.JOBS.DISPATCH,
+          constants.firebaseIds.JOBS.CASHIER,
+        ],
+      },
+      {
+        name: 'Create Supply Report',
+        route: '/createSupplyReport',
+        key: 'tab-create-supply-report',
+        allowJob: [constants.firebaseIds.JOBS.DISPATCH],
+      },
+      {
+        name: 'Pending Supply Reports',
+        route: '/pendingSupplyReports',
+        key: 'tab-pendingSupplyReports',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+      },
+      {
+        name: 'Receive Supply Reports',
+        route: '/receiveSupplyReports',
+        key: 'tab-receiveSupplyReports',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+      },
+    ],
+  },
+  {
+    name: 'Search Bills',
+    route: '/searchBills',
+    key: 'tab-searchBills',
+  },
+  {
+    name: 'UPI',
+    route: '/upi',
+    key: 'tab-upi',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  },
+  {
+    name: 'Receipts',
+    route: '/paymentReceipts',
+    key: 'tab-paymentreceipts',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  },
+  {
+    name: 'Cheques',
+    route: '/chequesList',
+    key: 'tab-chequesList',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  },
+  {
+    name: 'Bundles',
+    key: 'tab-bundles',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+    submenu: [
+      {
+        name: 'All Bundles',
+        route: '/bundles',
+        key: 'tab-bundles',
+      },
+      {
+        name: 'Create Bill Bundle',
+        route: '/assignBills',
+        key: 'tab-assignbills',
+      },
+    ],
+  },
+  {
+    name: 'Settings',
+    key: 'tab-settings',
+    submenu: [
+      {
+        name: 'Parties',
+        route: '/partyListSettings',
+        key: 'tab-settings',
+      },
+      {
+        name: 'File Numbers',
+        route: '/settings',
+        key: 'tab-settings-filen',
+      },
+    ],
+  },
+  {
+    name: 'Credit Notes',
+
+    key: 'tab-creditNotes',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+    submenu: [
+      {
+        name: 'Credit Notes',
+        route: '/creditNotes',
+        key: 'tab-creditNotes',
+      },
+      {
+        name: 'Create C/N',
+        route: '/createCreditNotes',
+        key: 'tab-createcreditNotes',
+      },
+    ],
+  },
+];

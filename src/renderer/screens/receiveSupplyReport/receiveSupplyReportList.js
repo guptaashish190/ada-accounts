@@ -76,6 +76,10 @@ export default function ReceiveSupplyReportScreen() {
         {supplyReports.map((sr) => {
           return <SupplyReportRow data={sr} />;
         })}
+
+        {supplyReports.length === 0 ? (
+          <Text style={{ color: '#ddd' }}>No Supply Reports to receive</Text>
+        ) : null}
       </div>
     </center>
   );

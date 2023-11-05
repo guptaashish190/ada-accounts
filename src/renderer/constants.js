@@ -52,4 +52,11 @@ export default {
     error: '#f44336',
     warning: '#ffa726',
   },
+
+  firebaseIds: {
+    JOBS: {
+      DISPATCH: 'BiT2WpxL7rBnjovrxP54',
+      CASHIER: '3PyLZYPjuyfGwY3LJTY9',
+    },
+  },
 };

@@ -182,6 +182,7 @@
     "productName": "ElectronReact",
     "appId": "org.erb.ElectronReact",
     "asar": true,
+    "extends": null,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [
       "dist",

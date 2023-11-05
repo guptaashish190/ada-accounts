@@ -74,7 +74,10 @@ export default function CreatePaymentReceiptDialog({
       showToast(dispatchToast, 'Enter amount for all the parties', 'error');
       return;
     }
-    if (!paymentFrom) return;
+    if (!paymentFrom) {
+      showToast(dispatchToast, 'Select a user', 'error');
+      return;
+    }
 
     try {
       setLoading(true);

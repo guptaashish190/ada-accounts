@@ -78,14 +78,14 @@ export default function App({ routeProps, startRoute, printData }) {
               <Router>
                 <TabNavigator>
                   <Routes>
-                    <Route path="/" element={<CreateSupplyReportScreen />} />
+                    <Route path="/" element={<AllSupplyReportsScreen />} />
+                    <Route
+                      path="/createSupplyReport"
+                      element={<CreateSupplyReportScreen />}
+                    />
                     <Route
                       path="/viewSupplyReport"
                       element={<ViewSupplyReportScreen />}
-                    />
-                    <Route
-                      path="/allSupplyReports"
-                      element={<AllSupplyReportsScreen />}
                     />
                     <Route
                       path="/pendingSupplyReports"

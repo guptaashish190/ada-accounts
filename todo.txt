@@ -2,4 +2,7 @@
 3. Disable multiple submits when pressing button multiple times
 4. Create UPI interface to adjust later in party balance
 5. Create Cash Interface to adjust later in party balance
-6. Supply report rreceiving ddoesnt navigate back
+7. Add notifications
+8. Printing Cash receipts
+9. Vouchers
+

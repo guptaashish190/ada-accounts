@@ -198,8 +198,6 @@ export default function ReceiveSRScreen() {
       }
 
       showToast(dispatchToast, 'All Bills Received', 'success');
-      setLoading(false);
-
       onCreateCashReceipt();
     } catch (error) {
       console.error('Error updating document: ', error);
@@ -225,6 +223,7 @@ export default function ReceiveSRScreen() {
 
     if (!Object.keys(prItems).length) {
       showToast(dispatchToast, 'No Cash Received', 'error');
+      navigate('/receiveSupplyReports');
       return;
     }
 
@@ -234,6 +233,8 @@ export default function ReceiveSRScreen() {
         amount: prItems[pri],
       };
     });
+    setLoading(false);
+
     navigate('/createPaymentReceipts', {
       replace: true,
       state: { supplyReportId: supplyReport.id, prItems: updatedModelPrItems },
@@ -339,7 +340,7 @@ function BillRow({
   const navigate = useNavigate();
 
   useEffect(() => {
-    const paytemp = data.flow[data.flow.length - 1].payload?.payments;
+    const paytemp = data.flow[data.flow.length - 1]?.payload?.payments;
     if (paytemp) {
       paytemp.forEach((fetched) => {
         if (fetched.type === 'Cash') {

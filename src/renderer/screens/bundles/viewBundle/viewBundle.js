@@ -27,7 +27,7 @@ import {
   TableCell,
   TableCellLayout,
   TableHeader,
-  TableHeaderCell,
+  th,
   TableRow,
   Text,
   Toaster,
@@ -204,51 +204,31 @@ export default function ViewBundleScreen() {
               </div>
             </div>
             <h3 style={{ color: 'grey' }}>All Bills</h3>
-            <Table size="extra-small" className="vsrc-table">
-              <TableHeader className="table-header-container">
-                <TableRow>
-                  <TableHeaderCell key="vsrc-thc-billnumber">
-                    BILL NO.
-                  </TableHeaderCell>
-                  <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell">
-                    PARTY
-                  </TableHeaderCell>
-                  <TableHeaderCell key="vsrc-thc-amount vsrc-table-cell">
-                    BALANCE
-                  </TableHeaderCell>
-                  <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell2">
-                    CASH
-                  </TableHeaderCell>
-                  <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell3">
-                    CHEQUE
-                  </TableHeaderCell>
-                  <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell4">
-                    UPI
-                  </TableHeaderCell>
-                  <TableHeaderCell key="vsrc-thc-partyname vsrc-table-cell5">
-                    SCHEDULED
-                  </TableHeaderCell>
-                  <TableHeaderCell key="vsrc-thc-partyname">
-                    ACC NOTES
-                  </TableHeaderCell>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {allBills.map((bill, i) => {
-                  return (
-                    <BillRow
-                      orderDetail={
-                        bundle.orderDetails &&
-                        bundle.orderDetails.find((x) => x.billId === bill.id)
-                      }
-                      key={`rsr-${bill.id}`}
-                      data={bill}
-                      index={i}
-                    />
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <table>
+              <tr>
+                <th>BILL NO.</th>
+                <th>PARTY</th>
+                <th>BALANCE</th>
+                <th>CASH</th>
+                <th>CHEQUE</th>
+                <th>UPI</th>
+                <th>SCHEDULED</th>
+                <th>ACC NOTES</th>
+              </tr>
+              {allBills.map((bill, i) => {
+                return (
+                  <BillRow
+                    orderDetail={
+                      bundle.orderDetails &&
+                      bundle.orderDetails.find((x) => x.billId === bill.id)
+                    }
+                    key={`rsr-${bill.id}`}
+                    data={bill}
+                    index={i}
+                  />
+                );
+              })}
+            </table>
             {bundle.otherAdjustedBills?.length ? (
               <>
                 <VerticalSpace2 />
@@ -278,44 +258,44 @@ function BillRow({ data, index, orderDetail }) {
   };
 
   return (
-    <TableRow className="vsrc-table-row">
-      <TableCustomCell>
+    <tr className="vsrc-table-row">
+      <td>
         <b>{data.billNumber?.toUpperCase()}</b>
-      </TableCustomCell>
-      <TableCustomCell>
+      </td>
+      <td>
         <div style={{ color: 'grey', fontSize: '0.9em' }}>
           {data.party.name}
         </div>
-      </TableCustomCell>
-      <TableCustomCell>
+      </td>
+      <td>
         <b>{globalUtils.getCurrencyFormat(data.balance)}</b>
-      </TableCustomCell>
-      <TableCustomCell>
+      </td>
+      <td>
         {globalUtils.getCurrencyFormat(
           orderDetail?.payments?.find((x) => x.type === 'cash')?.amount,
         ) || '--'}
-      </TableCustomCell>
-      <TableCustomCell>
+      </td>
+      <td>
         {globalUtils.getCurrencyFormat(
           orderDetail?.payments?.find((x) => x.type === 'cheque')?.amount,
         ) || '--'}
-      </TableCustomCell>
-      <TableCustomCell>
+      </td>
+      <td>
         {globalUtils.getCurrencyFormat(
           orderDetail?.payments?.find((x) => x.type === 'upi')?.amount,
         ) || '--'}
-      </TableCustomCell>
-      <TableCustomCell>
+      </td>
+      <td>
         {orderDetail?.schedulePaymentDate
           ? globalUtils?.getTimeFormat(orderDetail.schedulePaymentDate, true)
           : '--'}
-      </TableCustomCell>
-      <TableCustomCell>{orderDetail?.accountsNotes || '--'}</TableCustomCell>
-    </TableRow>
+      </td>
+      <td>{orderDetail?.accountsNotes || '--'}</td>
+    </tr>
   );
 }
 
-function TableCustomCell({ children }) {
+function td({ children }) {
   return (
     <Tooltip content={children}>
       <TableCell className="vsrc-table-cell">
@@ -330,12 +310,12 @@ function OtherAdjustedBills({ otherAdjustedBills }) {
     <Table size="extra-small" className="vsrc-table">
       <TableHeader className="table-header-container">
         <TableRow>
-          <TableHeaderCell>BILL NO.</TableHeaderCell>
-          <TableHeaderCell>PARTY</TableHeaderCell>
-          <TableHeaderCell>BALANCE</TableHeaderCell>
-          <TableHeaderCell>CASH</TableHeaderCell>
-          <TableHeaderCell>CHEQUE</TableHeaderCell>
-          <TableHeaderCell>UPI</TableHeaderCell>
+          <th>BILL NO.</th>
+          <th>PARTY</th>
+          <th>BALANCE</th>
+          <th>CASH</th>
+          <th>CHEQUE</th>
+          <th>UPI</th>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -389,9 +369,9 @@ function OtherAdjustedBillsRow({ data, index }) {
   if (loading) {
     return (
       <TableRow className="vsrc-table-row">
-        <TableCustomCell>
+        <td>
           <Spinner />
-        </TableCustomCell>
+        </td>
       </TableRow>
     );
   }
@@ -401,29 +381,27 @@ function OtherAdjustedBillsRow({ data, index }) {
 
   return (
     <TableRow className="vsrc-table-row">
-      <TableCustomCell>
+      <td>
         <b>{order.billNumber?.toUpperCase()}</b>
-      </TableCustomCell>
-      <TableCustomCell>{party.name}</TableCustomCell>
-      <TableCustomCell>
-        {globalUtils.getCurrencyFormat(order.balance) || '--'}
-      </TableCustomCell>
-      <TableCustomCell>
+      </td>
+      <td>{party.name}</td>
+      <td>{globalUtils.getCurrencyFormat(order.balance) || '--'}</td>
+      <td>
         {globalUtils.getCurrencyFormat(
           data.payments.find((x) => x.type === 'cash')?.amount,
         ) || '--'}
-      </TableCustomCell>
-      <TableCustomCell>
+      </td>
+      <td>
         {globalUtils.getCurrencyFormat(
           data.payments.find((x) => x.type === 'cheque')?.amount,
         ) || '--'}
-      </TableCustomCell>
+      </td>
 
-      <TableCustomCell>
+      <td>
         {globalUtils.getCurrencyFormat(
           data.payments.find((x) => x.type === 'upi')?.amount,
         ) || '--'}
-      </TableCustomCell>
+      </td>
     </TableRow>
   );
 }

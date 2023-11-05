@@ -58,6 +58,10 @@ export default function PendingSupplyReports() {
             <SupplyReportRow key={`pending-supply-report-${sr.id}`} data={sr} />
           );
         })}
+
+        {supplyReports.length === 0 ? (
+          <Text style={{ color: '#ddd' }}>No Supply Reports Pending</Text>
+        ) : null}
       </div>
     </center>
   );

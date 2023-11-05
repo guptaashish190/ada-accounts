@@ -163,7 +163,7 @@ function OldBillRow({
   const onAttachBill = (save) => {
     const modifiedBill = { ...oldbill };
     if (newNotes.length > 0) {
-      modifiedBill.notes = newNotes;
+      modifiedBill.accountsNotes = newNotes;
     }
     if (newBalance.length > 0) {
       modifiedBill.balance = newBalance;
@@ -208,7 +208,8 @@ function OldBillRow({
         />
       </Tooltip>
       <div className="old-bill scheduled">
-        {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true) || '--'}
+        {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true, true) ||
+          '--'}
       </div>
       <Tooltip content={oldbill.note}>
         <Input

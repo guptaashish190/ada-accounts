@@ -99,7 +99,7 @@ export default function ReceiveBundle() {
           ...(rb2.schedulePaymentDate
             ? { schedulePaymentDate: rb2.schedulePaymentDate }
             : {}),
-          accountsNotes: rb2.notes || '',
+          accountsNotes: rb2.accountsNotes || '',
         });
       }
 
@@ -139,7 +139,7 @@ export default function ReceiveBundle() {
 
       showToast(dispatchToast, 'All Bills Received', 'success');
       setLoading(false);
-      navigate(-1);
+      onCreateCashReceipt();
     } catch (error) {
       console.error('Error updating document: ', error);
       showToast(dispatchToast, 'An error occured', 'error');
@@ -162,6 +162,7 @@ export default function ReceiveBundle() {
     });
     if (!Object.keys(prItems).length) {
       showToast(dispatchToast, 'No Cash Received', 'error');
+      navigate('/bundles');
       return;
     }
 
@@ -180,21 +181,23 @@ export default function ReceiveBundle() {
 
   if (loading) return <Loader />;
 
-  const allBillsReceived = receivedBills.length === allBills.length;
+  const allBillsReceived =
+    [...receivedBills, ...otherAdjustedBills].length === allBills.length;
 
   return (
     <>
       <Toaster toasterId={toasterId} />
       <AdjustAmountDialog
-        otherAdjustedBills={otherAdjustedBills}
-        setOtherAdjustedBills={setOtherAdjustedBills}
-        orderData={openAdjustAmountDialog?.orderData}
+        adjustedBills={otherAdjustedBills}
+        setAdjustedBills={setOtherAdjustedBills}
+        party={openAdjustAmountDialog?.orderData.party}
         amountToAdjust={openAdjustAmountDialog?.amount}
         type={openAdjustAmountDialog?.type}
         onDone={() => {
           setOpenAdjustAmountDialog();
         }}
       />
+
       <center>
         <div className="receive-sr-container">
           <h3>Receive Bundle: {bundle.id}</h3>
@@ -224,29 +227,13 @@ export default function ReceiveBundle() {
             );
           })}
         </div>
-        {allBillsReceived ? (
-          <Button
-            onClick={() => onComplete()}
-            size="large"
-            appearance="primary"
-          >
-            COMPLETED
-          </Button>
-        ) : (
-          <Button onClick={() => onSave()} size="large">
-            SAVE
-          </Button>
-        )}
-
         <Button
           disabled={!allBillsReceived}
+          onClick={() => onComplete()}
           size="large"
-          onClick={() => {
-            // createBrowserWindow();
-            onCreateCashReceipt();
-          }}
+          appearance="primary"
         >
-          Create Cash Receipt
+          COMPLETED
         </Button>
       </center>
     </>

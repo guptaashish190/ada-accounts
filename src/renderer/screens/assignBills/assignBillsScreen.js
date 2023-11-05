@@ -93,7 +93,7 @@ export default function AssignBillScreen() {
 
       // Update the "orderStatus" field in the order document to "dispatched"
       updateDoc(orderRef, {
-        accountsNotes: modifiedBill1.notes || '',
+        accountsNotes: modifiedBill1.accountsNotes || '',
         balance: parseInt(modifiedBill1.balance, 10),
         with: selectedUser.uid,
       });
@@ -136,6 +136,7 @@ export default function AssignBillScreen() {
               attachedBills={addedBills}
               setAttachedBills={setAddedBills}
               party={ap}
+              key={`billbundlesection${ap.id}`}
               onRemoveParty={() => {
                 setAddedParties((ap2) => ap2.filter((x) => x.id !== ap.id));
               }}

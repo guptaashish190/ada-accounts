@@ -44,6 +44,7 @@ import { showToast } from '../../common/toaster';
 import './style.css';
 import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import { useAuthUser } from '../../contexts/allUsersContext';
+import constants from '../../constants';
 
 export default function ViewSupplyReportScreen() {
   const { allUsers } = useAuthUser();
@@ -121,6 +122,7 @@ export default function ViewSupplyReportScreen() {
   if (!supplyReport) {
     return <div>Error loading supply report</div>;
   }
+  console.log(supplyReport.id);
   return (
     <center>
       <div className="view-supply-report-container">
@@ -171,51 +173,60 @@ export default function ViewSupplyReportScreen() {
           </div>
         </div>
         <VerticalSpace1 />
-        <h3 style={{ color: 'grey' }}>Received Bills</h3>
-        <table>
-          <tr>
-            <th>BILL NO.</th>
-            <th>PARTY</th>
-            <th>AMOUNT</th>
-            <th>CASH</th>
-            <th>CHEQUE</th>
-            <th>UPI</th>
-            <th>SCHEDULED</th>
-            <th>ACC NOTES</th>
-          </tr>
-          {allBills.map((bill, i) => {
-            return (
-              <BillRow
-                orderDetail={
-                  supplyReport.orderDetails &&
-                  supplyReport.orderDetails.find((x) => x.billId === bill.id)
-                }
-                key={`rsr-${bill.id}`}
-                data={bill}
-                index={i}
-              />
-            );
-          })}
-        </table>
-
-        {supplyReport.otherAdjustedBills?.length ? (
+        {supplyReport.status ===
+          constants.firebase.supplyReportStatus.COMPLETED && (
           <>
-            <VerticalSpace2 />
-            <h3 style={{ color: 'grey' }}>Other Adjusted Bills</h3>
-            <OtherAdjustedBills
-              otherAdjustedBills={supplyReport.otherAdjustedBills}
-            />
-          </>
-        ) : null}
+            <h3 style={{ color: 'grey' }}>Received Bills</h3>
+            <table>
+              <tr>
+                <th>BILL NO.</th>
+                <th>PARTY</th>
+                <th>AMOUNT</th>
+                <th>CASH</th>
+                <th>CHEQUE</th>
+                <th>UPI</th>
+                <th>SCHEDULED</th>
+                <th>ACC NOTES</th>
+              </tr>
+              {allBills.map((bill, i) => {
+                return (
+                  <BillRow
+                    orderDetail={
+                      supplyReport.orderDetails &&
+                      supplyReport.orderDetails.find(
+                        (x) => x.billId === bill.id,
+                      )
+                    }
+                    key={`rsr-${bill.id}`}
+                    data={bill}
+                    index={i}
+                  />
+                );
+              })}
+            </table>
 
-        {supplyReport.returnedBills?.length ? (
-          <>
+            {supplyReport.otherAdjustedBills?.length ? (
+              <>
+                <VerticalSpace2 />
+                <h3 style={{ color: 'grey' }}>Other Adjusted Bills</h3>
+                <OtherAdjustedBills
+                  otherAdjustedBills={supplyReport.otherAdjustedBills}
+                />
+              </>
+            ) : null}
+
+            {supplyReport.returnedBills?.length ? (
+              <>
+                <VerticalSpace2 />
+                <h3 style={{ color: 'grey' }}>Returned Goods Bills</h3>
+                <ReturnedBillsTable
+                  returnedBills={supplyReport.returnedBills}
+                />
+              </>
+            ) : null}
             <VerticalSpace2 />
-            <h3 style={{ color: 'grey' }}>Returned Goods Bills</h3>
-            <ReturnedBillsTable returnedBills={supplyReport.returnedBills} />
           </>
-        ) : null}
-        <VerticalSpace2 />
+        )}
       </div>
     </center>
   );

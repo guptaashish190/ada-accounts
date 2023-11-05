@@ -50,10 +50,7 @@
 }
 
 .supplementary-bill-row {
-  display: grid;
   width: 90%;
-  grid-template-columns: 2fr 2fr 2fr 1fr 1fr 0.5fr;
-  align-items: center;
 }
 
 .supplementary-bill-row * {
