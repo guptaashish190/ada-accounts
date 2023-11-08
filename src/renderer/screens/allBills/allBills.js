@@ -145,7 +145,11 @@ export default function AllBillsScreen() {
               None
             </Option>
             {allUsers.map((user) => (
-              <Option text={user.username} value={user.uid} key={user.uid}>
+              <Option
+                text={user.username}
+                value={user.uid}
+                key={`allbills-filter-user-${user.uid}`}
+              >
                 {user.username}
               </Option>
             ))}
@@ -164,7 +168,11 @@ export default function AllBillsScreen() {
             placeholder="MR"
           >
             {allUsers.map((user) => (
-              <Option text={user.username} value={user.uid} key={user.uid}>
+              <Option
+                text={user.username}
+                value={user.uid}
+                key={`allbills-filter-mr-${user.uid}`}
+              >
                 {user.username}
               </Option>
             ))}
@@ -195,7 +203,13 @@ export default function AllBillsScreen() {
             <Spinner />
           ) : (
             filteredOrders.map((sr, index) => {
-              return <BillRow data={sr} index={index} />;
+              return (
+                <BillRow
+                  data={sr}
+                  key={`allbills-order-item-${sr.id}`}
+                  index={index}
+                />
+              );
             })
           )}
         </table>

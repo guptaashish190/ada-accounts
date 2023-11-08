@@ -13,6 +13,12 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import {
+  ThermalPrinter,
+  PrinterTypes,
+  CharacterSet,
+  BreakLine,
+} from 'node-thermal-printer';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
@@ -31,6 +37,36 @@ ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
+});
+
+const onPrint = async () => {
+  const printer = new ThermalPrinter({
+    type: PrinterTypes.EPSON, // Printer type: 'star' or 'epson'
+    interface: 'Ashish’s MacBook Air', // Printer interface
+    removeSpecialCharacters: false, // Removes special characters - default: false
+    lineCharacter: '=', // Set character for lines - default: "-"
+    breakLine: BreakLine.WORD, // Break line after WORD or CHARACTERS. Disabled with NONE - default: WORD
+    options: {
+      // Additional options
+      timeout: 5000, // Connection timeout (ms) [applicable only for network printers] - default: 3000
+    },
+  });
+  const isConnected = await printer.isPrinterConnected();
+
+  printer.print('Hello World'); // Append text
+  printer.println('Hello World'); // Append text with new line
+  printer.openCashDrawer(); // Kick the cash drawer
+
+  try {
+    const execute = await printer.execute();
+    console.log(execute);
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+ipcMain.on('print', async (event, arg) => {
+  onPrint();
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -76,6 +112,7 @@ const createWindow = async () => {
     width: 1024,
     height: 728,
     icon: getAssetPath('icon.png'),
+
     webPreferences: {
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
@@ -103,6 +140,8 @@ const createWindow = async () => {
   });
 
   mainWindow.on('ready-to-show', () => {
+    onPrint();
+
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
     }
@@ -112,9 +151,11 @@ const createWindow = async () => {
       mainWindow.show();
     }
   });
+  // Get List of Printers
 
+  const list = await mainWindow.webContents.getPrintersAsync();
+  console.log('list of Printers', list);
   ipcMain.emit('main-window-route');
-
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
@@ -153,6 +194,7 @@ ipcMain.on('new-window', (event, args) => {
       width: 800,
       height: 600,
       webPreferences: {
+        devTools: false,
         nodeIntegration: true,
         contextIsolation: true,
         preload: app.isPackaged

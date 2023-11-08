@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable no-unreachable */
 import React, { useEffect, useState } from 'react';
 import {
@@ -170,10 +171,12 @@ export default function CreatePaymentReceiptDialog({
         total: getTotal(),
       };
     }
-    window.electron.ipcRenderer.sendMessage('new-window', {
-      type: constants.printConstants.PRINT_CASHRECEIPT,
-      printData: printDataNew,
-    });
+    // window.electron.ipcRenderer.sendMessage('new-window', {
+    //   type: constants.printConstants.PRINT_CASHRECEIPT,
+    //   printData: printDataNew,
+    // });
+
+    window.electron.ipcRenderer.sendMessage('print');
   };
 
   useEffect(() => {

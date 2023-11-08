@@ -20,7 +20,15 @@ export default function App({ args }) {
   }, []);
 
   if (args.type === constants.printConstants.PRINT_CASHRECEIPT) {
-    return <PrintCashReceipt data={args.printData} />;
+    return (
+      <>
+        <PrintCashReceipt data={args.printData} />
+
+        <Button className="print-button" onClick={() => window.print()}>
+          Print
+        </Button>
+      </>
+    );
   }
 
   return <div>Type not found</div>;

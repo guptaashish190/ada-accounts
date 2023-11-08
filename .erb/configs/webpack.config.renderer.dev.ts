@@ -125,7 +125,9 @@ const configuration: webpack.Configuration = {
             sourceType: 'var',
           }),
         ]),
-
+    new webpack.IgnorePlugin({
+      resourceRegExp: /^fs$|^net$/,
+    }),
     new webpack.NoEmitOnErrorsPlugin(),
 
     /**

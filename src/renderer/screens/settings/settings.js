@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   onSnapshot,
+  setDoc,
   updateDoc,
 } from 'firebase/firestore';
 import {
@@ -65,7 +66,7 @@ function AddFileNumberDialog() {
   const onAdd = async () => {
     const settingsDocRef = doc(firebaseDB, 'settings', 'fileNumbers');
     try {
-      updateDoc(settingsDocRef, {
+      setDoc(settingsDocRef, {
         data: arrayUnion(file),
       });
       console.log('Document updated successfully.');

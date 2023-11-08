@@ -98,7 +98,7 @@ export default function UpiScreen() {
               <th>Action</th>
             </tr>
             {unReceivedUpiItems?.map((uri) => {
-              return <UpiItemRow data={uri} />;
+              return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
             })}
             <tr>
               <td />
@@ -107,7 +107,7 @@ export default function UpiScreen() {
               <td />
             </tr>
             {receivedUpiItems?.map((uri) => {
-              return <UpiItemRow data={uri} />;
+              return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
             })}
           </table>
         </div>

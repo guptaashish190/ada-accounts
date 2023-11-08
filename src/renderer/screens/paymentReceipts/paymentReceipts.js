@@ -74,7 +74,7 @@ export default function PaymentReceipts() {
                     allUsers.find((x) => x.uid === rc?.paymentFromUserId)
                       ?.username
                   }
-                </td>{' '}
+                </td>
                 <td className="username">{rc.prItems.length}</td>
               </tr>
             );
