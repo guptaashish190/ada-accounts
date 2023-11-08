@@ -45,6 +45,7 @@ import { showToast } from '../../../common/toaster';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
 import { useAuthUser } from '../../../contexts/allUsersContext';
+import printerDataGenerator from '../../../common/printerDataGenerator';
 
 export default function CreatePaymentReceiptDialog({
   open,
@@ -148,7 +149,7 @@ export default function CreatePaymentReceiptDialog({
   };
 
   const onPrint = () => {
-    let printDataNew = {};
+    let printDataNew = [];
     if (state?.view) {
       printDataNew = {
         time: globalUtils.getTimeFormat(state?.timestamp),
@@ -171,12 +172,10 @@ export default function CreatePaymentReceiptDialog({
         total: getTotal(),
       };
     }
-    // window.electron.ipcRenderer.sendMessage('new-window', {
-    //   type: constants.printConstants.PRINT_CASHRECEIPT,
-    //   printData: printDataNew,
-    // });
-
-    window.electron.ipcRenderer.sendMessage('print');
+    window.electron.ipcRenderer.sendMessage(
+      'print',
+      printerDataGenerator.generatePrinterCommand(printDataNew),
+    );
   };
 
   useEffect(() => {
@@ -188,6 +187,7 @@ export default function CreatePaymentReceiptDialog({
     return <Spinner />;
   }
 
+  console.log(prItems);
   return (
     <>
       <Toaster toasterId={toasterId} />
@@ -298,7 +298,7 @@ export default function CreatePaymentReceiptDialog({
             {prItems &&
               prItems.map((pri) => (
                 <PaymentReceiptRow
-                  key={`paymentreceiptrow-${pri.id}`}
+                  key={`paymentreceiptrow-${pri.partyId}`}
                   editable={editable && !state?.view}
                   amount={pri.amount}
                   setAmount={(val) => {
