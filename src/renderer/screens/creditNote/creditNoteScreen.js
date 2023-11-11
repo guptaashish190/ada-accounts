@@ -57,7 +57,11 @@ export default function CreditNoteScreen() {
         </tr>
 
         {creditNotes.map((cn, i) => (
-          <CnTableRow data={cn} index={i} />
+          <CnTableRow
+            key={`credit-notes-${cn.receiptNumber}`}
+            data={cn}
+            index={i}
+          />
         ))}
       </table>
     </center>

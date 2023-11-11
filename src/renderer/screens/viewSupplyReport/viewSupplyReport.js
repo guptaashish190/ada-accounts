@@ -45,6 +45,7 @@ import './style.css';
 import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import constants from '../../constants';
+import printerDataGenerator from '../../common/printerDataGenerator';
 
 export default function ViewSupplyReportScreen() {
   const { allUsers } = useAuthUser();
@@ -54,7 +55,9 @@ export default function ViewSupplyReportScreen() {
   const supplyReportIdState = state.supplyReportId;
   const [supplyReport, setSupplyReport] = useState(supplyReportState);
   const [allBills, setAllBills] = useState([]);
-  const [receivedBills, setReceivedBills] = useState([]);
+  const [otherAdjustedBills, setOtherAdjustedBills] = useState([]);
+  const [returnedGoods, setReturnedGoods] = useState([]);
+
   const [loading, setLoading] = useState(false);
 
   const toasterId = useId('toaster');
@@ -82,11 +85,58 @@ export default function ViewSupplyReportScreen() {
     }
   };
 
+  const init = async () => {
+    setLoading(true);
+    const allReceivedBills = await fetchBillData([
+      ...supplyReport.orders,
+      ...(supplyReport.supplementaryBills || []),
+      ...(supplyReport.attachedBills || []),
+    ]);
+    setAllBills(allReceivedBills);
+
+    const otherAdjustedBills1 = await fetchBillData(
+      supplyReport.otherAdjustedBills?.map((x) => x.orderId),
+    );
+    setOtherAdjustedBills(
+      otherAdjustedBills1.map((x, i) => ({
+        ...x,
+        ...supplyReport.otherAdjustedBills[i],
+      })),
+    );
+
+    const returnedGoods1 = await fetchBillData(
+      supplyReport.returnedBills?.map((x) => x.billId),
+    );
+    setReturnedGoods(
+      returnedGoods1.map((x, i) => ({
+        ...x,
+        ...supplyReport.returnedBills[i],
+      })),
+    );
+    setLoading(false);
+  };
+
   useEffect(() => {
     if (supplyReport) {
-      getAllBills();
+      init();
     }
   }, [supplyReport]);
+
+  const fetchBillData = async (billList) => {
+    if (!billList) return [];
+    console.log(billList);
+    try {
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(billList);
+
+      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+
+      return fetchedOrders;
+    } catch (e) {
+      console.error(e);
+    }
+    return [];
+  };
 
   useEffect(() => {
     if (supplyReportIdState) {
@@ -94,13 +144,29 @@ export default function ViewSupplyReportScreen() {
     }
   }, []);
 
-  const getAllBills = async () => {
+  const onPrintSupplyReport = () => {
+    const printData = {
+      receivedBy: allUsers.find((x) => x.uid === supplyReport.receivedBy)
+        ?.username,
+      supplyman: allUsers.find((x) => x.uid === supplyReport.supplymanId)
+        ?.username,
+      dispatchTime: globalUtils.getTimeFormat(supplyReport.dispatchTimestamp),
+      receiptNumber: supplyReport.receiptNumber,
+      bills: allBills,
+      otherAdjustedBills,
+      returnedGoods,
+    };
+    window.electron.ipcRenderer.sendMessage(
+      'print',
+      printerDataGenerator.generateSupplyReportPrintFormat(printData),
+    );
+  };
+
+  const getOtherAdjustedBills = async () => {
     setLoading(true);
     try {
       let fetchedOrders = await globalUtils.fetchOrdersByIds([
-        ...supplyReport.orders,
-        ...(supplyReport.supplementaryBills || []),
-        ...(supplyReport.attachedBills || []),
+        ...supplyReport.otherAdjustedBills,
       ]);
 
       fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
@@ -113,16 +179,13 @@ export default function ViewSupplyReportScreen() {
       console.error(e);
     }
   };
-  const receiveBill = (bi) => {
-    setReceivedBills((r) => [...r, bi]);
-  };
 
   if (loading) return <Loader />;
 
   if (!supplyReport) {
     return <div>Error loading supply report</div>;
   }
-  console.log(supplyReport.id);
+
   return (
     <center>
       <div className="view-supply-report-container">
@@ -173,6 +236,10 @@ export default function ViewSupplyReportScreen() {
           </div>
         </div>
         <VerticalSpace1 />
+        <Button onClick={() => onPrintSupplyReport()}>
+          Print Supply Report
+        </Button>
+        <VerticalSpace1 />
         {supplyReport.status ===
           constants.firebase.supplyReportStatus.COMPLETED && (
           <>
@@ -205,23 +272,19 @@ export default function ViewSupplyReportScreen() {
               })}
             </table>
 
-            {supplyReport.otherAdjustedBills?.length ? (
+            {otherAdjustedBills?.length ? (
               <>
                 <VerticalSpace2 />
                 <h3 style={{ color: 'grey' }}>Other Adjusted Bills</h3>
-                <OtherAdjustedBills
-                  otherAdjustedBills={supplyReport.otherAdjustedBills}
-                />
+                <OtherAdjustedBills otherAdjustedBills={otherAdjustedBills} />
               </>
             ) : null}
 
-            {supplyReport.returnedBills?.length ? (
+            {returnedGoods?.length ? (
               <>
                 <VerticalSpace2 />
                 <h3 style={{ color: 'grey' }}>Returned Goods Bills</h3>
-                <ReturnedBillsTable
-                  returnedBills={supplyReport.returnedBills}
-                />
+                <ReturnedBillsTable returnedBills={returnedGoods} />
               </>
             ) : null}
             <VerticalSpace2 />
@@ -244,50 +307,20 @@ function OtherAdjustedBills({ otherAdjustedBills }) {
       </tr>
 
       {otherAdjustedBills?.map((bill, i) => {
-        return <OtherAdjustedBillsRow data={bill} index={i} />;
+        return (
+          <OtherAdjustedBillsRow
+            key={`vsrs-otheradjust-${bill.id}`}
+            data={bill}
+            index={i}
+          />
+        );
       })}
     </table>
   );
 }
 
 function OtherAdjustedBillsRow({ data, index }) {
-  const [order, setOrder] = useState();
-  const [party, setParty] = useState();
-
   const [loading, setLoading] = useState(false);
-
-  const fetchOrderAndParty = async () => {
-    try {
-      setLoading(true);
-      // Fetch the order using orderId
-      const orderRef = doc(firebaseDB, 'orders', data.orderId);
-      const orderSnapshot = await getDoc(orderRef);
-      if (orderSnapshot.exists()) {
-        const fetchedOrder = orderSnapshot.data();
-        setOrder(fetchedOrder);
-
-        // Fetch party information using partyId from the fetched order
-        const partyRef = doc(firebaseDB, 'parties', fetchedOrder.partyId);
-        const partySnapshot = await getDoc(partyRef);
-        if (partySnapshot.exists()) {
-          const fetchedParty = partySnapshot.data();
-          setParty(fetchedParty);
-        } else {
-          console.log('Party not found');
-        }
-      } else {
-        console.log('Order not found');
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching order and party:', error);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOrderAndParty();
-  }, []);
 
   if (loading) {
     return (
@@ -298,16 +331,13 @@ function OtherAdjustedBillsRow({ data, index }) {
       </tr>
     );
   }
-  if (!order || !party) {
-    return <Text>Error Fetching Bill Details</Text>;
-  }
 
   return (
     <tr>
       <TableCustomCell>
-        <b>{order.billNumber?.toUpperCase()}</b>
+        <b>{data.billNumber?.toUpperCase()}</b>
       </TableCustomCell>
-      <TableCustomCell>{party.name}</TableCustomCell>
+      <TableCustomCell>{data.party?.name}</TableCustomCell>
       <TableCustomCell>
         {globalUtils.getCurrencyFormat(
           data.payments.find((x) => x.type === 'cash')?.amount,
@@ -398,65 +428,14 @@ function ReturnedBillsTable({ returnedBills }) {
   );
 }
 function ReturnedBillRow({ data, index }) {
-  const [order, setOrder] = useState();
-  const [party, setParty] = useState();
-
-  const [loading, setLoading] = useState(false);
-
-  const fetchOrderAndParty = async () => {
-    try {
-      setLoading(true);
-      // Fetch the order using orderId
-      const orderRef = doc(firebaseDB, 'orders', data.billId);
-      const orderSnapshot = await getDoc(orderRef);
-      if (orderSnapshot.exists()) {
-        const fetchedOrder = orderSnapshot.data();
-        setOrder(fetchedOrder);
-
-        // Fetch party information using partyId from the fetched order
-        const partyRef = doc(firebaseDB, 'parties', fetchedOrder.partyId);
-        const partySnapshot = await getDoc(partyRef);
-        if (partySnapshot.exists()) {
-          const fetchedParty = partySnapshot.data();
-          setParty(fetchedParty);
-        } else {
-          console.log('Party not found');
-        }
-      } else {
-        console.log('Order not found');
-      }
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching order and party:', error);
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOrderAndParty();
-  }, []);
-
-  if (loading) {
-    return (
-      <tr className="vsrc-table-row">
-        <TableCustomCell>
-          <Spinner />
-        </TableCustomCell>
-      </tr>
-    );
-  }
-  if (!order || !party) {
-    return <Text>Error Fetching Bill Details</Text>;
-  }
-
   return (
     <tr className="vsrc-table-row">
       <TableCustomCell>
-        <b>{order.billNumber?.toUpperCase()}</b>
+        <b>{data.billNumber?.toUpperCase()}</b>
       </TableCustomCell>
-      <TableCustomCell>{party.name}</TableCustomCell>
+      <TableCustomCell>{data.party.name}</TableCustomCell>
       <TableCustomCell>
-        {globalUtils.getCurrencyFormat(order.orderAmount) || '--'}
+        {globalUtils.getCurrencyFormat(data.orderAmount) || '--'}
       </TableCustomCell>
       <TableCustomCell>{data.remarks || '--'}</TableCustomCell>
     </tr>

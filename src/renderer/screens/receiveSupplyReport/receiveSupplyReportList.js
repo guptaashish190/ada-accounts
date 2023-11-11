@@ -74,7 +74,7 @@ export default function ReceiveSupplyReportScreen() {
         </div>
         <VerticalSpace1 />
         {supplyReports.map((sr) => {
-          return <SupplyReportRow data={sr} />;
+          return <SupplyReportRow key={`recevie-sr-list-${sr.id}`} data={sr} />;
         })}
 
         {supplyReports.length === 0 ? (

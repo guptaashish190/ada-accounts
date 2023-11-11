@@ -88,6 +88,11 @@ export default [
         route: '/settings',
         key: 'tab-settings-filen',
       },
+      {
+        name: 'Printer',
+        route: '/printerSettings',
+        key: 'tab-settings-printers',
+      },
     ],
   },
   {

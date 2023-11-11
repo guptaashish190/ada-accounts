@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable radix */
 /* eslint-disable no-restricted-syntax */
 
@@ -208,7 +209,7 @@ export default function ViewBundleScreen() {
               <tr>
                 <th>BILL NO.</th>
                 <th>PARTY</th>
-                <th>BALANCE</th>
+                <th>AMOUNT</th>
                 <th>CASH</th>
                 <th>CHEQUE</th>
                 <th>UPI</th>
@@ -268,7 +269,7 @@ function BillRow({ data, index, orderDetail }) {
         </div>
       </td>
       <td>
-        <b>{globalUtils.getCurrencyFormat(data.balance)}</b>
+        <b>{globalUtils.getCurrencyFormat(data.orderAmount)}</b>
       </td>
       <td>
         {globalUtils.getCurrencyFormat(
@@ -312,7 +313,7 @@ function OtherAdjustedBills({ otherAdjustedBills }) {
         <TableRow>
           <th>BILL NO.</th>
           <th>PARTY</th>
-          <th>BALANCE</th>
+          <th>AMOUNT</th>
           <th>CASH</th>
           <th>CHEQUE</th>
           <th>UPI</th>
@@ -368,11 +369,11 @@ function OtherAdjustedBillsRow({ data, index }) {
 
   if (loading) {
     return (
-      <TableRow className="vsrc-table-row">
+      <tr className="vsrc-table-row">
         <td>
           <Spinner />
         </td>
-      </TableRow>
+      </tr>
     );
   }
   if (!order || !party) {
@@ -385,7 +386,7 @@ function OtherAdjustedBillsRow({ data, index }) {
         <b>{order.billNumber?.toUpperCase()}</b>
       </td>
       <td>{party.name}</td>
-      <td>{globalUtils.getCurrencyFormat(order.balance) || '--'}</td>
+      <td>{globalUtils.getCurrencyFormat(order.orderAmount) || '--'}</td>
       <td>
         {globalUtils.getCurrencyFormat(
           data.payments.find((x) => x.type === 'cash')?.amount,

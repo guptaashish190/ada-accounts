@@ -18,6 +18,7 @@ import {
   PosPrinter,
   PosPrintOptions,
 } from '@3ksy/electron-pos-printer';
+import Store from 'electron-store';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
@@ -31,6 +32,8 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 let childWindow: BrowserWindow | null = null;
+const store = new Store();
+let selectedPrinter: string;
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -38,12 +41,26 @@ ipcMain.on('ipc-example', async (event, arg) => {
   event.reply('ipc-example', msgTemplate('pong'));
 });
 
+ipcMain.on('fetch-printers', async (event, arg) => {
+  let list;
+  if (mainWindow) {
+    list = await mainWindow.webContents.getPrintersAsync();
+  }
+  event.sender.send('all-printers', { list, selectedPrinter });
+});
+
+ipcMain.on('set-selected-printer', async (event, arg) => {
+  store.set('selected-printer', arg);
+  selectedPrinter = arg;
+});
+
 const onPrint = async (data: PosPrintData[]) => {
   const options: PosPrintOptions = {
-    preview: false,
+    silent: true,
+    preview: true,
     margin: '0 0 0 0',
     copies: 1,
-    printerName: 'Everycom-58-Series (1)',
+    printerName: 'Thermal_Printer_H58_Printer_USB',
     timeOutPerLine: 100,
     pageSize: '58mm',
   };
@@ -65,7 +82,6 @@ const isDebug =
 if (isDebug) {
   require('electron-debug')();
 }
-
 const installExtensions = async () => {
   const installer = require('electron-devtools-installer');
   const forceDownload = !!process.env.UPGRADE_EXTENSIONS;
@@ -124,6 +140,8 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
+  selectedPrinter = store.get('selected-printer');
+
   mainWindow.on('ready-to-show', () => {
     if (!mainWindow) {
       throw new Error('"mainWindow" is not defined');
@@ -134,10 +152,6 @@ const createWindow = async () => {
       mainWindow.show();
     }
   });
-  // Get List of Printers
-
-  const list = await mainWindow.webContents.getPrintersAsync();
-  console.log('list of Printers', list);
   ipcMain.emit('main-window-route');
   mainWindow.on('closed', () => {
     mainWindow = null;

@@ -17,7 +17,7 @@ import CreateSupplyReportScreen from './screens/createSupplyReport/createSupplyR
 import UserContext from './contexts/userContext';
 import AllUsersContext from './contexts/allUsersContext';
 import constants from './constants';
-import TabNavigator from './screens/tabNavigator';
+import TabNavigator from './tabs/tabNavigator';
 import AllSupplyReportsScreen from './screens/allSupplyReports/allSupplyReports';
 import ViewSupplyReportScreen from './screens/viewSupplyReport/viewSupplyReport';
 import PendingSupplyReports from './screens/pendingSupplyReports/pendingSupplyReports';
@@ -40,6 +40,7 @@ import PartyListScreen from './screens/settings/partyList/partyList';
 import PartyDetailsScreen from './screens/settings/partyList/partyDetails/partyDetails';
 import LoginWrapper from './loginWrapper';
 import UpiScreen from './screens/upi/upiScreen';
+import PrinterSettings from './screens/settings/printers';
 
 const myNewTheme = {
   10: '#010304',
@@ -132,6 +133,10 @@ export default function App({ routeProps, startRoute, printData }) {
                       element={<PartyDetailsScreen />}
                     />
                     <Route path="/upi" element={<UpiScreen />} />
+                    <Route
+                      path="/printerSettings"
+                      element={<PrinterSettings />}
+                    />
                   </Routes>
                 </TabNavigator>
               </Router>

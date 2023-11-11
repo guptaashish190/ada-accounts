@@ -26,7 +26,6 @@ export default function PartyListScreen() {
         querySnapshot.forEach((doc) => {
           partyData.push(doc.data());
         });
-        console.log(partyData);
         setParties(partyData);
         setDefaultParties(partyData);
         setLoading(false);
@@ -64,6 +63,7 @@ export default function PartyListScreen() {
 
         {parties.map((party) => (
           <tr
+            key={`party-list-screen-${party.id}`}
             onClick={() => {
               navigate('/partyDetails', {
                 state: {
