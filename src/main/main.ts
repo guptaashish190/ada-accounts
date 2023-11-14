@@ -32,6 +32,7 @@ class AppUpdater {
 
 let mainWindow: BrowserWindow | null = null;
 let childWindow: BrowserWindow | null = null;
+let allPrinters: Array<Object>;
 const store = new Store();
 let selectedPrinter: string;
 
@@ -45,6 +46,7 @@ ipcMain.on('fetch-printers', async (event, arg) => {
   let list;
   if (mainWindow) {
     list = await mainWindow.webContents.getPrintersAsync();
+    allPrinters = list;
   }
   event.sender.send('all-printers', { list, selectedPrinter });
 });
@@ -52,15 +54,16 @@ ipcMain.on('fetch-printers', async (event, arg) => {
 ipcMain.on('set-selected-printer', async (event, arg) => {
   store.set('selected-printer', arg);
   selectedPrinter = arg;
+
+  event.sender.send('all-printers', { list: allPrinters, selectedPrinter });
 });
 
 const onPrint = async (data: PosPrintData[]) => {
   const options: PosPrintOptions = {
-    silent: true,
-    preview: true,
+    preview: false,
     margin: '0 0 0 0',
     copies: 1,
-    printerName: 'Thermal_Printer_H58_Printer_USB',
+    printerName: selectedPrinter,
     timeOutPerLine: 100,
     pageSize: '58mm',
   };
@@ -69,6 +72,18 @@ const onPrint = async (data: PosPrintData[]) => {
 
 ipcMain.on('print', async (event, arg) => {
   onPrint(arg);
+});
+
+ipcMain.on('app_version', (event) => {
+  event.sender.send('app_version', {
+    version: autoUpdater.currentVersion.version,
+  });
+});
+autoUpdater.on('update-available', () => {
+  mainWindow?.webContents.send('update_available');
+});
+autoUpdater.on('update-downloaded', () => {
+  mainWindow?.webContents.send('update_downloaded');
 });
 
 if (process.env.NODE_ENV === 'production') {

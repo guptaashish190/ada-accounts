@@ -13,20 +13,19 @@
   ],
   "name": "ADA-Accounts",
   "productName": "ADA Accounts",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "homepage": "https://github.com/electron-react-boilerplate/electron-react-boilerplate#readme",
   "bugs": {
     "url": "https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/electron-react-boilerplate/electron-react-boilerplate.git"
+    "url": "git+https://github.com/guptaashish190/ada-accounts2.git"
   },
   "license": "MIT",
   "author": {
-    "name": "Electron React Boilerplate Maintainers",
-    "email": "electronreactboilerplate@gmail.com",
-    "url": "https://electron-react-boilerplate.js.org"
+    "name": "Ashish Gupta",
+    "email": "guptaashish190@gmail.com"
   },
   "contributors": [
     {
@@ -44,6 +43,7 @@
     "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && npm run build:dll",
     "lint": "cross-env NODE_ENV=development eslint . --ext .js,.jsx,.ts,.tsx",
     "package": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && npm run build:dll",
+    "package-publish": "ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish always && npm run build:dll",
     "rebuild": "electron-rebuild --parallel --types prod,dev,optional --module-dir release/app",
     "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run start:renderer",
     "start:main": "cross-env NODE_ENV=development electronmon -r ts-node/register/transpile-only .",
@@ -190,8 +190,8 @@
     "webpack-merge": "^5.9.0"
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "ADA Accounts",
+    "appId": "org.erb.adaAccounts",
     "asar": true,
     "extends": null,
     "asarUnpack": "**\\*.{node,dll}",
@@ -230,6 +230,7 @@
       ]
     },
     "win": {
+      "icon": "./assets/icon.png",
       "target": [
         "nsis"
       ]
@@ -250,12 +251,11 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "electron-react-boilerplate",
-      "repo": "electron-react-boilerplate"
+      "releaseType": "release",
+      "owner": "guptaashish190",
+      "repo": "ada-accounts2",
+      "token": "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"
     }
-  },
-  "collective": {
-    "url": "https://opencollective.com/electron-react-boilerplate-594"
   },
   "devEngines": {
     "node": ">=14.x",

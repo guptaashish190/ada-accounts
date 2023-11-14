@@ -1,5 +1,6 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
+import './font.css';
 import './firebaseInit';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import {
@@ -11,7 +12,7 @@ import {
   createLightTheme,
   createDarkTheme,
 } from '@fluentui/react-components';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import icon from '../../assets/icon.svg';
 import CreateSupplyReportScreen from './screens/createSupplyReport/createSupplyReport';
 import UserContext from './contexts/userContext';
@@ -41,6 +42,7 @@ import PartyDetailsScreen from './screens/settings/partyList/partyDetails/partyD
 import LoginWrapper from './loginWrapper';
 import UpiScreen from './screens/upi/upiScreen';
 import PrinterSettings from './screens/settings/printers';
+import AutoUpdaterWrapper from './contexts/autoUpdaterContext';
 
 const myNewTheme = {
   10: '#010304',
@@ -70,80 +72,105 @@ const darkTheme = {
 };
 
 export default function App({ routeProps, startRoute, printData }) {
+  const [version, setVersion] = useState('');
+
+  useEffect(() => {
+    const { ipcRenderer } = window.electron;
+    ipcRenderer.sendMessage('app_version');
+    ipcRenderer.on('app_version', (arg) => {
+      setVersion(arg.version);
+    });
+  }, []);
+
   return (
     <FluentProvider theme={lightTheme}>
-      <LoginWrapper>
-        <AllUsersContext>
-          <UserContext>
-            <SettingsContext>
-              <Router>
-                <TabNavigator>
-                  <Routes>
-                    <Route path="/" element={<AllSupplyReportsScreen />} />
-                    <Route
-                      path="/createSupplyReport"
-                      element={<CreateSupplyReportScreen />}
-                    />
-                    <Route
-                      path="/viewSupplyReport"
-                      element={<ViewSupplyReportScreen />}
-                    />
-                    <Route
-                      path="/pendingSupplyReports"
-                      element={<PendingSupplyReports />}
-                    />
-                    <Route
-                      path="/verifySupplyReport"
-                      element={<VerifySupplyReport />}
-                    />
-                    <Route
-                      path="/receiveSupplyReports"
-                      element={<ReceiveSupplyReportScreen />}
-                    />
-                    <Route path="/searchBills" element={<AllBillsScreen />} />
-                    <Route
-                      path="/receiveSRScreen"
-                      element={<ReceiveSRScreen />}
-                    />
-                    <Route
-                      path="/paymentReceipts"
-                      element={<PaymentReceipts />}
-                    />
-                    <Route
-                      path="/createPaymentReceipts"
-                      element={<CreatePaymentReceiptDialog />}
-                    />
-                    <Route path="/chequesList" element={<ChequesScreen />} />
-                    <Route path="/assignBills" element={<AssignBillScreen />} />
-                    <Route path="/settings" element={<SettingsScreen />} />
-                    <Route path="/bundles" element={<AllBundlesScreen />} />
-                    <Route path="/viewBundle" element={<ViewBundleScreen />} />
-                    <Route path="/receiveBundle" element={<ReceiveBundle />} />
-                    <Route path="/creditNotes" element={<CreditNoteScreen />} />
-                    <Route
-                      path="/partyListSettings"
-                      element={<PartyListScreen />}
-                    />
-                    <Route
-                      path="/createCreditNotes"
-                      element={<CreateCreditNoteScreen />}
-                    />
-                    <Route
-                      path="/partyDetails"
-                      element={<PartyDetailsScreen />}
-                    />
-                    <Route path="/upi" element={<UpiScreen />} />
-                    <Route
-                      path="/printerSettings"
-                      element={<PrinterSettings />}
-                    />
-                  </Routes>
-                </TabNavigator>
-              </Router>
-            </SettingsContext>
-          </UserContext>
-        </AllUsersContext>
-      </LoginWrapper>
+      <AutoUpdaterWrapper>
+        <LoginWrapper>
+          <AllUsersContext>
+            <UserContext>
+              <SettingsContext>
+                <Router>
+                  <TabNavigator>
+                    <Routes>
+                      <Route path="/" element={<AllSupplyReportsScreen />} />
+                      <Route
+                        path="/createSupplyReport"
+                        element={<CreateSupplyReportScreen />}
+                      />
+                      <Route
+                        path="/viewSupplyReport"
+                        element={<ViewSupplyReportScreen />}
+                      />
+                      <Route
+                        path="/pendingSupplyReports"
+                        element={<PendingSupplyReports />}
+                      />
+                      <Route
+                        path="/verifySupplyReport"
+                        element={<VerifySupplyReport />}
+                      />
+                      <Route
+                        path="/receiveSupplyReports"
+                        element={<ReceiveSupplyReportScreen />}
+                      />
+                      <Route path="/searchBills" element={<AllBillsScreen />} />
+                      <Route
+                        path="/receiveSRScreen"
+                        element={<ReceiveSRScreen />}
+                      />
+                      <Route
+                        path="/paymentReceipts"
+                        element={<PaymentReceipts />}
+                      />
+                      <Route
+                        path="/createPaymentReceipts"
+                        element={<CreatePaymentReceiptDialog />}
+                      />
+                      <Route path="/chequesList" element={<ChequesScreen />} />
+                      <Route
+                        path="/assignBills"
+                        element={<AssignBillScreen />}
+                      />
+                      <Route path="/settings" element={<SettingsScreen />} />
+                      <Route path="/bundles" element={<AllBundlesScreen />} />
+                      <Route
+                        path="/viewBundle"
+                        element={<ViewBundleScreen />}
+                      />
+                      <Route
+                        path="/receiveBundle"
+                        element={<ReceiveBundle />}
+                      />
+                      <Route
+                        path="/creditNotes"
+                        element={<CreditNoteScreen />}
+                      />
+                      <Route
+                        path="/partyListSettings"
+                        element={<PartyListScreen />}
+                      />
+                      <Route
+                        path="/createCreditNotes"
+                        element={<CreateCreditNoteScreen />}
+                      />
+                      <Route
+                        path="/partyDetails"
+                        element={<PartyDetailsScreen />}
+                      />
+                      <Route path="/upi" element={<UpiScreen />} />
+                      <Route
+                        path="/printerSettings"
+                        element={<PrinterSettings />}
+                      />
+                    </Routes>
+                  </TabNavigator>
+                </Router>
+                <div className="version-name">Version {version}</div>
+              </SettingsContext>
+            </UserContext>
+          </AllUsersContext>
+        </LoginWrapper>
+      </AutoUpdaterWrapper>
     </FluentProvider>
   );
 }

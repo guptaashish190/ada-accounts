@@ -55,7 +55,7 @@ export default function LoginScreen() {
       />
       <VerticalSpace1 />
       <Button onClick={() => onLogin()} size="large" appearance="primary">
-        {logginIn ? <Spinner /> : 'Login'}
+        {logginIn ? <Spinner size="tiny" /> : 'Login'}
       </Button>
     </div>
   );

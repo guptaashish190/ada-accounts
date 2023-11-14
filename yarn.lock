@@ -7007,7 +7007,7 @@ electron-to-chromium@^1.4.535:
 
 electron-updater@^6.1.4:
   version "6.1.4"
-  resolved "https://registry.npmjs.org/electron-updater/-/electron-updater-6.1.4.tgz"
+  resolved "https://registry.yarnpkg.com/electron-updater/-/electron-updater-6.1.4.tgz#86f7e1fc4353f578456c34304b48df7d976cf348"
   integrity sha512-yYAJc6RQjjV4WtInZVn+ZcLyXRhbVXoomKEfUUwDqIk5s2wxzLhWaor7lrNgxODyODhipjg4SVPMhJHi5EnsCA==
   dependencies:
     builder-util-runtime "9.2.1"

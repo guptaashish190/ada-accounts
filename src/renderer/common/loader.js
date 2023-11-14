@@ -4,6 +4,7 @@ export default function Loader({ translucent }) {
   return (
     <center
       style={{
+        height: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

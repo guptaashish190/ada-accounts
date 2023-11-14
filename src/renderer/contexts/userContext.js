@@ -4,6 +4,7 @@ import { getAuth } from 'firebase/auth';
 import { Spinner } from '@fluentui/react-components';
 import globalUtils from '../services/globalUtils';
 import firebaseApp from '../firebaseInit';
+import Loader from '../common/loader';
 
 const Context = createContext('');
 
@@ -32,7 +33,7 @@ export default function UserContext({ children }) {
   }, []);
 
   if (loading) {
-    return <Spinner />;
+    return <Loader />;
   }
   return <Context.Provider value={{ user }}>{children}</Context.Provider>;
 }

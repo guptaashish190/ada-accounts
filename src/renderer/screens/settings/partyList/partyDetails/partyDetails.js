@@ -11,6 +11,7 @@ import {
   where,
 } from 'firebase/firestore';
 import {
+  Button,
   Dialog,
   DialogSurface,
   DialogTrigger,
@@ -21,6 +22,7 @@ import './style.css';
 import BillDetailDialog from '../../../allBills/billDetail/billDetail';
 import globalUtils from '../../../../services/globalUtils';
 import { VerticalSpace1 } from '../../../../common/verticalSpace';
+import EditPartyDetails from './editParty';
 
 export default function PartyDetailsScreen() {
   const { state } = useLocation();
@@ -40,6 +42,7 @@ export default function PartyDetailsScreen() {
       } else {
         console.log('Document not found.');
       }
+      await fetchOutstanding();
       setLoading(false);
     } catch (error) {
       console.error('Error fetching document:', error);
@@ -47,7 +50,6 @@ export default function PartyDetailsScreen() {
     }
   };
   const fetchOutstanding = async () => {
-    setLoading(true);
     try {
       const ordersCollection = collection(firebaseDB, 'orders');
       const q = query(
@@ -67,15 +69,12 @@ export default function PartyDetailsScreen() {
         (s1, s2) => s2.creationTime - s1.creationTime,
       );
       setOutstandingBills(sortedData);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching orders: ', error);
-      setLoading(false);
     }
   };
   useEffect(() => {
     fetchDocument();
-    fetchOutstanding();
   }, []);
 
   const getOutstandigBalance = () => {
@@ -103,8 +102,16 @@ export default function PartyDetailsScreen() {
   return (
     <center>
       <div className="party-detail-screen">
-        <h3>{party?.name}</h3>
+        <h3>
+          {party?.name}
 
+          {party ? (
+            <EditPartyDetails
+              refreshParty={() => fetchDocument()}
+              party={party}
+            />
+          ) : null}
+        </h3>
         <div className="vsrc-detail-items-container">
           <div className="vsrc-detail-items">
             <div className="label">Area: </div>

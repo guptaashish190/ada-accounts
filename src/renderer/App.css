@@ -8,10 +8,12 @@ body {
   font-family: sans-serif;
   overflow-y: hidden;
   margin: 0;
+
+
 }
 
-:root {
-  --green: #06d6a0;
+* {
+  font-family: Roboto;
 }
 
 table {
@@ -23,6 +25,7 @@ table tr:nth-child(1) {
   background-color: #698fffc6;
   color: white;
 }
+
 table tr:not(:nth-child(1)) {
   background-color: white;
 }
@@ -37,6 +40,7 @@ table * {
   max-width: 100%;
   text-wrap: nowrap;
 }
+
 table td {
   border: 1px solid #547fff36;
 }
@@ -53,21 +57,36 @@ table td {
     border: none !important;
     text-wrap: wrap;
   }
+
   th,
   td {
     width: 100px;
   }
+
   body {
-    width: 80mm; /* Adjust to match your receipt paper width */
-    margin: 0; /* Adjust margins as needed */
+    width: 80mm;
+    /* Adjust to match your receipt paper width */
+    margin: 0;
+    /* Adjust margins as needed */
     padding: 0;
     font-family: 'Courier New', monospace;
   }
+
   .print-button {
     display: none;
   }
+
   /* etc */
 }
+
+.version-name {
+  padding: 4px;
+  background-color: white;
+  color: grey;
+  position: fixed;
+  bottom: 0;
+}
+
 @page {
   margin: 0;
 }

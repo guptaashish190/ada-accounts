@@ -5,6 +5,7 @@ import { Spinner } from '@fluentui/react-components';
 import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import globalUtils from '../services/globalUtils';
 import firebaseApp, { firebaseDB } from '../firebaseInit';
+import Loader from '../common/loader';
 
 const Context = createContext('');
 
@@ -39,7 +40,7 @@ export default function SettingsContext({ children }) {
   }, []);
 
   if (loading) {
-    return <Spinner />;
+    return <Loader />;
   }
   return <Context.Provider value={{ settings }}>{children}</Context.Provider>;
 }

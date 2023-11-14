@@ -3,6 +3,7 @@ import firebase from 'firebase/app'; // Make sure to import the Firebase SDK
 import { getAuth } from 'firebase/auth';
 import { Spinner } from '@fluentui/react-components';
 import LoginScreen from './login/login';
+import Loader from './common/loader';
 
 function LoginWrapper({ children }) {
   const [user, setUser] = useState(null);
@@ -27,7 +28,7 @@ function LoginWrapper({ children }) {
   }, []);
 
   if (loading) {
-    return <Spinner />;
+    return <Loader />;
   }
 
   if (user) {

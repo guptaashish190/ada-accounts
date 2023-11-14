@@ -25,3 +25,10 @@
 .party-detail-screen .vsrc-detail-items-container :nth-child(even) {
   justify-content: flex-end;
 }
+
+.edit-party-input-container {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  margin-top: 20px;
+
+}
