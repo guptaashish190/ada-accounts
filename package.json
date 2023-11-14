@@ -14,10 +14,6 @@
   "name": "ADA-Accounts",
   "productName": "ADA Accounts",
   "version": "1.0.0",
-  "homepage": "https://github.com/electron-react-boilerplate/electron-react-boilerplate#readme",
-  "bugs": {
-    "url": "https://github.com/electron-react-boilerplate/electron-react-boilerplate/issues"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/guptaashish190/ada-accounts2.git"
@@ -253,8 +249,8 @@
       "provider": "github",
       "releaseType": "release",
       "owner": "guptaashish190",
-      "repo": "ada-accounts2",
-      "token": "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"
+      "repo": "ada-accounts",
+      "token": "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"
     }
   },
   "devEngines": {
