@@ -160,24 +160,46 @@ export default function AssignBillScreen() {
 
 function AddPartySectionsDialog({ addParties }) {
   const [open, setOpen] = useState(false);
-  const [fileNumbers, setFileNumbers] = useState([]);
   const [addedParties, setAddedParties] = useState([]);
+  const [mrRoutes, setMrRoutes] = useState([]);
+  const [selectedMrRoute, setSelectedMrRoute] = useState();
+  const [selectedDay, setSelectedDay] = useState();
+  const [loading, setLoading] = useState(false);
 
   const getFileNumbers = async () => {
+    setLoading(true);
     try {
-      const settingsCollection = collection(firebaseDB, 'settings');
-      const fileNumbersDoc = doc(firebaseDB, 'settings', 'fileNumbers');
+      const mrRoutesCollection = collection(firebaseDB, 'mr_routes');
+      const querySnapshot = await getDocs(mrRoutesCollection);
 
-      const document = await getDoc(fileNumbersDoc);
-      setFileNumbers(document.data()?.data || []);
-    } catch (e) {
-      console.log(e);
+      const reportsData = [];
+      querySnapshot.forEach((doc1) => {
+        reportsData.push({ id: doc1.id, ...doc1.data() });
+      });
+
+      reportsData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
+      setMrRoutes(reportsData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching Routes:', error);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     getFileNumbers();
   }, []);
+
+  const onDaySelect = async (parties) => {
+    try {
+      setLoading(true);
+      const partiesData = await globalUtils.fetchPartyByIds(parties);
+      setAddedParties(partiesData);
+    } catch (e) {
+      console.log(e);
+    }
+    setLoading(false);
+  };
 
   return (
     <>
@@ -186,16 +208,39 @@ function AddPartySectionsDialog({ addParties }) {
         <DialogSurface>
           <DialogBody>
             <DialogContent>
-              {/* <Dropdown placeholder="Select File Number">
-                <Option text="None" value={null} key="none">
-                  None
-                </Option>
-                {fileNumbers.map((option) => (
-                  <Option text={option} value={option} key={option}>
-                    {option}
+              <Dropdown
+                onOptionSelect={(_, e) => {
+                  setSelectedMrRoute(e.optionValue);
+                }}
+                placeholder="Select MR Route"
+              >
+                {mrRoutes.map((option, i) => (
+                  <Option text={option.name} value={i} key={option.id}>
+                    {option.name}
                   </Option>
                 ))}
-              </Dropdown> */}
+              </Dropdown>
+              {selectedMrRoute !== undefined ? (
+                <Dropdown
+                  placeholder="Select Day"
+                  onOptionSelect={(_, e) => {
+                    onDaySelect(
+                      mrRoutes[selectedMrRoute].route[e.optionValue].parties,
+                    );
+                  }}
+                >
+                  {mrRoutes[selectedMrRoute]?.route?.map((option, i) => (
+                    <Option
+                      text={option.day}
+                      value={i}
+                      key={`selectedmrroute${selectedMrRoute}${option.day}`}
+                    >
+                      {option.day}
+                    </Option>
+                  ))}
+                </Dropdown>
+              ) : null}
+              <VerticalSpace1 />
               <PartySelector
                 onPartySelected={(p) => {
                   if (p?.id) {
@@ -204,9 +249,14 @@ function AddPartySectionsDialog({ addParties }) {
                 }}
               />
               <VerticalSpace1 />
+              {loading ? <Spinner size="tiny" /> : null}
               {addedParties.map((ap) => {
                 return (
-                  <Card>
+                  <Card
+                    appearance="outline"
+                    style={{ marginTop: '10px' }}
+                    key={`assign-bills-dialog-${ap.id}`}
+                  >
                     {ap.name}&nbsp;&nbsp;({ap.area})&nbsp;&nbsp;&nbsp;
                     {ap.fileNumber}
                   </Card>

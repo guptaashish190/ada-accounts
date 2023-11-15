@@ -54,6 +54,32 @@ export default {
       throw error;
     }
   },
+  // Function to fetch orders by a list of order IDs
+  fetchPartyByIds: async (partyIds) => {
+    try {
+      // Reference to the "orders" collection
+      const partiesCollection = collection(firebaseDB, 'parties');
+
+      // Use Promise.all to fetch all orders concurrently
+      const partyPromises = partyIds.map(async (partyId) => {
+        const partyDoc = await getDoc(doc(partiesCollection, partyId));
+        if (partyDoc.exists) {
+          return { id: partyId, ...partyDoc.data() };
+        }
+        // Handle the case where the order with the given ID doesn't exist
+        return { id: partyId, error: 'Order not found' };
+      });
+
+      // Wait for all promises to resolve
+      const partyData = await Promise.all(partyPromises);
+
+      return partyData;
+    } catch (error) {
+      // Handle any errors that occur during the fetch
+      console.error('Error fetching orders:', error);
+      throw error;
+    }
+  },
   fetchPartyInfoForOrders: async (orders) => {
     try {
       const updatedOrders = await Promise.all(
