@@ -342,31 +342,8 @@ function BillRow({ bill, updatedBill, remove, editable }) {
     <>
       <Text className="party-name">{bill.party?.name}</Text>
       <Text className="bill-number">{bill.billNumber?.toUpperCase()}</Text>
-
-      <Dropdown
-        defaultValue={bill.party.fileNumber}
-        placeholder="File"
-        onOptionSelect={(_, e) => {
-          // bill has party object which will be updated
-          const newBill = { ...bill };
-          newBill.party = { ...bill.party, fileNumber: e.optionValue };
-          console.log(newBill);
-          updatedBill(newBill);
-        }}
-      >
-        {settings?.fileNumbers?.data.map((option) => (
-          <Option text={option} value={option} key={option}>
-            {option}
-          </Option>
-        ))}
-      </Dropdown>
-      <Input
-        disabled
-        value={bill.party.area}
-        className="field"
-        placeholder="Area..."
-      />
-
+      <Text>{bill.party.fileNumber}</Text>
+      <Text>{bill.party.area}</Text>
       <SpinButton
         disabled={!editable}
         className="spinner"

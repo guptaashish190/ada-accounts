@@ -43,6 +43,7 @@ import LoginWrapper from './loginWrapper';
 import UpiScreen from './screens/upi/upiScreen';
 import PrinterSettings from './screens/settings/printers';
 import AutoUpdaterWrapper from './contexts/autoUpdaterContext';
+import RouteSettings from './screens/settings/routes/routeSettings';
 
 const myNewTheme = {
   10: '#010304',
@@ -161,6 +162,10 @@ export default function App({ routeProps, startRoute, printData }) {
                       <Route
                         path="/printerSettings"
                         element={<PrinterSettings />}
+                      />
+                      <Route
+                        path="/routeSettings"
+                        element={<RouteSettings />}
                       />
                     </Routes>
                   </TabNavigator>

@@ -276,6 +276,7 @@ function AddPartySectionsDialog({ addParties }) {
               </Button>
               <Button
                 onClick={() => {
+                  setAddedParties([]);
                   setOpen(false);
                 }}
                 appearance="secondary"

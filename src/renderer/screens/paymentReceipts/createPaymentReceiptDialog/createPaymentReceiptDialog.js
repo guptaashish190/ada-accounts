@@ -45,7 +45,7 @@ import { showToast } from '../../../common/toaster';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
 import { useAuthUser } from '../../../contexts/allUsersContext';
-import printerDataGenerator from '../../../common/printerDataGenerator';
+import cashReceiptFormatGenerator from '../../../common/printerDataGenerator/cashReceiptFormatGenerator';
 
 export default function CreatePaymentReceiptDialog({
   open,
@@ -174,7 +174,7 @@ export default function CreatePaymentReceiptDialog({
     }
     window.electron.ipcRenderer.sendMessage(
       'print',
-      printerDataGenerator.generatePrinterCommand(printDataNew),
+      cashReceiptFormatGenerator(printDataNew),
     );
   };
 

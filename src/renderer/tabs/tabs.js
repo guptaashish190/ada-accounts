@@ -93,6 +93,11 @@ export default [
         route: '/printerSettings',
         key: 'tab-settings-printers',
       },
+      {
+        name: 'Routes',
+        route: '/routeSettings',
+        key: 'tab-settings-route',
+      },
     ],
   },
   {

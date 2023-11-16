@@ -45,7 +45,8 @@ import './style.css';
 import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import constants from '../../constants';
-import printerDataGenerator from '../../common/printerDataGenerator';
+import supplyReportRecievingFormatGenerator from '../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
+import supplyReportFormatGenerator from '../../common/printerDataGenerator/supplyReportFormatGenerator';
 
 export default function ViewSupplyReportScreen() {
   const { allUsers } = useAuthUser();
@@ -158,10 +159,26 @@ export default function ViewSupplyReportScreen() {
     };
     window.electron.ipcRenderer.sendMessage(
       'print',
-      printerDataGenerator.generateSupplyReportPrintFormat(printData),
+      supplyReportFormatGenerator(printData),
     );
   };
-
+  const onPrintSupplyReportReceiving = () => {
+    const printData = {
+      receivedBy: allUsers.find((x) => x.uid === supplyReport.receivedBy)
+        ?.username,
+      supplyman: allUsers.find((x) => x.uid === supplyReport.supplymanId)
+        ?.username,
+      dispatchTime: globalUtils.getTimeFormat(supplyReport.dispatchTimestamp),
+      receiptNumber: supplyReport.receiptNumber,
+      bills: allBills,
+      otherAdjustedBills,
+      returnedGoods,
+    };
+    window.electron.ipcRenderer.sendMessage(
+      'print',
+      supplyReportRecievingFormatGenerator(printData),
+    );
+  };
   const getOtherAdjustedBills = async () => {
     setLoading(true);
     try {
@@ -236,9 +253,20 @@ export default function ViewSupplyReportScreen() {
           </div>
         </div>
         <VerticalSpace1 />
-        <Button onClick={() => onPrintSupplyReport()}>
-          Print Supply Report
-        </Button>
+        {supplyReport.status ===
+        constants.firebase.supplyReportStatus.DISPATCHED ? (
+          <Button onClick={() => onPrintSupplyReport()}>
+            Print Supply Report
+          </Button>
+        ) : null}
+
+        {supplyReport.status ===
+        constants.firebase.supplyReportStatus.COMPLETED ? (
+          <Button onClick={() => onPrintSupplyReportReceiving()}>
+            Print Bill Receiving
+          </Button>
+        ) : null}
+
         <VerticalSpace1 />
         {supplyReport.status ===
           constants.firebase.supplyReportStatus.COMPLETED && (
