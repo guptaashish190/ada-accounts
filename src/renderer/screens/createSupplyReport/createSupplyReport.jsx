@@ -106,9 +106,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const getTotalCases = () =>
     modifiedBills.reduce((acc, cur) => acc + cur.bags[0].quantity, 0);
   const getTotalPolyBags = () =>
-    modifiedBills.reduce((acc, cur) => acc + cur.bags[1].quantity, 0);
-  const getTotalPackets = () =>
     modifiedBills.reduce((acc, cur) => acc + cur.bags[2].quantity, 0);
+  const getTotalPackets = () =>
+    modifiedBills.reduce((acc, cur) => acc + cur.bags[1].quantity, 0);
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
@@ -320,15 +320,15 @@ function TotalBagsComponent({ cases, polybags, packet }) {
         </Text>
       </Text>
       <Text size={400}>
-        Polybags:{' '}
-        <Text size={600}>
-          <b>{polybags}</b>
-        </Text>
-      </Text>
-      <Text size={400}>
         Packets:{' '}
         <Text size={600}>
           <b>{packet}</b>
+        </Text>
+      </Text>
+      <Text size={400}>
+        Polybag:{' '}
+        <Text size={600}>
+          <b>{polybags}</b>
         </Text>
       </Text>
     </div>
