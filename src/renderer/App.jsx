@@ -73,16 +73,6 @@ const darkTheme = {
 };
 
 export default function App({ routeProps, startRoute, printData }) {
-  const [version, setVersion] = useState('');
-
-  useEffect(() => {
-    const { ipcRenderer } = window.electron;
-    ipcRenderer.sendMessage('app_version');
-    ipcRenderer.on('app_version', (arg) => {
-      setVersion(arg.version);
-    });
-  }, []);
-
   return (
     <FluentProvider theme={lightTheme}>
       <AutoUpdaterWrapper>
@@ -170,7 +160,6 @@ export default function App({ routeProps, startRoute, printData }) {
                     </Routes>
                   </TabNavigator>
                 </Router>
-                <div className="version-name">Version {version}</div>
               </SettingsContext>
             </UserContext>
           </AllUsersContext>

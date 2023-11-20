@@ -64,7 +64,7 @@ const onPrint = async (data: PosPrintData[]) => {
     margin: '0 0 0 0',
     copies: 1,
     printerName: selectedPrinter,
-    timeOutPerLine: 100,
+    timeOutPerLine: 400,
     pageSize: '58mm',
   };
   PosPrinter.print(data, options);
@@ -84,6 +84,11 @@ autoUpdater.on('update-available', () => {
 });
 autoUpdater.on('update-downloaded', () => {
   mainWindow?.webContents.send('update_downloaded');
+});
+autoUpdater.on('download-progress', (progressObj) => {
+  mainWindow?.webContents.send('download_progress', {
+    progress: progressObj.percent,
+  });
 });
 
 if (process.env.NODE_ENV === 'production') {

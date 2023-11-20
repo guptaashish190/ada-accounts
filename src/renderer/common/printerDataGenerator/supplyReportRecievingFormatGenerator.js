@@ -60,12 +60,20 @@ export default (data) => {
       style: {
         fontSize: '12px',
         fontFamily: 'Arial',
-        padding: '5px 0',
+        paddingTop: '5px',
+        fontWeight: 'bold',
+      },
+      value: item.billNumber,
+    });
+    commands.push({
+      type: 'text',
+      style: {
+        fontSize: '12px',
+        fontFamily: 'Arial',
+        paddingBottom: '5px',
         borderBottom: '1px solid #000',
       },
-      value: `${item.billNumber} ${_.startCase(
-        item.party.name.toLowerCase(),
-      )} ${_.capitalize(item.party.area)}`,
+      value: `${_.startCase(item.party.name.toLowerCase())}`,
     });
   });
   if (data.otherAdjustedBills && data.otherAdjustedBills.length) {
@@ -88,12 +96,18 @@ export default (data) => {
         style: {
           fontSize: '12px',
           fontFamily: 'Arial',
-          padding: '5px 0',
-          borderBottom: '1px solid #000',
+          paddingTop: '5px',
+          fontWeight: 'bold',
         },
-        value: `${item.billNumber} ${_.startCase(
-          item.party.name.toLowerCase(),
-        )} ${_.capitalize(item.party.area)}`,
+        value: item.billNumber,
+      });
+      commands.push({
+        type: 'text',
+        style: {
+          fontSize: '12px',
+          fontFamily: 'Arial',
+        },
+        value: `${_.startCase(item.party.name.toLowerCase())}`,
       });
     });
   }

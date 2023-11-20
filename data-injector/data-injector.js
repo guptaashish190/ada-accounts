@@ -33,6 +33,7 @@ const writeDataToFirestore = async () => {
     // Iterate over each document in the data and write it to the Firestore collection
 
     let partyId;
+    let count = 0;
 
     for await (const document of data) {
       if (document['Party Name']) {
@@ -52,11 +53,11 @@ const writeDataToFirestore = async () => {
         };
         const docRef = db.collection(collectionName).doc();
         await docRef.set({ ...billData, id: docRef.id });
-        console.log('Document written to Firestore:', document);
+        count += 1;
       }
     }
 
-    console.log('Data has been successfully written to Firestore.');
+    console.log('Data has been successfully written to Firestore.', count);
   } catch (error) {
     console.error('Error writing data to Firestore:', error);
   }
@@ -78,10 +79,11 @@ const updateOrdersWithDocumentId = async () => {
     await batch.commit();
     console.log(
       'Documents in the "orders" collection updated with "id" field.',
+      count,
     );
   } catch (error) {
     console.error('Error updating documents:', error);
   }
 };
 // Call the function to write data to Firestore
-updateOrdersWithDocumentId();
+writeDataToFirestore();

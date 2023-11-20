@@ -253,8 +253,8 @@ export default function ViewSupplyReportScreen() {
           </div>
         </div>
         <VerticalSpace1 />
-        {supplyReport.status ===
-        constants.firebase.supplyReportStatus.DISPATCHED ? (
+        {supplyReport.status !==
+        constants.firebase.supplyReportStatus.COMPLETED ? (
           <Button onClick={() => onPrintSupplyReport()}>
             Print Supply Report
           </Button>
@@ -268,56 +268,49 @@ export default function ViewSupplyReportScreen() {
         ) : null}
 
         <VerticalSpace1 />
-        {supplyReport.status ===
-          constants.firebase.supplyReportStatus.COMPLETED && (
+        <h3 style={{ color: 'grey' }}>Received Bills</h3>
+        <table>
+          <tr>
+            <th>BILL NO.</th>
+            <th>PARTY</th>
+            <th>AMOUNT</th>
+            <th>CASH</th>
+            <th>CHEQUE</th>
+            <th>UPI</th>
+            <th>SCHEDULED</th>
+            <th>ACC NOTES</th>
+          </tr>
+          {allBills.map((bill, i) => {
+            return (
+              <BillRow
+                orderDetail={
+                  supplyReport.orderDetails &&
+                  supplyReport.orderDetails.find((x) => x.billId === bill.id)
+                }
+                key={`rsr-${bill.id}`}
+                data={bill}
+                index={i}
+              />
+            );
+          })}
+        </table>
+
+        {otherAdjustedBills?.length ? (
           <>
-            <h3 style={{ color: 'grey' }}>Received Bills</h3>
-            <table>
-              <tr>
-                <th>BILL NO.</th>
-                <th>PARTY</th>
-                <th>AMOUNT</th>
-                <th>CASH</th>
-                <th>CHEQUE</th>
-                <th>UPI</th>
-                <th>SCHEDULED</th>
-                <th>ACC NOTES</th>
-              </tr>
-              {allBills.map((bill, i) => {
-                return (
-                  <BillRow
-                    orderDetail={
-                      supplyReport.orderDetails &&
-                      supplyReport.orderDetails.find(
-                        (x) => x.billId === bill.id,
-                      )
-                    }
-                    key={`rsr-${bill.id}`}
-                    data={bill}
-                    index={i}
-                  />
-                );
-              })}
-            </table>
-
-            {otherAdjustedBills?.length ? (
-              <>
-                <VerticalSpace2 />
-                <h3 style={{ color: 'grey' }}>Other Adjusted Bills</h3>
-                <OtherAdjustedBills otherAdjustedBills={otherAdjustedBills} />
-              </>
-            ) : null}
-
-            {returnedGoods?.length ? (
-              <>
-                <VerticalSpace2 />
-                <h3 style={{ color: 'grey' }}>Returned Goods Bills</h3>
-                <ReturnedBillsTable returnedBills={returnedGoods} />
-              </>
-            ) : null}
             <VerticalSpace2 />
+            <h3 style={{ color: 'grey' }}>Other Adjusted Bills</h3>
+            <OtherAdjustedBills otherAdjustedBills={otherAdjustedBills} />
           </>
-        )}
+        ) : null}
+
+        {returnedGoods?.length ? (
+          <>
+            <VerticalSpace2 />
+            <h3 style={{ color: 'grey' }}>Returned Goods Bills</h3>
+            <ReturnedBillsTable returnedBills={returnedGoods} />
+          </>
+        ) : null}
+        <VerticalSpace2 />
       </div>
     </center>
   );

@@ -5,26 +5,19 @@
 .verify-supply-report .party-section-container .party-info-header {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 0 50px;
   margin-bottom: 10px;
 }
 
-.verify-supply-report .party-section-container .party-info-header .party-name {
-  width: 20%;
-  text-align: left;
-  margin-left: 20px;
-}
 .verify-supply-report .party-section-container .party-info-header .bill-number {
   color: grey;
-  width: 20%;
-  text-align: left;
 }
 
 .verify-supply-report .party-section-container .party-info-header .amount {
   font-weight: bold;
-  width: 20%;
-  text-align: left;
 }
+
 .verify-supply-report .party-old-bills {
   width: 90%;
 }
@@ -35,6 +28,7 @@
   font-size: 0.9em;
   margin-bottom: 10px;
 }
+
 .verify-supply-report .party-old-bills {
   display: grid;
   text-align: left;
@@ -44,6 +38,7 @@
 .verify-supply-report .old-bill.amount {
   font-weight: bold;
 }
+
 .verify-supply-report .old-bill {
   padding: 5px 0;
   border-bottom: 1px solid rgba(128, 128, 128, 0.095);
@@ -58,7 +53,4 @@
 
 .verify-supply-report .supplementary-bill-row * {
   text-align: left;
-}
-
-.verify-supply-report .supplementary-bill-container .party-name {
 }

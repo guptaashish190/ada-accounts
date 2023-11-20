@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 import React, { useContext, useEffect, useState } from 'react';
 import './style.css';
 import {
@@ -161,17 +162,16 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           receiptNumber: srNumber,
         };
       }
-      // update party info
-      modifiedBills.forEach((b) => {
-        if (b.party.fileNumber) {
-          const partyRef = doc(firebaseDB, 'parties', b.partyId);
-          updateDoc(partyRef, {
-            fileNumber: b.party.fileNumber,
-          });
-        }
-      });
-
       const docRef = await setDoc(reportDocRef, supplyReport);
+
+      for (const modifiedBill1 of modifiedBills) {
+        const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
+
+        updateDoc(orderRef, {
+          bags: modifiedBill1.bags,
+          billNumber: modifiedBill1.billNumber,
+        });
+      }
       await globalUtils.incrementReceiptCounter(
         constants.newReceiptCounters.SUPPLYREPORTS,
       );
@@ -224,7 +224,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
               {bills.map((b, i) => (
                 <BillRow
                   editable={editable}
-                  key={b.id}
+                  key={`createsupplyreport-${b.id}`}
                   bill={b}
                   remove={() => {
                     const tempBills = bills.filter(
@@ -239,7 +239,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
                   updatedBill={(newBill) => {
                     const tempBill = [...modifiedBills];
                     tempBill[i] = newBill;
-
                     setModifiedBills(tempBill);
                   }}
                 />
@@ -341,7 +340,16 @@ function BillRow({ bill, updatedBill, remove, editable }) {
   return (
     <>
       <Text className="party-name">{bill.party?.name}</Text>
-      <Text className="bill-number">{bill.billNumber?.toUpperCase()}</Text>
+      <Input
+        style={{ marginRight: '20px', width: '100px' }}
+        contentBefore="T-"
+        defaultValue={bill.billNumber || ''}
+        onChange={(x) => {
+          const tempBill = { ...bill };
+          tempBill.billNumber = `T-${x.target.value}`;
+          updatedBill(tempBill);
+        }}
+      />
       <Text>{bill.party.fileNumber}</Text>
       <Text>{bill.party.area}</Text>
       <SpinButton
@@ -353,8 +361,10 @@ function BillRow({ bill, updatedBill, remove, editable }) {
         id={shortid.generate()}
         onChange={(_, data) => {
           const tempBill = { ...bill };
-          tempBill.bags[0].quantity = data.value;
-          console.log(tempBill);
+          tempBill.bags[0].quantity = parseInt(
+            data.value || data.displayValue || 0,
+            10,
+          );
           updatedBill(tempBill);
         }}
       />
@@ -364,7 +374,10 @@ function BillRow({ bill, updatedBill, remove, editable }) {
         defaultValue={bill.bags[1].quantity}
         onChange={(_, data) => {
           const tempBill = { ...bill };
-          tempBill.bags[1].quantity = data.value;
+          tempBill.bags[1].quantity = parseInt(
+            data.value || data.displayValue,
+            10,
+          );
           updatedBill(tempBill);
         }}
         min={0}
@@ -380,7 +393,10 @@ function BillRow({ bill, updatedBill, remove, editable }) {
         id={shortid.generate()}
         onChange={(_, data) => {
           const tempBill = { ...bill };
-          tempBill.bags[2].quantity = data.value;
+          tempBill.bags[2].quantity = parseInt(
+            data.value || data.displayValue,
+            10,
+          );
           updatedBill(tempBill);
         }}
       />

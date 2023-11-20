@@ -1,6 +1,6 @@
 {
   "name": "ada-accounts",
-  "version": "1.0.2",
+  "version": "1.0.7",
   "description": "A foundation for scalable desktop apps",
   "license": "MIT",
   "author": {
@@ -14,5 +14,7 @@
     "postinstall": "npm run rebuild && npm run link-modules",
     "link-modules": "node -r ts-node/register ../../.erb/scripts/link-modules.ts"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@3ksy/electron-pos-printer": "^1.4.9"
+  }
 }

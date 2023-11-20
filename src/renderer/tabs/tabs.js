@@ -84,11 +84,6 @@ export default [
         key: 'tab-settings',
       },
       {
-        name: 'File Numbers',
-        route: '/settings',
-        key: 'tab-settings-filen',
-      },
-      {
         name: 'Printer',
         route: '/printerSettings',
         key: 'tab-settings-printers',
@@ -97,6 +92,7 @@ export default [
         name: 'Routes',
         route: '/routeSettings',
         key: 'tab-settings-route',
+        allowJob: [],
       },
     ],
   },

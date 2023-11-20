@@ -72,7 +72,10 @@ export default function BillSelector({ onBillsAdded }) {
   }, [searchPartyName]);
 
   useState(() => {
-    getDispatchableBills();
+    const unsubscribe = getDispatchableBills();
+    return () => {
+      unsubscribe();
+    };
   }, []);
   return (
     <div className="bill-selector">
@@ -157,7 +160,7 @@ function OrderRow({ order, onAddToggle, isSelected }) {
       key={shortid.generate()}
       className={`order-row ${isSelected ? 'is-selected' : ''}`}
     >
-      <div className="bill-number">{order.billNumber?.toUpperCase()}</div>
+      <div className="bill-number">{order.challanNumber?.toUpperCase()}</div>
       <div className="bill-name">
         {order.party?.name} {order.fileNumber}
       </div>
