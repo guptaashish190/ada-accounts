@@ -106,10 +106,10 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 
   const getTotalCases = () =>
     modifiedBills.reduce((acc, cur) => acc + cur.bags[0].quantity, 0);
-  const getTotalPolyBags = () =>
-    modifiedBills.reduce((acc, cur) => acc + cur.bags[2].quantity, 0);
   const getTotalPackets = () =>
     modifiedBills.reduce((acc, cur) => acc + cur.bags[1].quantity, 0);
+  const getTotalPolyBags = () =>
+    modifiedBills.reduce((acc, cur) => acc + cur.bags[2].quantity, 0);
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
@@ -122,6 +122,22 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 
     if (!selectedSupplyman) {
       showToast(dispatchToast, 'Please select a supplyman', 'error');
+      return;
+    }
+
+    let billNumbersAdded = true;
+    modifiedBills.forEach((bi) => {
+      if (
+        !bi.billNumber ||
+        bi.billNumber.length === 0 ||
+        bi.billNumber === 'T-'
+      ) {
+        billNumbersAdded = false;
+      }
+    });
+
+    if (!billNumbersAdded) {
+      showToast(dispatchToast, 'Please enter bill numberds', 'error');
       return;
     }
 
@@ -375,7 +391,7 @@ function BillRow({ bill, updatedBill, remove, editable }) {
         onChange={(_, data) => {
           const tempBill = { ...bill };
           tempBill.bags[1].quantity = parseInt(
-            data.value || data.displayValue,
+            data.value || data.displayValue || 0,
             10,
           );
           updatedBill(tempBill);
@@ -394,7 +410,7 @@ function BillRow({ bill, updatedBill, remove, editable }) {
         onChange={(_, data) => {
           const tempBill = { ...bill };
           tempBill.bags[2].quantity = parseInt(
-            data.value || data.displayValue,
+            data.value || data.displayValue || 0,
             10,
           );
           updatedBill(tempBill);
@@ -425,8 +441,8 @@ function BillRowLabelHeader() {
 
       <Text className="field label-header">Area</Text>
       <Text className="spinner label-header">Cases</Text>
-      <Text className="spinner label-header">Polybags</Text>
       <Text className="spinner label-header">Packets</Text>
+      <Text className="spinner label-header">Polybags</Text>
       <Text className="spinner" />
     </>
   );
