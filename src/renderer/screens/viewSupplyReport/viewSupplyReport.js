@@ -36,7 +36,7 @@ import {
   useToastController,
 } from '@fluentui/react-components';
 import { getAuth } from 'firebase/auth';
-import math, { parse } from 'mathjs';
+import math, { asecDependencies, parse } from 'mathjs';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import globalUtils from '../../services/globalUtils';
@@ -56,6 +56,7 @@ export default function ViewSupplyReportScreen() {
   const supplyReportIdState = state.supplyReportId;
   const [supplyReport, setSupplyReport] = useState(supplyReportState);
   const [allBills, setAllBills] = useState([]);
+  const [extraOldBills, setExtraOldBills] = useState([]);
   const [otherAdjustedBills, setOtherAdjustedBills] = useState([]);
   const [returnedGoods, setReturnedGoods] = useState([]);
 
@@ -88,12 +89,13 @@ export default function ViewSupplyReportScreen() {
 
   const init = async () => {
     setLoading(true);
-    const allReceivedBills = await fetchBillData([
-      ...supplyReport.orders,
+    const allReceivedBills = await fetchBillData(supplyReport.orders);
+    const extraBills1 = await fetchBillData([
       ...(supplyReport.supplementaryBills || []),
       ...(supplyReport.attachedBills || []),
     ]);
     setAllBills(allReceivedBills);
+    setExtraOldBills(extraBills1);
 
     const otherAdjustedBills1 = await fetchBillData(
       supplyReport.otherAdjustedBills?.map((x) => x.orderId),
@@ -145,6 +147,37 @@ export default function ViewSupplyReportScreen() {
     }
   }, []);
 
+  const onCancel = () => {
+    const confirm = window.confirm('Cancel supply report?');
+
+    if (!confirm) return;
+
+    try {
+      setLoading(true);
+
+      const supplyReportsCol = collection(
+        firebaseDB,
+        'supplyReports',
+        supplyReport.id,
+      );
+
+      const docRef = updateDoc(supplyReportsCol, {
+        status: constants.firebase.supplyReportStatus.CANCELLED,
+      });
+
+      showToast(dispatchToast, 'Supply Report Cancelled', 'success');
+      setLoading(false);
+    } catch (error) {
+      console.error('Error adding document: ', error);
+      showToast(
+        dispatchToast,
+        `An error occured deleting supply report ${error}`,
+        'error',
+      );
+      setLoading(false);
+    }
+  };
+
   const onPrintSupplyReport = () => {
     const printData = {
       receivedBy: allUsers.find((x) => x.uid === supplyReport.receivedBy)
@@ -154,6 +187,7 @@ export default function ViewSupplyReportScreen() {
       dispatchTime: globalUtils.getTimeFormat(supplyReport.dispatchTimestamp),
       receiptNumber: supplyReport.receiptNumber,
       bills: allBills,
+      oldBills: extraOldBills,
       otherAdjustedBills,
       returnedGoods,
     };
@@ -254,6 +288,10 @@ export default function ViewSupplyReportScreen() {
         </div>
         <VerticalSpace1 />
         {supplyReport.status !==
+        constants.firebase.supplyReportStatus.TOACCOUNTS ? (
+          <Button onClick={() => onCancel()}>Cancel</Button>
+        ) : null}
+        {supplyReport.status !==
         constants.firebase.supplyReportStatus.COMPLETED ? (
           <Button onClick={() => onPrintSupplyReport()}>
             Print Supply Report
@@ -268,7 +306,7 @@ export default function ViewSupplyReportScreen() {
         ) : null}
 
         <VerticalSpace1 />
-        <h3 style={{ color: 'grey' }}>Received Bills</h3>
+        <h3 style={{ color: 'grey' }}>Received New Bills</h3>
         <table>
           <tr>
             <th>BILL NO.</th>
@@ -281,6 +319,34 @@ export default function ViewSupplyReportScreen() {
             <th>ACC NOTES</th>
           </tr>
           {allBills.map((bill, i) => {
+            return (
+              <BillRow
+                orderDetail={
+                  supplyReport.orderDetails &&
+                  supplyReport.orderDetails.find((x) => x.billId === bill.id)
+                }
+                key={`rsr-${bill.id}`}
+                data={bill}
+                index={i}
+              />
+            );
+          })}
+        </table>
+
+        <VerticalSpace1 />
+        <h3 style={{ color: 'grey' }}>Received Old Bills</h3>
+        <table>
+          <tr>
+            <th>BILL NO.</th>
+            <th>PARTY</th>
+            <th>AMOUNT</th>
+            <th>CASH</th>
+            <th>CHEQUE</th>
+            <th>UPI</th>
+            <th>SCHEDULED</th>
+            <th>ACC NOTES</th>
+          </tr>
+          {extraOldBills.map((bill, i) => {
             return (
               <BillRow
                 orderDetail={
