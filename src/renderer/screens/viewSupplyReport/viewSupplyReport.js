@@ -287,12 +287,14 @@ export default function ViewSupplyReportScreen() {
           </div>
         </div>
         <VerticalSpace1 />
-        {supplyReport.status !==
+        {supplyReport.status ===
         constants.firebase.supplyReportStatus.TOACCOUNTS ? (
           <Button onClick={() => onCancel()}>Cancel</Button>
         ) : null}
         {supplyReport.status !==
-        constants.firebase.supplyReportStatus.COMPLETED ? (
+          constants.firebase.supplyReportStatus.COMPLETED &&
+        supplyReport.status !==
+          constants.firebase.supplyReportStatus.CANCELLED ? (
           <Button onClick={() => onPrintSupplyReport()}>
             Print Supply Report
           </Button>
@@ -306,7 +308,7 @@ export default function ViewSupplyReportScreen() {
         ) : null}
 
         <VerticalSpace1 />
-        <h3 style={{ color: 'grey' }}>Received New Bills</h3>
+        <h3 style={{ color: 'grey' }}>New Bills</h3>
         <table>
           <tr>
             <th>BILL NO.</th>
@@ -334,7 +336,7 @@ export default function ViewSupplyReportScreen() {
         </table>
 
         <VerticalSpace1 />
-        <h3 style={{ color: 'grey' }}>Received Old Bills</h3>
+        <h3 style={{ color: 'grey' }}>Old Bills</h3>
         <table>
           <tr>
             <th>BILL NO.</th>
