@@ -14,6 +14,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Button,
   Card,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogBody,
@@ -90,25 +91,29 @@ export default function UpiScreen() {
       ) : (
         <div>
           <table>
-            <tr>
-              <th>Party</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Created By</th>
-              <th>Action</th>
-            </tr>
-            {unReceivedUpiItems?.map((uri) => {
-              return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
-            })}
-            <tr>
-              <td />
-              <td />
-              <td />
-              <td />
-            </tr>
-            {receivedUpiItems?.map((uri) => {
-              return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
-            })}
+            <thead>
+              <tr>
+                <th>Party</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Created By</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unReceivedUpiItems?.map((uri) => {
+                return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
+              })}
+              <tr>
+                <td />
+                <td />
+                <td />
+                <td />
+              </tr>
+              {receivedUpiItems?.map((uri) => {
+                return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
+              })}
+            </tbody>
           </table>
         </div>
       )}
@@ -147,39 +152,44 @@ function UPIDialog({ data, createdBy }) {
   const [openDialog, setOpenDialog] = useState(false);
   const [openAdjust, setOpenAdjust] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkedWantToAdjust, setWantToAdjustChecked] = React.useState(false);
 
   const onDone = async () => {
     if (loading) return;
     setLoading(true);
     try {
-      for await (const oab of adjustedBills) {
-        const orderRef = doc(firebaseDB, 'orders', oab.id);
+      if (checkedWantToAdjust) {
+        for await (const oab of adjustedBills) {
+          const orderRef = doc(firebaseDB, 'orders', oab.id);
 
-        updateDoc(orderRef, {
-          balance:
-            oab.balance -
-            oab.payments.reduce(
-              (acc, cur) => acc + parseInt(cur.amount, 10),
-              0,
-            ),
-        });
-
-        const partyRef = doc(firebaseDB, 'parties', data.partyId);
-
-        const partySnapshot = await getDoc(partyRef);
-        let newPayments = partySnapshot.data().payments || [];
-
-        const addedPayments = oab.payments.map((oab1p) => ({
-          ...oab1p,
-          timestamp: new Date().getTime(),
-          orderId: oab.id,
-        }));
-
-        newPayments = [...newPayments, ...addedPayments];
-        updateDoc(partyRef, {
-          payments: newPayments,
-        });
+          updateDoc(orderRef, {
+            balance:
+              oab.balance -
+              oab.payments.reduce(
+                (acc, cur) => acc + parseInt(cur.amount, 10),
+                0,
+              ),
+          });
+        }
       }
+
+      const partyRef = doc(firebaseDB, 'parties', data.partyId);
+      const partySnapshot = await getDoc(partyRef);
+      let newPayments = partySnapshot.data().payments || [];
+
+      newPayments = [
+        ...newPayments,
+        {
+          amount: data.amount,
+          adjustedBills: adjustedBills.map((x) => x.id),
+          timestamp: new Date().getTime(),
+          mode: 'UPI',
+        },
+      ];
+      updateDoc(partyRef, {
+        payments: newPayments,
+      });
+
       const upiRef = doc(firebaseDB, 'upi', data.id);
       updateDoc(upiRef, {
         receivedBy: getAuth().currentUser.uid,
@@ -244,25 +254,43 @@ function UPIDialog({ data, createdBy }) {
                   <Text size={400}>
                     Comments: <b>{data.comment}</b>
                   </Text>
-                  <VerticalSpace2 />
-                  <Text size={400}>
-                    {data.isReceived
-                      ? data.bills?.join(',')
-                      : `Adjusted: ${adjustedBills.map(
-                          (ab) => `${ab.billNumber},`,
-                        )}`}
-                  </Text>
-                  <VerticalSpace2 />
+                  <VerticalSpace1 />
                   {!data.isReceived ? (
-                    <Button
-                      onClick={() => {
-                        setAdjustedBills([]);
-                        setOpenAdjust(true);
+                    <Checkbox
+                      checked={checkedWantToAdjust}
+                      onChange={(ev, ev2) => {
+                        if (!ev2.checked) {
+                          setAdjustedBills([]);
+                        }
+                        setWantToAdjustChecked(ev2.checked);
                       }}
-                    >
-                      Adjust Bills
-                    </Button>
+                      label="Want to adjust?"
+                    />
                   ) : null}
+                  <VerticalSpace1 />
+                  {checkedWantToAdjust ? (
+                    <>
+                      <Text size={400}>
+                        {data.isReceived
+                          ? data.bills?.join(',')
+                          : `Adjusted: ${adjustedBills.map(
+                              (ab) => `${ab.billNumber},`,
+                            )}`}
+                      </Text>
+                      <VerticalSpace2 />
+                      {!data.isReceived ? (
+                        <Button
+                          onClick={() => {
+                            setAdjustedBills([]);
+                            setOpenAdjust(true);
+                          }}
+                        >
+                          Adjust Bills
+                        </Button>
+                      ) : null}
+                    </>
+                  ) : null}
+
                   <VerticalSpace2 />
                 </div>
               </div>
@@ -278,7 +306,7 @@ function UPIDialog({ data, createdBy }) {
               </DialogTrigger>
               {!data.isReceived ? (
                 <Button
-                  disabled={!adjustedBills.length}
+                  disabled={!adjustedBills.length && checkedWantToAdjust}
                   onClick={() => {
                     onDone();
                   }}

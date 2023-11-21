@@ -96,37 +96,41 @@ export default function ChequesScreen() {
         />
         <VerticalSpace1 />
         <table style={{ width: '100%' }}>
-          <tr className="table-header-container">
-            <th>Entry No.</th>
-            <th style={{ width: '80%' }}>Party Name</th>
-            <th>Cheque Number</th>
-            <th>Cheque Date</th>
-            <th>Amount</th>
-            <th>Notes</th>
-            <th>Received On</th>
-          </tr>
-          {(filteredCheques || chequeList).map((ch, i) => {
-            return (
-              <ChequeTableRow
-                key={`checque-list-${ch.entryNumber}`}
-                data={ch}
-                index={i}
-              />
-            );
-          })}
-          {filteredCheques ? (
-            <tr>
-              <TableCustomCell />
-              <TableCustomCell />
-              <TableCustomCell />
-              <TableCustomCell>Total Amount</TableCustomCell>
-              <TableCustomCell>
-                <b>{globalUtils.getCurrencyFormat(getFilteredTotal())}</b>
-              </TableCustomCell>
-              <TableCustomCell />
-              <TableCustomCell />
+          <thead>
+            <tr className="table-header-container">
+              <th>Entry No.</th>
+              <th style={{ width: '80%' }}>Party Name</th>
+              <th>Cheque Number</th>
+              <th>Cheque Date</th>
+              <th>Amount</th>
+              <th>Notes</th>
+              <th>Received On</th>
             </tr>
-          ) : null}
+          </thead>
+          <tbody>
+            {(filteredCheques || chequeList).map((ch, i) => {
+              return (
+                <ChequeTableRow
+                  key={`checque-list-${ch.entryNumber}`}
+                  data={ch}
+                  index={i}
+                />
+              );
+            })}
+            {filteredCheques ? (
+              <tr>
+                <TableCustomCell />
+                <TableCustomCell />
+                <TableCustomCell />
+                <TableCustomCell>Total Amount</TableCustomCell>
+                <TableCustomCell>
+                  <b>{globalUtils.getCurrencyFormat(getFilteredTotal())}</b>
+                </TableCustomCell>
+                <TableCustomCell />
+                <TableCustomCell />
+              </tr>
+            ) : null}
+          </tbody>
         </table>
       </div>
     </center>

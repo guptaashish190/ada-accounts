@@ -190,28 +190,32 @@ export default function AllBillsScreen() {
         <div className="all-bills-row-header" />
         <VerticalSpace1 />
         <table className="all-bills-header">
-          <tr>
-            <th>Party Name</th>
-            <th>Bill No.</th>
-            <th>Date</th>
-            <th>With</th>
-            <th>MR</th>
-            <th>Amount</th>
-            <th>Balance</th>
-          </tr>
-          {loading ? (
-            <Spinner />
-          ) : (
-            filteredOrders.map((sr, index) => {
-              return (
-                <BillRow
-                  data={sr}
-                  key={`allbills-order-item-${sr.id}`}
-                  index={index}
-                />
-              );
-            })
-          )}
+          <thead>
+            <tr>
+              <th>Party Name</th>
+              <th>Bill No.</th>
+              <th>Date</th>
+              <th>With</th>
+              <th>MR</th>
+              <th>Amount</th>
+              <th>Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <Spinner />
+            ) : (
+              filteredOrders.map((sr, index) => {
+                return (
+                  <BillRow
+                    data={sr}
+                    key={`allbills-order-item-${sr.id}`}
+                    index={index}
+                  />
+                );
+              })
+            )}
+          </tbody>
         </table>
       </div>
     </center>

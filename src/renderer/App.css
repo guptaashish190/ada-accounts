@@ -21,7 +21,7 @@ table {
   border-collapse: collapse;
 }
 
-table tr:nth-child(1) {
+table thead {
   background-color: #698fffc6;
   color: white;
 }

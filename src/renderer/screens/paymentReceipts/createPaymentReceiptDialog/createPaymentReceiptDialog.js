@@ -288,37 +288,41 @@ export default function CreatePaymentReceiptDialog({
           <VerticalSpace1 />
 
           <table size="extra-small" className="vsrc-table">
-            <tr style={{ width: '100%' }} className="table-header-container">
-              <th>Party</th>
-              <th>Area</th>
-              <th>File</th>
-              <th>Amount</th>
-              <th>Actions</th>
-            </tr>
-            {prItems &&
-              prItems.map((pri) => (
-                <PaymentReceiptRow
-                  key={`paymentreceiptrow-${pri.partyId}`}
-                  editable={editable && !state?.view}
-                  amount={pri.amount}
-                  setAmount={(val) => {
-                    setPrItems((newPr) =>
-                      newPr.map((newprc) => {
-                        if (newprc.party?.id === pri.party?.id) {
-                          return { ...newprc, amount: val };
-                        }
-                        return newprc;
-                      }),
-                    );
-                  }}
-                  onDelete={() => {
-                    setPrItems((x) =>
-                      x.filter((x1) => x1.party.id !== pri.party.id),
-                    );
-                  }}
-                  pr={pri}
-                />
-              ))}
+            <thead>
+              <tr style={{ width: '100%' }} className="table-header-container">
+                <th>Party</th>
+                <th>Area</th>
+                <th>File</th>
+                <th>Amount</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {prItems &&
+                prItems.map((pri) => (
+                  <PaymentReceiptRow
+                    key={`paymentreceiptrow-${pri.partyId}`}
+                    editable={editable && !state?.view}
+                    amount={pri.amount}
+                    setAmount={(val) => {
+                      setPrItems((newPr) =>
+                        newPr.map((newprc) => {
+                          if (newprc.party?.id === pri.party?.id) {
+                            return { ...newprc, amount: val };
+                          }
+                          return newprc;
+                        }),
+                      );
+                    }}
+                    onDelete={() => {
+                      setPrItems((x) =>
+                        x.filter((x1) => x1.party.id !== pri.party.id),
+                      );
+                    }}
+                    pr={pri}
+                  />
+                ))}
+            </tbody>
           </table>
 
           <div className="total-amount">

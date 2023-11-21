@@ -20,9 +20,10 @@ import { useAuthUser } from '../../contexts/allUsersContext';
 
 const statusColors = {
   Completed: '#00A9A5',
-  Dispatched: '#FFD166',
+  Dispatched: '#d9cf4c',
   'To Accounts': '#F25C54',
-  Delivered: '#F9B572',
+  Delivered: '#5060d9',
+  CANCELLED: 'grey',
 };
 
 export default function AllSupplyReportsScreen() {
@@ -49,7 +50,6 @@ export default function AllSupplyReportsScreen() {
       querySnapshot.forEach((doc) => {
         reportsData.push({ id: doc.id, ...doc.data() });
       });
-
       reportsData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
       setSupplyReports(reportsData);
       setLoading(false);
@@ -107,6 +107,7 @@ export default function AllSupplyReportsScreen() {
           ...doc.data(),
           id: doc.id,
         }));
+        supplyReportData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
         setSupplyReports(supplyReportData);
       } catch (error) {
         console.error('Error fetching supply reports:', error);
@@ -244,9 +245,11 @@ function SupplyReportRow({ data, index }) {
           <Text className="sr-supplyman">{supplyman?.username}</Text>
           <Text
             className="sr-status"
-            style={{ backgroundColor: statusColors[data.status] }}
+            style={{
+              backgroundColor: statusColors[data.status],
+            }}
           >
-            {data?.status}
+            {data?.status?.toUpperCase()}
           </Text>
         </div>
       </Button>

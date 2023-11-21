@@ -53,32 +53,35 @@ export default function PartyListScreen() {
       />
       <VerticalSpace1 />
       <table>
-        <tr>
-          <th>Name</th>
-          <th>Area</th>
-          <th>PIN</th>
-          <th>Address</th>
-          <th>File Number</th>
-        </tr>
-
-        {parties.map((party) => (
-          <tr
-            key={`party-list-screen-${party.id}`}
-            onClick={() => {
-              navigate('/partyDetails', {
-                state: {
-                  partyId: party.id,
-                },
-              });
-            }}
-          >
-            <td>{party.name}</td>
-            <td>{party.area || '--'}</td>
-            <td>{party.pin || '--'}</td>
-            <td>{party.addressline1 || '--'}</td>
-            <td>{party.fileNumber || '--'}</td>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Area</th>
+            <th>PIN</th>
+            <th>Address</th>
+            <th>File Number</th>
           </tr>
-        ))}
+        </thead>
+        <tbody>
+          {parties.map((party) => (
+            <tr
+              key={`party-list-screen-${party.id}`}
+              onClick={() => {
+                navigate('/partyDetails', {
+                  state: {
+                    partyId: party.id,
+                  },
+                });
+              }}
+            >
+              <td>{party.name}</td>
+              <td>{party.area || '--'}</td>
+              <td>{party.pin || '--'}</td>
+              <td>{party.addressline1 || '--'}</td>
+              <td>{party.fileNumber || '--'}</td>
+            </tr>
+          ))}
+        </tbody>
       </table>
     </center>
   );

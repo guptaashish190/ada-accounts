@@ -26,31 +26,35 @@ export default function PrintCashReceipt({ data }) {
         </div>
 
         <table className="print-area-table">
-          <tr>
-            <th>Party Name</th>
-            <th>Area</th>
-            <th>Amount</th>
-          </tr>
-          {data.items?.map((pri) => {
-            return (
-              <tr>
-                <td>
-                  {pri.party?.name}({pri.party?.fileNumber})
-                </td>
-                <td>{pri.party?.area}</td>
-                <td>{globalUtils.getCurrencyFormat(pri.amount)}</td>
-              </tr>
-            );
-          })}
-          <tr>
-            <td />
-            <td>
-              <b>Total</b>
-            </td>
-            <td>
-              <b>{globalUtils.getCurrencyFormat(data.total)}</b>
-            </td>
-          </tr>
+          <thead>
+            <tr>
+              <th>Party Name</th>
+              <th>Area</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.items?.map((pri) => {
+              return (
+                <tr>
+                  <td>
+                    {pri.party?.name}({pri.party?.fileNumber})
+                  </td>
+                  <td>{pri.party?.area}</td>
+                  <td>{globalUtils.getCurrencyFormat(pri.amount)}</td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td />
+              <td>
+                <b>Total</b>
+              </td>
+              <td>
+                <b>{globalUtils.getCurrencyFormat(data.total)}</b>
+              </td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </center>

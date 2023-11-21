@@ -48,21 +48,24 @@ export default function CreditNoteScreen() {
       <h3>Credit Notes</h3>
 
       <table>
-        <tr>
-          <th>CN No.</th>
-          <th>Party Name</th>
-          <th>Amount</th>
-          <th>Remarks</th>
-          <th>Created On</th>
-        </tr>
-
-        {creditNotes.map((cn, i) => (
-          <CnTableRow
-            key={`credit-notes-${cn.receiptNumber}`}
-            data={cn}
-            index={i}
-          />
-        ))}
+        <thead>
+          <tr>
+            <th>CN No.</th>
+            <th>Party Name</th>
+            <th>Amount</th>
+            <th>Remarks</th>
+            <th>Created On</th>
+          </tr>
+        </thead>
+        <tbody>
+          {creditNotes.map((cn, i) => (
+            <CnTableRow
+              key={`credit-notes-${cn.receiptNumber}`}
+              data={cn}
+              index={i}
+            />
+          ))}
+        </tbody>
       </table>
     </center>
   );

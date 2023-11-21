@@ -179,7 +179,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           receiptNumber: srNumber,
         };
       }
-      const docRef = await setDoc(reportDocRef, supplyReport);
+      const docRef = setDoc(reportDocRef, supplyReport);
 
       for (const modifiedBill1 of modifiedBills) {
         const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
@@ -230,6 +230,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
               ? `Supply Report: ${prefillSupplyReport.id}`
               : 'Create Supply Report'}
           </h3>
+          <div>{srNumber}</div>
           <VerticalSpace1 />
           {editable ? <BillSelector onBillsAdded={(b) => addBills(b)} /> : null}
           <VerticalSpace2 />

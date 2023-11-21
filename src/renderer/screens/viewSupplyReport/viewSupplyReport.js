@@ -155,7 +155,7 @@ export default function ViewSupplyReportScreen() {
     try {
       setLoading(true);
 
-      const supplyReportsCol = collection(
+      const supplyReportsCol = doc(
         firebaseDB,
         'supplyReports',
         supplyReport.id,
@@ -166,6 +166,7 @@ export default function ViewSupplyReportScreen() {
       });
 
       showToast(dispatchToast, 'Supply Report Cancelled', 'success');
+      fetchSupplyReport();
       setLoading(false);
     } catch (error) {
       console.error('Error adding document: ', error);
@@ -310,57 +311,65 @@ export default function ViewSupplyReportScreen() {
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>New Bills</h3>
         <table>
-          <tr>
-            <th>BILL NO.</th>
-            <th>PARTY</th>
-            <th>AMOUNT</th>
-            <th>CASH</th>
-            <th>CHEQUE</th>
-            <th>UPI</th>
-            <th>SCHEDULED</th>
-            <th>ACC NOTES</th>
-          </tr>
-          {allBills.map((bill, i) => {
-            return (
-              <BillRow
-                orderDetail={
-                  supplyReport.orderDetails &&
-                  supplyReport.orderDetails.find((x) => x.billId === bill.id)
-                }
-                key={`rsr-${bill.id}`}
-                data={bill}
-                index={i}
-              />
-            );
-          })}
+          <thead>
+            <tr>
+              <th>BILL NO.</th>
+              <th>PARTY</th>
+              <th>AMOUNT</th>
+              <th>CASH</th>
+              <th>CHEQUE</th>
+              <th>UPI</th>
+              <th>SCHEDULED</th>
+              <th>ACC NOTES</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allBills.map((bill, i) => {
+              return (
+                <BillRow
+                  orderDetail={
+                    supplyReport.orderDetails &&
+                    supplyReport.orderDetails.find((x) => x.billId === bill.id)
+                  }
+                  key={`rsr-${bill.id}`}
+                  data={bill}
+                  index={i}
+                />
+              );
+            })}
+          </tbody>
         </table>
 
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>Old Bills</h3>
         <table>
-          <tr>
-            <th>BILL NO.</th>
-            <th>PARTY</th>
-            <th>AMOUNT</th>
-            <th>CASH</th>
-            <th>CHEQUE</th>
-            <th>UPI</th>
-            <th>SCHEDULED</th>
-            <th>ACC NOTES</th>
-          </tr>
-          {extraOldBills.map((bill, i) => {
-            return (
-              <BillRow
-                orderDetail={
-                  supplyReport.orderDetails &&
-                  supplyReport.orderDetails.find((x) => x.billId === bill.id)
-                }
-                key={`rsr-${bill.id}`}
-                data={bill}
-                index={i}
-              />
-            );
-          })}
+          <thead>
+            <tr>
+              <th>BILL NO.</th>
+              <th>PARTY</th>
+              <th>AMOUNT</th>
+              <th>CASH</th>
+              <th>CHEQUE</th>
+              <th>UPI</th>
+              <th>SCHEDULED</th>
+              <th>ACC NOTES</th>
+            </tr>
+          </thead>
+          <tbody>
+            {extraOldBills.map((bill, i) => {
+              return (
+                <BillRow
+                  orderDetail={
+                    supplyReport.orderDetails &&
+                    supplyReport.orderDetails.find((x) => x.billId === bill.id)
+                  }
+                  key={`rsr-${bill.id}`}
+                  data={bill}
+                  index={i}
+                />
+              );
+            })}
+          </tbody>
         </table>
 
         {otherAdjustedBills?.length ? (
@@ -387,23 +396,26 @@ export default function ViewSupplyReportScreen() {
 function OtherAdjustedBills({ otherAdjustedBills }) {
   return (
     <table size="extra-small">
-      <tr>
-        <th>BILL NO.</th>
-        <th>PARTY</th>
-        <th>CASH</th>
-        <th>CHEQUE</th>
-        <th>UPI</th>
-      </tr>
-
-      {otherAdjustedBills?.map((bill, i) => {
-        return (
-          <OtherAdjustedBillsRow
-            key={`vsrs-otheradjust-${bill.id}`}
-            data={bill}
-            index={i}
-          />
-        );
-      })}
+      <thead>
+        <tr>
+          <th>BILL NO.</th>
+          <th>PARTY</th>
+          <th>CASH</th>
+          <th>CHEQUE</th>
+          <th>UPI</th>
+        </tr>
+      </thead>
+      <tbody>
+        {otherAdjustedBills?.map((bill, i) => {
+          return (
+            <OtherAdjustedBillsRow
+              key={`vsrs-otheradjust-${bill.id}`}
+              data={bill}
+              index={i}
+            />
+          );
+        })}
+      </tbody>
     </table>
   );
 }

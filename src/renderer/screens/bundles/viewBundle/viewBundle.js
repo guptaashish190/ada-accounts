@@ -206,29 +206,33 @@ export default function ViewBundleScreen() {
             </div>
             <h3 style={{ color: 'grey' }}>All Bills</h3>
             <table>
-              <tr>
-                <th>BILL NO.</th>
-                <th>PARTY</th>
-                <th>AMOUNT</th>
-                <th>CASH</th>
-                <th>CHEQUE</th>
-                <th>UPI</th>
-                <th>SCHEDULED</th>
-                <th>ACC NOTES</th>
-              </tr>
-              {allBills.map((bill, i) => {
-                return (
-                  <BillRow
-                    orderDetail={
-                      bundle.orderDetails &&
-                      bundle.orderDetails.find((x) => x.billId === bill.id)
-                    }
-                    key={`rsr-${bill.id}`}
-                    data={bill}
-                    index={i}
-                  />
-                );
-              })}
+              <thead>
+                <tr>
+                  <th>BILL NO.</th>
+                  <th>PARTY</th>
+                  <th>AMOUNT</th>
+                  <th>CASH</th>
+                  <th>CHEQUE</th>
+                  <th>UPI</th>
+                  <th>SCHEDULED</th>
+                  <th>ACC NOTES</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allBills.map((bill, i) => {
+                  return (
+                    <BillRow
+                      orderDetail={
+                        bundle.orderDetails &&
+                        bundle.orderDetails.find((x) => x.billId === bill.id)
+                      }
+                      key={`rsr-${bill.id}`}
+                      data={bill}
+                      index={i}
+                    />
+                  );
+                })}
+              </tbody>
             </table>
             {bundle.otherAdjustedBills?.length ? (
               <>
@@ -296,35 +300,25 @@ function BillRow({ data, index, orderDetail }) {
   );
 }
 
-function td({ children }) {
-  return (
-    <Tooltip content={children}>
-      <TableCell className="vsrc-table-cell">
-        <TableCellLayout>{children}</TableCellLayout>
-      </TableCell>
-    </Tooltip>
-  );
-}
-
 function OtherAdjustedBills({ otherAdjustedBills }) {
   return (
-    <Table size="extra-small" className="vsrc-table">
-      <TableHeader className="table-header-container">
-        <TableRow>
+    <table size="extra-small" className="vsrc-table">
+      <thead className="table-header-container">
+        <tr>
           <th>BILL NO.</th>
           <th>PARTY</th>
           <th>AMOUNT</th>
           <th>CASH</th>
           <th>CHEQUE</th>
           <th>UPI</th>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+        </tr>
+      </thead>
+      <tbody>
         {otherAdjustedBills?.map((bill, i) => {
           return <OtherAdjustedBillsRow data={bill} index={i} />;
         })}
-      </TableBody>
-    </Table>
+      </tbody>
+    </table>
   );
 }
 

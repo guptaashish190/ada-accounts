@@ -336,29 +336,32 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
             <DialogContent>
               <VerticalSpace1 />
               <table className="assign-bills-confirm-table">
-                <tr>
-                  <td>Bill Number</td>
-                  <td>Date</td>
-                  <td>Party Name</td>
-                  <td>Amount</td>
-                  <td>Balance</td>
-                </tr>
-
-                {addedBills.map((ab) => (
+                <thead>
                   <tr>
-                    <TableCustomCell>{ab.billNumber}</TableCustomCell>
-                    <TableCustomCell>
-                      {globalUtils.getTimeFormat(ab.creationTime, true)}
-                    </TableCustomCell>
-                    <TableCustomCell>{ab.party?.name}</TableCustomCell>
-                    <TableCustomCell>
-                      {globalUtils.getCurrencyFormat(ab.orderAmount)}
-                    </TableCustomCell>
-                    <TableCustomCell>
-                      {globalUtils.getCurrencyFormat(ab.balance)}
-                    </TableCustomCell>
+                    <td>Bill Number</td>
+                    <td>Date</td>
+                    <td>Party Name</td>
+                    <td>Amount</td>
+                    <td>Balance</td>
                   </tr>
-                ))}
+                </thead>
+                <tbody>
+                  {addedBills.map((ab) => (
+                    <tr>
+                      <TableCustomCell>{ab.billNumber}</TableCustomCell>
+                      <TableCustomCell>
+                        {globalUtils.getTimeFormat(ab.creationTime, true)}
+                      </TableCustomCell>
+                      <TableCustomCell>{ab.party?.name}</TableCustomCell>
+                      <TableCustomCell>
+                        {globalUtils.getCurrencyFormat(ab.orderAmount)}
+                      </TableCustomCell>
+                      <TableCustomCell>
+                        {globalUtils.getCurrencyFormat(ab.balance)}
+                      </TableCustomCell>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
               <VerticalSpace1 />
               <Card>

@@ -136,37 +136,41 @@ export default function PartyDetailsScreen() {
         <VerticalSpace1 />
         <h3>Outstanding</h3>
         <table className="all-bills-header">
-          <tr>
-            <th>Bill No.</th>
-            <th>Date</th>
-            <th>With</th>
-            <th>MR</th>
-            <th>Amount</th>
-            <th>Balance</th>
-            <th>Days</th>
-          </tr>
-          {loading ? (
-            <Spinner />
-          ) : (
-            outstandingBills?.map((sr, index) => {
-              return <BillRow data={sr} index={index} />;
-            })
-          )}
+          <thead>
+            <tr>
+              <th>Bill No.</th>
+              <th>Date</th>
+              <th>With</th>
+              <th>MR</th>
+              <th>Amount</th>
+              <th>Balance</th>
+              <th>Days</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <Spinner />
+            ) : (
+              outstandingBills?.map((sr, index) => {
+                return <BillRow data={sr} index={index} />;
+              })
+            )}
 
-          <tr>
-            <td />
-            <td />
-            <td />
-            <td />
-            <td>
-              {' '}
-              <b>{getOutstandigAmount()}</b>
-            </td>
-            <td>
-              <b>{getOutstandigBalance()}</b>
-            </td>
-            <td />
-          </tr>
+            <tr>
+              <td />
+              <td />
+              <td />
+              <td />
+              <td>
+                {' '}
+                <b>{getOutstandigAmount()}</b>
+              </td>
+              <td>
+                <b>{getOutstandigBalance()}</b>
+              </td>
+              <td />
+            </tr>
+          </tbody>
         </table>
       </div>
     </center>

@@ -46,39 +46,43 @@ export default function PaymentReceipts() {
         </Button>
         <VerticalSpace1 />
         <table>
-          <tr>
-            <th>Receipt</th>
-            <th>Date</th>
-            <th>Username</th>
-            <th>Parties</th>
-          </tr>
-          {receipts.map((rc, i) => {
-            return (
-              <tr
-                key={`receipt-list-${rc.cashReceiptNumber}`}
-                onClick={() => {
-                  navigate('/createPaymentReceipts', {
-                    state: { ...rc, view: true },
-                  });
-                }}
-                className="pr-receipt-row"
-              >
-                <td className="pr-id">
-                  {i + 1}. {rc.cashReceiptNumber}
-                </td>
-                <td className="timestamp">
-                  {globalUtils.getTimeFormat(rc.timestamp, true)}
-                </td>
-                <td className="username">
-                  {
-                    allUsers.find((x) => x.uid === rc?.paymentFromUserId)
-                      ?.username
-                  }
-                </td>
-                <td className="username">{rc.prItems.length}</td>
-              </tr>
-            );
-          })}
+          <thead>
+            <tr>
+              <th>Receipt</th>
+              <th>Date</th>
+              <th>Username</th>
+              <th>Parties</th>
+            </tr>
+          </thead>
+          <tbody>
+            {receipts.map((rc, i) => {
+              return (
+                <tr
+                  key={`receipt-list-${rc.cashReceiptNumber}`}
+                  onClick={() => {
+                    navigate('/createPaymentReceipts', {
+                      state: { ...rc, view: true },
+                    });
+                  }}
+                  className="pr-receipt-row"
+                >
+                  <td className="pr-id">
+                    {i + 1}. {rc.cashReceiptNumber}
+                  </td>
+                  <td className="timestamp">
+                    {globalUtils.getTimeFormat(rc.timestamp, true)}
+                  </td>
+                  <td className="username">
+                    {
+                      allUsers.find((x) => x.uid === rc?.paymentFromUserId)
+                        ?.username
+                    }
+                  </td>
+                  <td className="username">{rc.prItems.length}</td>
+                </tr>
+              );
+            })}
+          </tbody>
         </table>
       </div>
     </center>
