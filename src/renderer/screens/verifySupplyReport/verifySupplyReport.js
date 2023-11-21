@@ -101,8 +101,12 @@ export default function VerifySupplyReport() {
       updateDoc(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
         dispatchTimestamp: new Date().getTime(),
-        attachedBills: attachedBills.map((b) => b.id),
-        supplementaryBills: supplementaryBills.map((b) => b.id),
+        attachedBills: attachedBills
+          .filter((x) => x.balance !== 0)
+          .map((b) => b.id),
+        supplementaryBills: supplementaryBills
+          .filter((x) => x.balance !== 0)
+          .map((b) => b.id),
       });
 
       await bills.forEach(async (bill1) => {

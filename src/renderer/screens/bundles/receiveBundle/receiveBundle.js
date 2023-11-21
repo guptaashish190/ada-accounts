@@ -181,8 +181,7 @@ export default function ReceiveBundle() {
 
   if (loading) return <Loader />;
 
-  const allBillsReceived =
-    [...receivedBills, ...otherAdjustedBills].length === allBills.length;
+  const allBillsReceived = receivedBills.length === allBills.length;
 
   return (
     <>

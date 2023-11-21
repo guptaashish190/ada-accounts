@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import './style.css';
 import {
   Button,
@@ -48,6 +48,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const [loading, setLoading] = useState(false);
   const [editable, setEditable] = useState(true);
   const [srNumber, setSrNumber] = useState();
+  const billListRefs = useRef([]);
 
   const prefillState = async () => {
     setLoading(true);
@@ -239,7 +240,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
               <BillRowLabelHeader />
               {bills.map((b, i) => (
                 <BillRow
+                  billsRefList={billListRefs}
                   editable={editable}
+                  index={i}
                   key={`createsupplyreport-${b.id}`}
                   bill={b}
                   remove={() => {
@@ -350,13 +353,21 @@ function TotalBagsComponent({ cases, polybags, packet }) {
   );
 }
 
-function BillRow({ bill, updatedBill, remove, editable }) {
+function BillRow({ bill, updatedBill, remove, editable, index }) {
   const { settings } = useSettingsContext();
-
+  const inputId = `createsupreport-bill-${index}`;
+  const nextId = `createsupreport-bill-${index + 1}`;
+  const handleKeyUp = (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById(nextId)?.focus();
+    }
+  };
   return (
     <>
       <Text className="party-name">{bill.party?.name}</Text>
       <Input
+        onKeyDown={(e) => handleKeyUp(e)}
+        id={inputId}
         style={{ marginRight: '20px', width: '100px' }}
         contentBefore="T-"
         defaultValue={bill.billNumber || ''}

@@ -69,7 +69,7 @@ export default function AssignBillScreen() {
         status: constants.firebase.billBundleFlowStatus.CREATED,
         timestamp: new Date().getTime(),
         assignedTo: selectedUser.uid,
-        bills: addedBills.map((x) => x.id),
+        bills: addedBills.filter((x) => x.balance !== 0).map((x) => x.id),
       });
 
       await addedBills.forEach(async (bill1) => {
