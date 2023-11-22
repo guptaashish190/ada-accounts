@@ -139,7 +139,7 @@ export default (data) => {
       },
       value: `${
         item.party.area?.toUpperCase() || ''
-      } : ${globalUtils.getCurrencyFormat(item.orderAmount)}`,
+      } : ${globalUtils.getCurrencyFormat(item.balance)}`,
     });
   });
   commands.push({

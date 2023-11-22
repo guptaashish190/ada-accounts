@@ -1,7 +1,7 @@
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Text } from '@fluentui/react-components';
+import { Button, Card, Text, Input } from '@fluentui/react-components';
 import { firebaseDB } from '../../firebaseInit';
 import './style.css';
 import Loader from '../../common/loader';
@@ -10,6 +10,8 @@ import { VerticalSpace1 } from '../../common/verticalSpace';
 
 export default function ReceiveSupplyReportScreen() {
   const [supplyReports, setSupplyReports] = useState([]);
+  const [filteredSupplyReports, setFilteredSupplyReports] = useState([]);
+  const [querySR, setQuerySR] = useState('');
 
   const [loading, setLoading] = useState(false);
 
@@ -48,6 +50,7 @@ export default function ReceiveSupplyReportScreen() {
 
       setLoading(false);
       setSupplyReports(dispatchedSupplyReports);
+      setFilteredSupplyReports(dispatchedSupplyReports);
     } catch (error) {
       console.error('Error fetching undispatched supply reports:', error);
       setLoading(false);
@@ -58,12 +61,28 @@ export default function ReceiveSupplyReportScreen() {
     fetchDispatchedSupplyReports();
   }, []);
 
+  useEffect(() => {
+    if (querySR.length === 0) {
+      setFilteredSupplyReports(supplyReports);
+    } else {
+      setFilteredSupplyReports(
+        filteredSupplyReports.filter((x) => x.receiptNumber.includes(querySR)),
+      );
+    }
+  }, [querySR]);
+
   if (loading) return <Loader />;
 
   return (
     <center>
       <div className="receive-supply-reports-container">
-        <h3>Receive Supply Report</h3>
+        <h3>Receive Supply Reports</h3>
+
+        <Input
+          onChange={(_, e) => setQuerySR(e.value)}
+          contentBefore="SR-"
+          placeholder="00"
+        />
         <VerticalSpace1 />
         <div className="supply-report-row-header">
           <Text className="sr-id">ID</Text>
@@ -73,11 +92,11 @@ export default function ReceiveSupplyReportScreen() {
           <Text>ACTION</Text>
         </div>
         <VerticalSpace1 />
-        {supplyReports.map((sr) => {
+        {filteredSupplyReports.map((sr) => {
           return <SupplyReportRow key={`recevie-sr-list-${sr.id}`} data={sr} />;
         })}
 
-        {supplyReports.length === 0 ? (
+        {filteredSupplyReports.length === 0 ? (
           <Text style={{ color: '#ddd' }}>No Supply Reports to receive</Text>
         ) : null}
       </div>

@@ -198,6 +198,8 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       } else {
         setEditable(false);
       }
+
+      getNewSupplyReportNumber();
       setLoading(false);
     } catch (error) {
       console.error('Error adding document: ', error);
@@ -239,7 +241,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           ) : (
             <div className="bill-row-container">
               <BillRowLabelHeader />
-              {bills.map((b, i) => (
+              {modifiedBills.map((b, i) => (
                 <BillRow
                   billsRefList={billListRefs}
                   editable={editable}
