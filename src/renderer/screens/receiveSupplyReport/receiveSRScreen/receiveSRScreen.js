@@ -383,6 +383,26 @@ export default function ReceiveSRScreen() {
                     );
                   })}
                 </div>
+                {otherAdjustedBills
+                  .filter((x) => x.partyId === bill.party.id)
+                  .map((o) => {
+                    return (
+                      <div
+                        className="cashadjustedbillrows"
+                        size="small"
+                        key={`cashotherbillrow-${o.id}`}
+                      >
+                        <div>
+                          Adjusted {o.payments[0].type.toUpperCase()}
+                          {` `}
+                          {globalUtils.getCurrencyFormat(
+                            o.payments[0].amount,
+                          )}{' '}
+                          against {o.billNumber}
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             );
           })}
@@ -440,26 +460,7 @@ export default function ReceiveSRScreen() {
               </div>
             );
           })}
-          <div>
-            {otherAdjustedBills.map((o) => {
-              return (
-                <Card
-                  appearance="outline"
-                  size="small"
-                  key={`cashotherbillrow-${o.id}`}
-                >
-                  <div>
-                    Adjusted {o.payments[0].type.toUpperCase()}
-                    {` `}
-                    <b>
-                      {globalUtils.getCurrencyFormat(o.payments[0].amount)}{' '}
-                    </b>
-                    against <b>{o.billNumber}</b>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+          <div />
         </div>
         <VerticalSpace1 />
         {allBillsReceived ? (

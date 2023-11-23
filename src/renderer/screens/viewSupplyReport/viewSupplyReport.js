@@ -34,8 +34,17 @@ import {
   makeStyles,
   useId,
   useToastController,
+  Dialog,
+  DialogTrigger,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogActions,
+  DialogContent,
 } from '@fluentui/react-components';
 import { getAuth } from 'firebase/auth';
+
+import { Edit12Filled } from '@fluentui/react-icons';
 import math, { asecDependencies, parse } from 'mathjs';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
@@ -47,6 +56,7 @@ import { useAuthUser } from '../../contexts/allUsersContext';
 import constants from '../../constants';
 import supplyReportRecievingFormatGenerator from '../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
 import supplyReportFormatGenerator from '../../common/printerDataGenerator/supplyReportFormatGenerator';
+import SelectUserDropdown from '../../common/selectUser';
 
 export default function ViewSupplyReportScreen() {
   const { allUsers } = useAuthUser();
@@ -67,12 +77,13 @@ export default function ViewSupplyReportScreen() {
 
   // Fetch the document data
   const fetchSupplyReport = async () => {
+    console.log(state);
     try {
       setLoading(true);
       const supplyReportRef = doc(
         firebaseDB,
         'supplyReports',
-        supplyReportIdState,
+        supplyReportIdState || supplyReport.id,
       );
       const docSnapshot = await getDoc(supplyReportRef);
       if (docSnapshot.exists()) {
@@ -260,6 +271,13 @@ export default function ViewSupplyReportScreen() {
                 allUsers.find((x) => x.uid === supplyReport.supplymanId)
                   ?.username
               }
+              <EditSupplymanDialog
+                currentUser={allUsers.find(
+                  (x) => x.uid === supplyReport.supplymanId,
+                )}
+                supplyReportId={supplyReport.id}
+                refresh={fetchSupplyReport}
+              />
             </div>
           </div>
           <div className="vsrc-detail-items">
@@ -540,5 +558,61 @@ function ReturnedBillRow({ data, index }) {
       </TableCustomCell>
       <TableCustomCell>{data.remarks || '--'}</TableCustomCell>
     </tr>
+  );
+}
+
+function EditSupplymanDialog({ currentUser, supplyReportId, refresh }) {
+  const [open, setOpen] = useState(false);
+  const [user, setUser] = useState(currentUser);
+  const [loading, setLoading] = useState(false);
+
+  const setSupplymanFunc = async () => {
+    try {
+      // Reference to the order document
+      const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReportId);
+
+      // Update the supplymanId field
+      updateDoc(supplyReportRef, { supplymanId: user.uid });
+      refresh();
+      setOpen(false);
+    } catch (error) {
+      alert('error occured');
+    }
+  };
+
+  return (
+    <Dialog open={open}>
+      <DialogTrigger>
+        <Button size="small" onClick={() => setOpen(true)}>
+          <Edit12Filled />
+        </Button>
+      </DialogTrigger>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>Edit Supplyman</DialogTitle>
+          <DialogContent>
+            <SelectUserDropdown user={user} setUser={setUser} />
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setSupplymanFunc();
+              }}
+              appearance="secondary"
+            >
+              {loading ? <Spinner size="tiny" /> : 'Done'}
+            </Button>
+            <Button
+              onClick={() => {
+                setOpen(false);
+              }}
+              appearance="secondary"
+            >
+              Close
+            </Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }

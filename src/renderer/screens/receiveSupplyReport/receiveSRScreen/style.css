@@ -41,6 +41,10 @@
   font-size: 0.95em;
 }
 
+.receive-sr-container .cashadjustedbillrows {
+  color: rgb(193, 193, 193);
+  margin: 5px;
+}
 .receive-sr-container .bill-row .input {
   margin: 0 10px;
 }
