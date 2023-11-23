@@ -103,10 +103,10 @@ export default function ReceiveSRScreen() {
     await getAllBills();
     const obg = await getGroupedBills(supplyReport.attachedBills);
     const sbg = await getGroupedBills(supplyReport.supplementaryBills);
-    console.log(obg);
-    console.log(sbg);
+
     setGroupedOldBills(obg || []);
     setGroupedSupplementaryBills(sbg || []);
+    console.log(sbg);
     setLoading(false);
   };
 
@@ -414,48 +414,50 @@ export default function ReceiveSRScreen() {
               <div>
                 <div className="title-sr">{bills[0].party?.name}</div>
                 <div className="party-bills-container">
-                  {groupedOldBills[bills[0].partyId]?.map((oldBill) => {
-                    return (
-                      <BillRow
-                        isOld
-                        isReturned={
-                          returnedBills.findIndex(
-                            (x) => x.id === oldBill.id,
-                          ) !== -1
-                        }
-                        onReturn={() => {
-                          setReturnedBills((x) => [...x, oldBill]);
-                        }}
-                        onReceive={(x) => {
-                          receiveBill(x);
-                        }}
-                        key={`rsr-${oldBill.id}`}
-                        data={oldBill}
-                        isReceived={
-                          receivedBills.findIndex(
-                            (x) => x.id === oldBill.id,
-                          ) !== -1
-                        }
-                        onUndo={() => {
-                          setReceivedBills((b) =>
-                            b.filter((tb) => tb.id !== oldBill.id),
-                          );
-                          setReturnedBills((b) =>
-                            b.filter((tb) => tb.id !== oldBill.id),
-                          );
-                        }}
-                        openAdjustDialog={(orderData, amount, type) => {
-                          setOpenAdjustAmountDialog({
-                            orderData,
-                            amount,
-                            type,
-                          });
-                        }}
-                        setOtherAdjustedBills={setOtherAdjustedBills}
-                        otherAdjustedBills={otherAdjustedBills}
-                      />
-                    );
-                  })}
+                  {groupedSupplementaryBills[bills[0].partyId]?.map(
+                    (oldBill) => {
+                      return (
+                        <BillRow
+                          isOld
+                          isReturned={
+                            returnedBills.findIndex(
+                              (x) => x.id === oldBill.id,
+                            ) !== -1
+                          }
+                          onReturn={() => {
+                            setReturnedBills((x) => [...x, oldBill]);
+                          }}
+                          onReceive={(x) => {
+                            receiveBill(x);
+                          }}
+                          key={`rsr-${oldBill.id}`}
+                          data={oldBill}
+                          isReceived={
+                            receivedBills.findIndex(
+                              (x) => x.id === oldBill.id,
+                            ) !== -1
+                          }
+                          onUndo={() => {
+                            setReceivedBills((b) =>
+                              b.filter((tb) => tb.id !== oldBill.id),
+                            );
+                            setReturnedBills((b) =>
+                              b.filter((tb) => tb.id !== oldBill.id),
+                            );
+                          }}
+                          openAdjustDialog={(orderData, amount, type) => {
+                            setOpenAdjustAmountDialog({
+                              orderData,
+                              amount,
+                              type,
+                            });
+                          }}
+                          setOtherAdjustedBills={setOtherAdjustedBills}
+                          otherAdjustedBills={otherAdjustedBills}
+                        />
+                      );
+                    },
+                  )}
                 </div>
               </div>
             );
