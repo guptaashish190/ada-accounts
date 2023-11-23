@@ -44,6 +44,7 @@ import constants from '../../../constants';
 
 export default function BillRow({
   data,
+  supplyReport,
   isOld,
   onReceive,
   isReceived,
@@ -129,15 +130,15 @@ export default function BillRow({
 
     newPayments = [
       ...newPayments,
-      cash1.length > 0 && {
+      cash1 > 0 && {
         type: 'cash',
         amount: cash1,
       },
-      cheque1.length > 0 && {
+      cheque1 > 0 && {
         type: 'cheque',
         amount: cheque1,
       },
-      upi1.length > 0 && {
+      upi1 > 0 && {
         type: 'upi',
         amount: upi1,
       },
@@ -158,8 +159,18 @@ export default function BillRow({
   };
   const disabled = isReceived || isReturned;
 
+  const isReceivedIndex = supplyReport.orderDetails?.findIndex(
+    (x) => x.billId === data.id,
+  );
+  const isReceived1 = isReceivedIndex !== undefined && isReceivedIndex !== -1;
+
   return (
-    <div className="bill-row">
+    <div
+      style={
+        isReceived1 ? { pointerEvents: 'none', filter: 'grayscale(1)' } : {}
+      }
+      className="bill-row"
+    >
       <center>
         <div className="bill-row-top">
           <Text>

@@ -63,6 +63,7 @@ export default function ReceiveSRScreen() {
 
   const [loading, setLoading] = useState(false);
   const getAllBills = async () => {
+    console.log(supplyReport);
     try {
       let fetchedOrders = await globalUtils.fetchOrdersByIds(
         supplyReport.orders,
@@ -118,35 +119,54 @@ export default function ReceiveSRScreen() {
     setReceivedBills((r) => [...r, bi]);
   };
 
+  const allBillsReceived =
+    receivedBills.length +
+      returnedBills.length +
+      (supplyReport.orderDetails?.length || 0) +
+      (supplyReport.returnedBills?.length || 0) ===
+    [
+      ...supplyReport.orders,
+      ...supplyReport.supplementaryBills,
+      ...supplyReport.attachedBills,
+    ].length;
+
   // update order details in the supplyreport and individual orders
   const onComplete = async () => {
     setLoading(true);
-    // Reference to the document in the "supplyReports" collection
-    const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
 
+    const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
+    const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
     try {
       // update supply report for all the bill rec details
       updateDoc(supplyReportRef, {
-        status: constants.firebase.supplyReportStatus.COMPLETED,
-        orderDetails: receivedBills.map((rb) => ({
-          billId: rb.id,
-          ...(rb.accountsNotes ? { accountsNotes: rb.accountsNotes } : {}),
-          payments: rb.payments,
-          ...(rb.schedulePaymentDate
-            ? { schedulePaymentDate: rb.schedulePaymentDate }
-            : {}),
-          with: rb.with,
-        })),
+        ...(allBillsReceived
+          ? { status: constants.firebase.supplyReportStatus.COMPLETED }
+          : {}),
+        orderDetails: [
+          ...(supplyReportDataNew.orderDetails || []),
+          ...receivedBills.map((rb) => ({
+            billId: rb.id,
+            ...(rb.accountsNotes ? { accountsNotes: rb.accountsNotes } : {}),
+            payments: rb.payments,
+            ...(rb.schedulePaymentDate
+              ? { schedulePaymentDate: rb.schedulePaymentDate }
+              : {}),
+            with: rb.with,
+          })),
+        ],
         otherAdjustedBills: otherAdjustedBills.map((oab1) => {
           return {
             orderId: oab1.id,
             payments: oab1.payments,
           };
         }),
-        returnedBills: returnedBills.map((x) => ({
-          billId: x.id,
-          remarks: x.notes || '',
-        })),
+        returnedBills: [
+          ...(supplyReportDataNew.returnedBills || []),
+          ...returnedBills.map((x) => ({
+            billId: x.id,
+            remarks: x.notes || '',
+          })),
+        ],
         receivedBy: getAuth(firebaseApp).currentUser.uid,
       });
 
@@ -243,7 +263,6 @@ export default function ReceiveSRScreen() {
     }
   };
 
-  const onSave = () => {};
   const onCreateCashReceipt = () => {
     const prItems = {};
 
@@ -279,14 +298,6 @@ export default function ReceiveSRScreen() {
   };
   if (loading) return <Loader />;
 
-  const allBillsReceived =
-    receivedBills.length + returnedBills.length ===
-    [
-      ...supplyReport.orders,
-      ...supplyReport.supplementaryBills,
-      ...supplyReport.attachedBills,
-    ].length;
-
   return (
     <>
       <Toaster toasterId={toasterId} />
@@ -306,12 +317,14 @@ export default function ReceiveSRScreen() {
           <VerticalSpace1 />
 
           {allBills.map((bill) => {
+            console.log(supplyReport.orderDetails, bill);
             return (
               <div className="party-section-receive-sr">
                 <div className="title-sr">{bill.party?.name}</div>
 
                 <div className="party-bills-container">
                   <BillRow
+                    supplyReport={supplyReport}
                     isReturned={
                       returnedBills.findIndex((x) => x.id === bill.id) !== -1
                     }
@@ -343,6 +356,7 @@ export default function ReceiveSRScreen() {
                   {groupedOldBills[bill.partyId]?.map((oldBill) => {
                     return (
                       <BillRow
+                        supplyReport={supplyReport}
                         isOld
                         isReturned={
                           returnedBills.findIndex(
@@ -418,6 +432,7 @@ export default function ReceiveSRScreen() {
                     (oldBill) => {
                       return (
                         <BillRow
+                          supplyReport={supplyReport}
                           isOld
                           isReturned={
                             returnedBills.findIndex(
@@ -474,7 +489,7 @@ export default function ReceiveSRScreen() {
             COMPLETED
           </Button>
         ) : (
-          <Button onClick={() => onSave()} size="large">
+          <Button onClick={() => onComplete()} size="large">
             SAVE
           </Button>
         )}
