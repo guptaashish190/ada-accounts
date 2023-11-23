@@ -1,11 +1,11 @@
 import _ from 'lodash';
 import globalUtils from '../../services/globalUtils';
 
-export default (data) => {
+export default (data, isBundle) => {
   const commands = [];
   commands.push({
     type: 'text',
-    value: `Supply Report`,
+    value: isBundle ? 'Bundle' : `Supply Report`,
     style: {
       fontWeight: '700',
       textAlign: 'center',
@@ -26,7 +26,7 @@ export default (data) => {
   });
   commands.push({
     type: 'text',
-    value: `Supplyman: ${data.supplyman}`,
+    value: `${isBundle ? 'Assigned to' : 'Supplyman'}: ${data.supplyman}`,
     style: {
       fontSize: '12px',
       fontFamily: 'Arial',
@@ -54,7 +54,7 @@ export default (data) => {
     },
   });
 
-  data.bills.forEach((item) => {
+  data.bills?.forEach((item) => {
     commands.push({
       type: 'text',
       style: {
@@ -83,18 +83,26 @@ export default (data) => {
         item.party.area?.toUpperCase() || ''
       } : ${globalUtils.getCurrencyFormat(item.orderAmount)}`,
     });
+    if (!isBundle) {
+      commands.push({
+        type: 'text',
+        style: {
+          fontSize: '14px',
+          fontFamily: 'Arial',
+        },
+        value: item.bags
+          ?.filter((x) => x.quantity > 0)
+          .map((x) => `${x.bagType}-${x.quantity}  `)
+          .join(','),
+      });
+    }
     commands.push({
       type: 'text',
       style: {
-        fontSize: '14px',
-        fontFamily: 'Arial',
         paddingBottom: '5px',
         borderBottom: '1px solid #000',
       },
-      value: item.bags
-        ?.filter((x) => x.quantity > 0)
-        .map((x) => `${x.bagType}-${x.quantity}  `)
-        .join(','),
+      value: '',
     });
   });
 
@@ -112,7 +120,7 @@ export default (data) => {
       },
     });
   }
-  data.oldBills.forEach((item) => {
+  data.oldBills?.forEach((item) => {
     commands.push({
       type: 'text',
       style: {

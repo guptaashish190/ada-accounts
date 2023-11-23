@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import globalUtils from '../../services/globalUtils';
 
-export default (data) => {
+export default (data, isBundle) => {
   const commands = [];
   commands.push({
     type: 'text',
@@ -26,7 +26,7 @@ export default (data) => {
   });
   commands.push({
     type: 'text',
-    value: `Supplyman: ${data.supplyman}`,
+    value: `${isBundle ? 'Received from' : 'Supplyman'}: ${data.supplyman}`,
     style: {
       fontSize: '12px',
       fontFamily: 'Arial',

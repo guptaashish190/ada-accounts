@@ -11,7 +11,7 @@ import constants from '../../constants';
 const statusColors = {
   [constants.firebase.billBundleFlowStatus.CREATED]: '#00A9A5',
   [constants.firebase.billBundleFlowStatus.HANDOVER]: '#FFD166',
-  [constants.firebase.billBundleFlowStatus.RECEIVED]: '#F25C54',
+  [constants.firebase.billBundleFlowStatus.COMPLETED]: '#F25C54',
 };
 
 export default function AllBundlesScreen() {
@@ -79,18 +79,19 @@ function BundlesRow({ data, index }) {
         }}
       >
         <div className="supply-report-row">
-          <Text className="sr-id">
-            {index + 1}. {assignedUser?.username}
-          </Text>
+          <Text className="sr-id">{data.receiptNumber || '--'} </Text>
+          <Text>{assignedUser?.username}</Text>
           <Text className="sr-timestamp">
             {globalUtils.getTimeFormat(data.timestamp, true)}
           </Text>
           <Text className="sr-parties-length">{data.bills.length} Bills </Text>
           <Text
             className="sr-status"
-            style={{ backgroundColor: statusColors[data.status] }}
+            style={{
+              backgroundColor: statusColors[data.status?.toUpperCase()],
+            }}
           >
-            {data?.status}
+            {data?.status?.toUpperCase()}
           </Text>
         </div>
       </Button>

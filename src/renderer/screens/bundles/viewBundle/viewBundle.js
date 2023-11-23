@@ -47,6 +47,8 @@ import './style.css';
 import firebaseApp, { firebaseDB } from '../../../firebaseInit';
 import { useAuthUser } from '../../../contexts/allUsersContext';
 import constants from '../../../constants';
+import supplyReportFormatGenerator from '../../../common/printerDataGenerator/supplyReportFormatGenerator';
+import supplyReportRecievingFormatGenerator from '../../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
 
 export default function ViewBundleScreen() {
   const [bundle, setBundle] = useState();
@@ -148,11 +150,8 @@ export default function ViewBundleScreen() {
         <Button
           appearance="primary"
           onClick={() => {
-            navigate('/receiveBundle', {
-              state: {
-                bundle,
-                bills: allBills,
-              },
+            navigate('/receiveSRScreen', {
+              state: { supplyReport: bundle, isBundle: true },
             });
           }}
         >
@@ -163,6 +162,33 @@ export default function ViewBundleScreen() {
     return null;
   };
 
+  const onPrintSupplyReport = () => {
+    const printData = {
+      receivedBy: allUsers.find((x) => x.uid === bundle.receivedBy)?.username,
+      supplyman: allUsers.find((x) => x.uid === bundle.assignedTo)?.username,
+      dispatchTime: globalUtils.getTimeFormat(bundle.timestamp),
+      receiptNumber: bundle.receiptNumber,
+      bills: allBills,
+    };
+    window.electron.ipcRenderer.sendMessage(
+      'print',
+      supplyReportFormatGenerator(printData, true),
+    );
+  };
+  const onPrintSupplyReportReceiving = () => {
+    console.log(bundle);
+    const printData = {
+      receivedBy: allUsers.find((x) => x.uid === bundle.receivedBy)?.username,
+      supplyman: allUsers.find((x) => x.uid === bundle.assignedTo)?.username,
+      dispatchTime: globalUtils.getTimeFormat(bundle.timestamp),
+      receiptNumber: bundle.receiptNumber,
+      bills: allBills,
+    };
+    window.electron.ipcRenderer.sendMessage(
+      'print',
+      supplyReportRecievingFormatGenerator(printData, true),
+    );
+  };
   if (!bundle) {
     return <div>Error loading supply report</div>;
   }
@@ -174,11 +200,9 @@ export default function ViewBundleScreen() {
       ) : (
         <center>
           <div className="view-supply-report-container">
-            <h3>Bundle ID: {bundle.id}</h3>
-
+            <h3>Bundle ID: {bundle.receiptNumber}</h3>
             <VerticalSpace1 />
             {getActionButton()}
-
             <VerticalSpace1 />
             <div className="vsrc-detail-items-container">
               <div className="vsrc-detail-items">
@@ -204,6 +228,15 @@ export default function ViewBundleScreen() {
                 <div className="value">{bundle.status}</div>
               </div>
             </div>
+            <VerticalSpace1 />
+            <Button onClick={() => onPrintSupplyReport()}>Print Bundle</Button>
+            &nbsp;&nbsp;
+            {bundle.status ===
+            constants.firebase.billBundleFlowStatus.COMPLETED ? (
+              <Button onClick={() => onPrintSupplyReportReceiving()}>
+                Print Bundle Receiving
+              </Button>
+            ) : null}
             <h3 style={{ color: 'grey' }}>All Bills</h3>
             <table>
               <thead>
@@ -243,7 +276,6 @@ export default function ViewBundleScreen() {
                 />
               </>
             ) : null}
-
             <VerticalSpace2 />
           </div>
         </center>

@@ -48,6 +48,7 @@ export default function AssignBillScreen() {
   const [addedBills, setAddedBills] = useState([]);
   const [selectedUser, setSelectedUser] = useState();
   const [creatingLoading, setCreatingLoading] = useState(false);
+  const [bundleNumber, setBundleNumber] = useState();
 
   const getFileNumbers = async () => {
     const settingsCollection = collection(firebaseDB, 'settings');
@@ -57,6 +58,12 @@ export default function AssignBillScreen() {
     setFileNumbers(document.data()?.data || []);
   };
 
+  const getNewBundleReceiptNumber = async () => {
+    const srNumber1 = await globalUtils.getNewReceiptNumber(
+      constants.newReceiptCounters.BUNDLES,
+    );
+    setBundleNumber(srNumber1);
+  };
   const onCreateBundle = async () => {
     if (creatingLoading) return;
     if (!addedBills.length || !selectedUser) {
@@ -70,6 +77,7 @@ export default function AssignBillScreen() {
         status: constants.firebase.billBundleFlowStatus.CREATED,
         timestamp: Timestamp.now().toMillis(),
         assignedTo: selectedUser.uid,
+        receiptNumber: bundleNumber,
         bills: addedBills.filter((x) => x.balance !== 0).map((x) => x.id),
       });
 
@@ -80,6 +88,12 @@ export default function AssignBillScreen() {
       setAddedBills([]);
       setAddedParties([]);
       setSelectedUser();
+
+      await globalUtils.incrementReceiptCounter(
+        constants.newReceiptCounters.BUNDLES,
+      );
+
+      getNewBundleReceiptNumber();
       // navigate(-1);
     } catch (e) {
       console.log(e);
@@ -106,6 +120,7 @@ export default function AssignBillScreen() {
   };
 
   useEffect(() => {
+    getNewBundleReceiptNumber();
     getFileNumbers();
   }, []);
 
@@ -113,7 +128,7 @@ export default function AssignBillScreen() {
     <div className="assign-bills-screen">
       <center>
         <h3>Create Bill Bundle</h3>
-
+        {bundleNumber}
         {/* <AddBillDialog /> */}
         <VerticalSpace1 />
 

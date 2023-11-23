@@ -44,10 +44,11 @@ import AdjustAmountDialog from '../adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../../constants';
 import BillRow from './billRow';
 
+// for bill bundles and supply reports
 export default function ReceiveSRScreen() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { supplyReport } = state;
+  const { supplyReport, isBundle } = state;
   const [allBills, setAllBills] = useState([]);
   const [groupedOldBills, setGroupedOldBills] = useState([]);
   const [groupedSupplementaryBills, setGroupedSupplementaryBills] = useState(
@@ -61,13 +62,13 @@ export default function ReceiveSRScreen() {
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
+  const dbName = isBundle ? '/billBundles' : 'supplyReports';
+  const dbBills = isBundle ? supplyReport.bills : supplyReport.orders;
   const [loading, setLoading] = useState(false);
   const getAllBills = async () => {
     console.log(supplyReport);
     try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds(
-        supplyReport.orders,
-      );
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(dbBills);
 
       fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
       fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
@@ -101,13 +102,22 @@ export default function ReceiveSRScreen() {
 
   const init = async () => {
     setLoading(true);
-    await getAllBills();
-    const obg = await getGroupedBills(supplyReport.attachedBills);
-    const sbg = await getGroupedBills(supplyReport.supplementaryBills);
+    if (isBundle) {
+      const obg = await getGroupedBills(supplyReport.bills);
 
-    setGroupedOldBills(obg || []);
-    setGroupedSupplementaryBills(sbg || []);
-    console.log(sbg);
+      setGroupedSupplementaryBills(obg || []);
+    } else {
+      await getAllBills();
+    }
+
+    if (!isBundle) {
+      const obg = await getGroupedBills(supplyReport.attachedBills);
+      const sbg = await getGroupedBills(supplyReport.supplementaryBills);
+
+      setGroupedOldBills(obg || []);
+      setGroupedSupplementaryBills(sbg || []);
+      console.log(sbg);
+    }
     setLoading(false);
   };
 
@@ -125,16 +135,16 @@ export default function ReceiveSRScreen() {
       (supplyReport.orderDetails?.length || 0) +
       (supplyReport.returnedBills?.length || 0) ===
     [
-      ...supplyReport.orders,
-      ...supplyReport.supplementaryBills,
-      ...supplyReport.attachedBills,
+      ...dbBills,
+      ...(supplyReport.supplementaryBills || []),
+      ...(supplyReport.attachedBills || []),
     ].length;
 
   // update order details in the supplyreport and individual orders
   const onComplete = async () => {
     setLoading(true);
 
-    const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
+    const supplyReportRef = doc(firebaseDB, dbName, supplyReport.id);
     const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
     try {
       // update supply report for all the bill rec details
@@ -160,13 +170,17 @@ export default function ReceiveSRScreen() {
             payments: oab1.payments,
           };
         }),
-        returnedBills: [
-          ...(supplyReportDataNew.returnedBills || []),
-          ...returnedBills.map((x) => ({
-            billId: x.id,
-            remarks: x.notes || '',
-          })),
-        ],
+        ...(!isBundle
+          ? {
+              returnedBills: [
+                ...(supplyReportDataNew.returnedBills || []),
+                ...returnedBills.map((x) => ({
+                  billId: x.id,
+                  remarks: x.notes || '',
+                })),
+              ],
+            }
+          : {}),
         receivedBy: getAuth(firebaseApp).currentUser.uid,
       });
 
@@ -243,7 +257,9 @@ export default function ReceiveSRScreen() {
           const addedPayments = oab1.payments.map((oab1p) => ({
             ...oab1p,
             timestamp: Timestamp.now().toMillis(),
-            supplyReportId: supplyReport.id,
+            ...(isBundle
+              ? { supplyReportId: supplyReport.id }
+              : { bundleId: supplyReport.id }),
             orderId: oab1.id,
           }));
 
@@ -279,7 +295,7 @@ export default function ReceiveSRScreen() {
 
     if (!Object.keys(prItems).length) {
       showToast(dispatchToast, 'No Cash Received', 'error');
-      navigate('/receiveSupplyReports');
+      navigate(isBundle ? '/bundles' : '/receiveSupplyReports');
       return;
     }
 
@@ -313,7 +329,10 @@ export default function ReceiveSRScreen() {
       />
       <center>
         <div className="receive-sr-container">
-          <h3>Receive Supply Report: {supplyReport.receiptNumber}</h3>
+          <h3>
+            Receive {isBundle ? 'Bundle' : 'Supply Report'}:{' '}
+            {supplyReport.receiptNumber}
+          </h3>
           <VerticalSpace1 />
 
           {allBills.map((bill) => {
@@ -420,9 +439,7 @@ export default function ReceiveSRScreen() {
               </div>
             );
           })}
-          {Object.values(groupedSupplementaryBills).length > 0 ? (
-            <div className="title-sr">SUPPLEMENTARY BILLS</div>
-          ) : null}
+
           {Object.values(groupedSupplementaryBills).map((bills) => {
             return (
               <div>

@@ -4,7 +4,7 @@
   width: 60vw;
   border-bottom: 1px solid rgba(128, 128, 128, 0.086);
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
+  grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
 }
 
 .all-bundles-container .supply-report-row .sr-id {

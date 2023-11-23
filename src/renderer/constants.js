@@ -13,7 +13,7 @@ export default {
     billBundleFlowStatus: {
       CREATED: 'CREATED',
       HANDOVER: 'HANDOVER',
-      RECEIVED: 'RECEIVED',
+      COMPLETED: 'COMPLETED',
     },
     billFlowTypes: {
       ORDER_CREATED: 'Order Created',
@@ -37,7 +37,7 @@ export default {
     },
     BUNDLES: {
       name: 'BUNDLES',
-      prefix: 'SR',
+      prefix: 'BD',
     },
     CHEQUES: {
       name: 'CHEQUES',
