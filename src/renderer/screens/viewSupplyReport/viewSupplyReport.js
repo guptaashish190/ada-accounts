@@ -200,8 +200,6 @@ export default function ViewSupplyReportScreen() {
       receiptNumber: supplyReport.receiptNumber,
       bills: allBills,
       oldBills: extraOldBills,
-      otherAdjustedBills,
-      returnedGoods,
     };
     window.electron.ipcRenderer.sendMessage(
       'print',

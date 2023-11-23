@@ -347,21 +347,23 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {addedBills.map((ab) => (
-                    <tr>
-                      <TableCustomCell>{ab.billNumber}</TableCustomCell>
-                      <TableCustomCell>
-                        {globalUtils.getTimeFormat(ab.creationTime, true)}
-                      </TableCustomCell>
-                      <TableCustomCell>{ab.party?.name}</TableCustomCell>
-                      <TableCustomCell>
-                        {globalUtils.getCurrencyFormat(ab.orderAmount)}
-                      </TableCustomCell>
-                      <TableCustomCell>
-                        {globalUtils.getCurrencyFormat(ab.balance)}
-                      </TableCustomCell>
-                    </tr>
-                  ))}
+                  {addedBills
+                    .filter((x) => x.balance !== 0)
+                    .map((ab) => (
+                      <tr>
+                        <TableCustomCell>{ab.billNumber}</TableCustomCell>
+                        <TableCustomCell>
+                          {globalUtils.getTimeFormat(ab.creationTime, true)}
+                        </TableCustomCell>
+                        <TableCustomCell>{ab.party?.name}</TableCustomCell>
+                        <TableCustomCell>
+                          {globalUtils.getCurrencyFormat(ab.orderAmount)}
+                        </TableCustomCell>
+                        <TableCustomCell>
+                          {globalUtils.getCurrencyFormat(ab.balance)}
+                        </TableCustomCell>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
               <VerticalSpace1 />

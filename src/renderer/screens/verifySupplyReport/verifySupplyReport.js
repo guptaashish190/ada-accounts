@@ -95,7 +95,6 @@ export default function VerifySupplyReport() {
   }, []);
 
   const onDispatch = async () => {
-    setLoading(true);
     try {
       const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
 
@@ -205,8 +204,8 @@ export default function VerifySupplyReport() {
                 key={`supp-${b.id}`}
                 oldbill={b}
                 saveBill={(newB) => {
-                  const updatedSuppBills = [...supplementaryBills];
-                  updatedSuppBills.map((x) => {
+                  let updatedSuppBills = [...supplementaryBills];
+                  updatedSuppBills = updatedSuppBills.map((x) => {
                     if (x.id === newB.id) {
                       return newB;
                     }
@@ -385,11 +384,11 @@ function OldBillRow({
 
   const onAttachBill = (save) => {
     const modifiedBill = { ...oldbill };
-    if (newNotes.length > 0) {
+    if (newNotes && newNotes.length > 0) {
       modifiedBill.notes = newNotes;
     }
-    if (newBalance.length > 0) {
-      modifiedBill.balance = newBalance;
+    if (newBalance && newBalance.length > 0) {
+      modifiedBill.balance = parseInt(newBalance, 10);
     }
     attachBill(modifiedBill);
   };
@@ -505,11 +504,11 @@ function SupplementaryBillRow({
 
   const onSaveBill = (save) => {
     const modifiedBill = { ...oldbill };
-    if (newNotes.length > 0) {
+    if (newNotes && newNotes.length > 0) {
       modifiedBill.notes = newNotes;
     }
-    if (newBalance.length > 0) {
-      modifiedBill.balance = newBalance;
+    if (newBalance && newBalance.length > 0) {
+      modifiedBill.balance = parseInt(newBalance, 10);
     }
     console.log(modifiedBill);
     saveBill(modifiedBill);
@@ -526,12 +525,14 @@ function SupplementaryBillRow({
       </div>
       <div className="supplementary-bill-row">
         <Text size={200} className="old-bill bill-number">
-          {oldbill.billNumber}
+          {oldbill.billNumber || '--'}
         </Text>
         <Text size={200} className="old-bill bill-number">
           {new Date(oldbill.creationTime).toLocaleDateString()}
         </Text>
         <div className="old-bill amount">₹{oldbill.orderAmount}</div>
+
+        <div>{globalUtils.getDaysPassed(oldbill.creationTime)} Days</div>
 
         <Tooltip content={`₹${oldbill.balance}`}>
           <Input

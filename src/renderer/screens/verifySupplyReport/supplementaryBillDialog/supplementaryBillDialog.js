@@ -225,9 +225,10 @@ function BillRow({ data, index, isAttached, addSupplementaryBill }) {
   };
   const getWithUser = async () => {
     if (!data.with || data.with === 'Accounts' || data.with === '') {
-      setWithUser(data.with);
+      setWithUser('Accounts');
       return;
     }
+    console.log(data);
     const user1 = await globalUtils.fetchUserById(data.with);
     setWithUser(user1.username);
   };
@@ -255,11 +256,13 @@ function BillRow({ data, index, isAttached, addSupplementaryBill }) {
           </Text>
         </Text>
         <Button
-          disabled={isAttached}
+          disabled={isAttached || withUser !== 'Accounts'}
           size="small"
           appearance="subtle"
           onClick={() => addSupplementaryBill()}
-          style={{ color: isAttached ? 'grey' : '#F25C54' }}
+          style={{
+            color: isAttached || withUser !== 'Accounts' ? 'grey' : '#F25C54',
+          }}
         >
           {isAttached ? 'Added' : 'Add Bill'}
         </Button>
@@ -276,7 +279,7 @@ function BillRow({ data, index, isAttached, addSupplementaryBill }) {
         </div>
         <Text style={{ color: 'grey', fontSize: '0.8em' }}>
           <i>
-            {`With ${withUser?.username || 'Accounts'}`} {scheduledDateString()}
+            {`With ${withUser || 'Accounts'}`} {scheduledDateString()}
           </i>
         </Text>
       </div>

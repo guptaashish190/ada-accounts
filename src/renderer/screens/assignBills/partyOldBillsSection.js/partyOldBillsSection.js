@@ -166,7 +166,7 @@ function OldBillRow({
       modifiedBill.accountsNotes = newNotes;
     }
     if (newBalance.length > 0) {
-      modifiedBill.balance = newBalance;
+      modifiedBill.balance = parseInt(newBalance, 10);
     }
     attachBill(modifiedBill);
   };
