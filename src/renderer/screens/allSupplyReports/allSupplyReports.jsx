@@ -30,74 +30,76 @@ export default function AllSupplyReportsScreen() {
   const [supplyReports, setSupplyReports] = useState([]);
 
   // filter state
-  const [suppplyman, setSupplyman] = useState();
+  const [supplyman, setSupplyman] = useState();
   const [status, setStatus] = useState();
   const [srNumber, setSrNumber] = useState('');
-  const [date, setDate] = useState();
+  const [date, setDate] = useState(new Date());
 
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
 
-  const fetchSupplyReports = async () => {
-    setLoading(true);
-    try {
-      const supplyReportsCollection = collection(firebaseDB, 'supplyReports');
-
-      const supplyQuery = query(supplyReportsCollection, limit(50));
-      const querySnapshot = await getDocs(supplyQuery);
-
-      const reportsData = [];
-      querySnapshot.forEach((doc) => {
-        reportsData.push({ id: doc.id, ...doc.data() });
-      });
-      reportsData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
-      setSupplyReports(reportsData);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching supply reports:', error);
-      setLoading(false);
-    }
-  };
-
-  const onSearch = () => {
+  const onSearch = (clear) => {
     const supplyReportRef = collection(firebaseDB, 'supplyReports');
 
     // Build the query dynamically based on non-empty filter fields
     let dynamicQuery = supplyReportRef;
 
     const filters = {
-      supplymanId: suppplyman,
+      supplymanId: supplyman,
       status,
       receiptNumber: srNumber && srNumber.length && `SR-${srNumber}`,
       timestamp: date && date.getTime(),
     };
 
-    for (const field in filters) {
-      if (filters[field]) {
-        if (field === 'timestamp') {
-          const dateFrom = new Date(date);
-          const dateTo = new Date(date);
-          dateTo.setHours(23);
-          dateTo.setMinutes(59);
-          dateTo.setSeconds(59);
-          console.log(dateFrom.toLocaleString(), dateTo.toLocaleString());
-          dynamicQuery = query(
-            dynamicQuery,
-            where(field, '>=', dateFrom.getTime()),
-          );
-          dynamicQuery = query(
-            dynamicQuery,
-            where(field, '<=', dateTo.getTime()),
-          );
-        } else {
-          dynamicQuery = query(
-            dynamicQuery,
-            where(field, '==', filters[field]),
-          );
+    if (!clear) {
+      for (const field in filters) {
+        if (filters[field]) {
+          if (field === 'timestamp') {
+            const dateFrom = new Date(date);
+            dateFrom.setHours(0);
+            dateFrom.setMinutes(0);
+            dateFrom.setSeconds(1);
+            const dateTo = new Date(date);
+            dateTo.setHours(23);
+            dateTo.setMinutes(59);
+            dateTo.setSeconds(59);
+            console.log(dateFrom.toLocaleString(), dateTo.toLocaleString());
+            dynamicQuery = query(
+              dynamicQuery,
+              where(field, '>=', dateFrom.getTime()),
+            );
+            dynamicQuery = query(
+              dynamicQuery,
+              where(field, '<=', dateTo.getTime()),
+            );
+          } else {
+            dynamicQuery = query(
+              dynamicQuery,
+              where(field, '==', filters[field]),
+            );
+          }
         }
       }
+    } else {
+      const dateFrom = new Date();
+      dateFrom.setHours(0);
+      dateFrom.setMinutes(0);
+      dateFrom.setSeconds(1);
+      const dateTo = new Date();
+      dateTo.setHours(23);
+      dateTo.setMinutes(59);
+      dateTo.setSeconds(59);
+      console.log(dateFrom.toLocaleString(), dateTo.toLocaleString());
+      dynamicQuery = query(
+        dynamicQuery,
+        where('timestamp', '>=', dateFrom.getTime()),
+      );
+      dynamicQuery = query(
+        dynamicQuery,
+        where('timestamp', '<=', dateTo.getTime()),
+      );
     }
-    dynamicQuery = query(dynamicQuery, limit(50));
+    dynamicQuery = query(dynamicQuery);
     // Fetch parties based on the dynamic query
     const fetchData = async () => {
       setLoading(true);
@@ -118,7 +120,7 @@ export default function AllSupplyReportsScreen() {
     fetchData();
   };
   useEffect(() => {
-    fetchSupplyReports();
+    onSearch();
   }, []);
 
   return (
@@ -181,11 +183,11 @@ export default function AllSupplyReportsScreen() {
           </Button>
           <Button
             onClick={() => {
-              setDate();
+              setDate(new Date());
               setSrNumber('');
               setStatus(null);
               setSupplyman('');
-              fetchSupplyReports();
+              onSearch(true);
             }}
           >
             Clear
