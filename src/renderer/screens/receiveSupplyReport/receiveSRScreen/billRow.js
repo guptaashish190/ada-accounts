@@ -167,7 +167,9 @@ export default function BillRow({
   return (
     <div
       style={
-        isReceived1 ? { pointerEvents: 'none', filter: 'grayscale(1)' } : {}
+        isReceived1
+          ? { pointerEvents: 'none', filter: 'grayscale(1)', opacity: 0.4 }
+          : {}
       }
       className="bill-row"
     >
@@ -176,6 +178,7 @@ export default function BillRow({
           <Text>
             {!isOld ? '*NEW* ' : ''}
             {data.billNumber}
+            <b>{isReceived1 ? '  (Received)' : null}</b>
           </Text>
           <Text>{data.fileNumber}</Text>
           <Text>
