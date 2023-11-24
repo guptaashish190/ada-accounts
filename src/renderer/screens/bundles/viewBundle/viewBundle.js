@@ -189,6 +189,10 @@ export default function ViewBundleScreen() {
       supplyReportRecievingFormatGenerator(printData, true),
     );
   };
+
+  if (loading) {
+    return <Spinner />;
+  }
   if (!bundle) {
     return <div>Error loading supply report</div>;
   }

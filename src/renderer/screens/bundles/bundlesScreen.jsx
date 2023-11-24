@@ -88,7 +88,7 @@ function BundlesRow({ data, index }) {
           <Text
             className="sr-status"
             style={{
-              backgroundColor: statusColors[data.status?.toUpperCase()],
+              backgroundColor: statusColors[data.status],
             }}
           >
             {data?.status?.toUpperCase()}

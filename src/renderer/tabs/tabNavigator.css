@@ -49,3 +49,7 @@
 .tab-navigator .tab-options.right-options {
   margin-right: 20px;
 }
+.tab-navigator .profile-pic-tab {
+  width: 5vh;
+  border-radius: 50%;
+}

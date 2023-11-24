@@ -1,55 +1,71 @@
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { Card, Spinner } from '@fluentui/react-components';
+import {
+  Card,
+  Spinner,
+  Combobox,
+  Option,
+  Input,
+  Text,
+} from '@fluentui/react-components';
 import { useNavigate } from 'react-router-dom';
 import { firebaseDB } from '../../../firebaseInit';
 import './style.css';
 import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
 
-export default function PartyListScreen() {
-  const [parties, setParties] = useState([]);
-  const [defaultParties, setDefaultParties] = useState([]);
-  const [loading, setLoading] = useState(false);
+import { useDebounce } from '../../../services/globalUtils';
+
+export default function PartyListScreen({
+  onPartySelected,
+  descriptive,
+  clearOnSelect,
+}) {
+  const [partyDetails, setPartyDetails] = useState([]);
+  const [queryPartyName, setQueryPartyName] = useState('');
+  const debouncedValue = useDebounce(queryPartyName, 500);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchPartyDetails = async () => {
+    if (!debouncedValue || debouncedValue.length < 3) return;
+    const fetchParties = async () => {
+      // Define a reference to the "parties" collection
+      const partiesRef = collection(firebaseDB, 'parties');
+
+      // Create a query with a "name" field filter
+      const q = query(
+        partiesRef,
+        where('name', '>=', debouncedValue.toUpperCase()),
+        limit(10),
+      );
+
       try {
-        setLoading(true);
-        const partiesCollection = collection(firebaseDB, 'parties');
-        const partiesQuery = query(partiesCollection, limit(50));
-        const querySnapshot = await getDocs(partiesQuery);
-
-        const partyData = [];
-
-        querySnapshot.forEach((doc) => {
-          partyData.push(doc.data());
-        });
-        setParties(partyData);
-        setDefaultParties(partyData);
-        setLoading(false);
+        const querySnapshot = await getDocs(q);
+        const partyData = querySnapshot.docs.map((doc) => doc.data());
+        setPartyDetails(partyData);
+        console.log(partyData);
       } catch (error) {
-        console.error('Error fetching party details:', error);
-        setLoading(false);
+        console.error('Error fetching  parties:', error);
       }
     };
 
-    fetchPartyDetails();
-  }, []);
+    fetchParties();
+  }, [debouncedValue]);
 
-  if (loading) return <Spinner />;
+  const descriptiveTextStyle = { color: 'grey', textWrap: 'nowrap' };
+
   return (
     <center className="settings-party-list-container">
       <h3>Party Details</h3>
-      <PartySelector
-        onPartySelected={(p) => {
-          if (!p) {
-            setParties(defaultParties);
-          } else {
-            setParties([p]);
-          }
+
+      <Input
+        className="filter-input"
+        onChange={(e) => {
+          setQueryPartyName(e.target.value);
         }}
+        value={queryPartyName}
+        placeholder="Party name"
+        style={descriptive ? { width: '100%' } : {}}
       />
       <VerticalSpace1 />
       <table>
@@ -63,7 +79,7 @@ export default function PartyListScreen() {
           </tr>
         </thead>
         <tbody>
-          {parties.map((party) => (
+          {partyDetails.map((party) => (
             <tr
               key={`party-list-screen-${party.id}`}
               onClick={() => {

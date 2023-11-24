@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -23,12 +24,16 @@ import BillDetailDialog from '../../../allBills/billDetail/billDetail';
 import globalUtils from '../../../../services/globalUtils';
 import { VerticalSpace1 } from '../../../../common/verticalSpace';
 import EditPartyDetails from './editParty';
+import { useCurrentUser } from '../../../../contexts/userContext';
 
 export default function PartyDetailsScreen() {
   const { state } = useLocation();
   const [party, setParty] = useState();
   const [loading, setLoading] = useState();
   const [outstandingBills, setOutstandingBills] = useState();
+  const navigate = useNavigate();
+
+  const { user } = useCurrentUser();
 
   const { partyId } = state;
 
@@ -95,6 +100,23 @@ export default function PartyDetailsScreen() {
     return globalUtils.getCurrencyFormat(amount);
   };
 
+  const onDelete = async () => {
+    const confirm = window.confirm('Delete Party?');
+    if (!confirm) return;
+
+    setLoading(true);
+    const partyRef = doc(firebaseDB, 'parties', partyId);
+
+    try {
+      await deleteDoc(partyRef);
+      navigate(-1);
+      console.log(`Party document with ID ${partyId} deleted successfully.`);
+    } catch (error) {
+      console.error('Error deleting party document:', error);
+    }
+    setLoading(false);
+  };
+
   if (loading) {
     return <Spinner />;
   }
@@ -112,6 +134,10 @@ export default function PartyDetailsScreen() {
             />
           ) : null}
         </h3>
+        {party && user?.isManager ? (
+          <Button onClick={() => onDelete()}>Delete Party</Button>
+        ) : null}
+        <VerticalSpace1 />
         <div className="vsrc-detail-items-container">
           <div className="vsrc-detail-items">
             <div className="label">Area: </div>

@@ -79,10 +79,17 @@ export default (data, isBundle) => {
         fontSize: '12px',
         fontFamily: 'Arial',
       },
-      value: `${
-        item.party.area?.toUpperCase() || ''
-      } : ${globalUtils.getCurrencyFormat(item.orderAmount)}`,
+      value: `${item.party.area?.toUpperCase() || ''}`,
     });
+    commands.push({
+      type: 'text',
+      style: {
+        fontSize: '12px',
+        fontFamily: 'Arial',
+      },
+      value: `Current Balance: ${globalUtils.getCurrencyFormat(item.balance)}`,
+    });
+
     if (!isBundle) {
       commands.push({
         type: 'text',

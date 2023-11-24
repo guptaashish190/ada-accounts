@@ -12,10 +12,12 @@ import {
 import {
   Dropdown,
   Option,
+  Input,
   Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
+  Textarea,
   DialogSurface,
   DialogTitle,
   DialogTrigger,
@@ -162,6 +164,8 @@ export default function AssignBillScreen() {
         <VerticalSpace1 />
 
         <SelectUserDropdown user={selectedUser} setUser={setSelectedUser} />
+        <VerticalSpace1 />
+        {/* <Textarea size="large" placeholder="Message" / */}
         <VerticalSpace1 />
         <SummaryDialog
           loading={creatingLoading}

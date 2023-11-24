@@ -105,11 +105,13 @@ export default function AllSupplyReportsScreen() {
       setLoading(true);
       try {
         const querySnapshot = await getDocs(dynamicQuery);
-        const supplyReportData = querySnapshot.docs.map((doc) => ({
+        let supplyReportData = querySnapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
         }));
-        supplyReportData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
+        supplyReportData = supplyReportData.sort(
+          (rd1, rd2) => rd2.receiptNumber.slice(3) - rd1.receiptNumber.slice(3),
+        );
         setSupplyReports(supplyReportData);
       } catch (error) {
         console.error('Error fetching supply reports:', error);

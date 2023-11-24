@@ -13,7 +13,7 @@ export default {
     billBundleFlowStatus: {
       CREATED: 'CREATED',
       HANDOVER: 'HANDOVER',
-      COMPLETED: 'COMPLETED',
+      COMPLETED: 'Completed',
     },
     billFlowTypes: {
       ORDER_CREATED: 'Order Created',

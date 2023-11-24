@@ -43,7 +43,6 @@ export default function LoginScreen() {
         className="input"
         placeholder="Username"
         size="large"
-        onKeyDown={(e) => handleKeyUp(e)}
       />
       <VerticalSpace1 />
       <Input

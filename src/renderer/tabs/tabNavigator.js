@@ -56,6 +56,7 @@ export default function TabNavigator({ children }) {
             })}
           </div>
           <div className="tab-options right-options">
+            <Image className="profile-pic-tab" src={user.profilePicture} />
             <Button
               key="logout-buttpn"
               appearance="subtle"
