@@ -200,6 +200,9 @@ export default function ViewSupplyReportScreen() {
       receiptNumber: supplyReport.receiptNumber,
       bills: allBills,
       oldBills: extraOldBills,
+      numCases: supplyReport.numCases,
+      numPolybags: supplyReport.numPolybags,
+      numPackets: supplyReport.numPackets,
     };
     window.electron.ipcRenderer.sendMessage(
       'print',
@@ -335,6 +338,7 @@ export default function ViewSupplyReportScreen() {
               <th>CASH</th>
               <th>CHEQUE</th>
               <th>UPI</th>
+              <th>STATUS</th>
               <th>SCHEDULED</th>
               <th>ACC NOTES</th>
             </tr>
@@ -343,6 +347,7 @@ export default function ViewSupplyReportScreen() {
             {allBills.map((bill, i) => {
               return (
                 <BillRow
+                  showStatus
                   orderDetail={
                     supplyReport.orderDetails &&
                     supplyReport.orderDetails.find((x) => x.billId === bill.id)
@@ -375,6 +380,7 @@ export default function ViewSupplyReportScreen() {
             {extraOldBills.map((bill, i) => {
               return (
                 <BillRow
+                  showStatus={false}
                   orderDetail={
                     supplyReport.orderDetails &&
                     supplyReport.orderDetails.find((x) => x.billId === bill.id)
@@ -475,7 +481,7 @@ function OtherAdjustedBillsRow({ data, index }) {
   );
 }
 
-function BillRow({ data, index, orderDetail }) {
+function BillRow({ data, index, orderDetail, showStatus }) {
   const navigate = useNavigate();
 
   const getBalance = () => {
@@ -511,6 +517,9 @@ function BillRow({ data, index, orderDetail }) {
           orderDetail?.payments?.find((x) => x.type === 'upi')?.amount,
         ) || '--'}
       </TableCustomCell>
+      {showStatus ? (
+        <TableCustomCell>{data.orderStatus || '--'}</TableCustomCell>
+      ) : null}
       <TableCustomCell>
         {orderDetail?.schedulePaymentDate
           ? globalUtils?.getTimeFormat(orderDetail.schedulePaymentDate, true)

@@ -60,7 +60,7 @@ ipcMain.on('set-selected-printer', async (event, arg) => {
 
 const onPrint = async (data: PosPrintData[]) => {
   const options: PosPrintOptions = {
-    preview: false,
+    preview: true,
     margin: '0 0 0 0',
     copies: 1,
     printerName: selectedPrinter,

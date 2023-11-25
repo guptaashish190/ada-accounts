@@ -40,6 +40,14 @@ export default (data, isBundle) => {
       fontFamily: 'Arial',
     },
   });
+  commands.push({
+    type: 'text',
+    value: `Cases: ${data.numCases}, Polybags: ${data.numPolybags}, Packets: ${data.numPackets}`,
+    style: {
+      fontSize: '12px',
+      fontFamily: 'Arial',
+    },
+  });
 
   commands.push({
     type: 'text',
