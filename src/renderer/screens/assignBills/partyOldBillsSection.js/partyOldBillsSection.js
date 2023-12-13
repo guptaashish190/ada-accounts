@@ -77,7 +77,7 @@ export default function PartySection({
   const getOutstanding = (orders1) => {
     return orders1.reduce(
       (acc, cur) =>
-        acc + (evaluate(cur.balance?.toString() || '0') || cur.orderAmount),
+        acc + evaluate(cur.balance?.toString() || cur.orderAmount || '0'),
       0,
     );
   };
@@ -107,6 +107,11 @@ export default function PartySection({
         </h3>
         <h4>
           {party.fileNumber} - {party.area}
+        </h4>{' '}
+        <h4>
+          {globalUtils.getCurrencyFormat(
+            getOutstanding(attachedBills.filter((x) => x.partyId === party.id)),
+          )}
         </h4>
       </div>
       {oldBills.length && !loading ? (
@@ -117,7 +122,7 @@ export default function PartySection({
           <div className="party-old-bills-header">AMOUNT</div>
           <div className="party-old-bills-header">BALANCE</div>
           <div className="party-old-bills-header">SCHEDULED</div>
-          <div className="party-old-bills-header">NOTE</div>
+          <div className="party-old-bills-header">ACC NOTE</div>
           <div className="party-old-bills-header" />
           {oldBills.map((ob, i) => {
             return (
@@ -211,7 +216,7 @@ function OldBillRow({
         {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true, true) ||
           '--'}
       </div>
-      <Tooltip content={oldbill.note}>
+      <Tooltip content={oldbill.accountNotes}>
         <Input
           disabled={disabled}
           style={{ width: '100px' }}

@@ -15,36 +15,28 @@ export default function ReceiveSupplyReportScreen() {
 
   const [loading, setLoading] = useState(false);
 
-  // Function to fetch supply reports where "isDispatched" is false
   const fetchDispatchedSupplyReports = async () => {
     setLoading(true);
     try {
-      // Reference to the "supplyReports" collection
       const supplyReportsCollection = collection(firebaseDB, 'supplyReports');
 
-      // Create a query to filter where "isDispatched" is false
       const q = query(
         supplyReportsCollection,
         where('status', '==', 'Delivered'),
         limit(30),
       );
 
-      // Execute the query and get the documents
       const querySnapshot = await getDocs(q);
 
-      // Extract the data from the querySnapshot
       const dispatchedSupplyReports = querySnapshot.docs
         .map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }))
         .sort((a, b) => {
-          // Compare the "dispatched" property
           if ((a.status === 'Dispatched') === (b.status === 'Dispatched')) {
-            // If "dispatched" is the same, compare by timestamp
             return b.dispatchTimestamp - a.dispatchTimestamp;
           }
-          // Sort by "dispatched" (false first)
           return a.status === 'Dispatched' ? -1 : 1;
         });
 
@@ -84,13 +76,7 @@ export default function ReceiveSupplyReportScreen() {
           placeholder="00"
         />
         <VerticalSpace1 />
-        <div className="supply-report-row-header">
-          <Text className="sr-id">ID</Text>
-          <Text className="sr-timestamp">DATE</Text>
-          <Text className="sr-parties-length">SUPPLYMAN</Text>
-          <Text>STATUS</Text>
-          <Text>ACTION</Text>
-        </div>
+        <SupplyRowListHeader />
         <VerticalSpace1 />
         {filteredSupplyReports.map((sr) => {
           return <SupplyReportRow key={`recevie-sr-list-${sr.id}`} data={sr} />;
@@ -104,7 +90,20 @@ export default function ReceiveSupplyReportScreen() {
   );
 }
 
-function SupplyReportRow({ data }) {
+export function SupplyRowListHeader() {
+  return (
+    <div className="supply-report-row-header">
+      <Text className="sr-id">ID</Text>
+      <Text className="sr-timestamp">DATE</Text>
+      <Text className="sr-parties-length">SUPPLYMAN</Text>
+      <Text className="sr-parties-length">BILLS</Text>
+      <Text>STATUS</Text>
+      <Text>ACTION</Text>
+    </div>
+  );
+}
+
+export function SupplyReportRow({ data }) {
   const navigate = useNavigate();
   const [supplyman, setSupplyman] = useState();
 
@@ -123,6 +122,10 @@ function SupplyReportRow({ data }) {
         {new Date(data.timestamp).toLocaleDateString()}
       </Text>
       <Text className="sr-parties-length">{supplyman?.username}</Text>
+      <Text>
+        {[...data.orders, ...data.supplementaryBills, ...data.attachedBills]
+          ?.length || 0}
+      </Text>
       <Text>{data.status}</Text>
       <Button
         appearance="subtle"

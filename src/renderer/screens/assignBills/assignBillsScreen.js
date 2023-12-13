@@ -156,6 +156,7 @@ export default function AssignBillScreen() {
               party={ap}
               key={`billbundlesection${ap.id}`}
               onRemoveParty={() => {
+                setAddedBills((x) => x.filter((i) => i.partyId !== ap.id));
                 setAddedParties((ap2) => ap2.filter((x) => x.id !== ap.id));
               }}
             />

@@ -208,6 +208,9 @@ export default function AllSupplyReportsScreen() {
             );
           })
         )}
+        {!loading && supplyReports.length === 0 ? (
+          <div>No Supply Reports found</div>
+        ) : null}
       </div>
     </center>
   );

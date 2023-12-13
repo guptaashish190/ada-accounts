@@ -58,6 +58,12 @@ export default [
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
   },
   {
+    name: 'Receive User',
+    route: '/receivePendingUser',
+    key: 'tab-receivependinuser',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  },
+  {
     name: 'Bundles',
     key: 'tab-bundles',
     allowJob: [constants.firebaseIds.JOBS.CASHIER],

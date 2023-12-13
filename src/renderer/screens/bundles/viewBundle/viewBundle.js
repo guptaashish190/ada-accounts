@@ -168,7 +168,7 @@ export default function ViewBundleScreen() {
       supplyman: allUsers.find((x) => x.uid === bundle.assignedTo)?.username,
       dispatchTime: globalUtils.getTimeFormat(bundle.timestamp),
       receiptNumber: bundle.receiptNumber,
-      bills: allBills,
+      oldBills: allBills,
     };
     window.electron.ipcRenderer.sendMessage(
       'print',

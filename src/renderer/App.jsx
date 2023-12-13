@@ -44,6 +44,8 @@ import UpiScreen from './screens/upi/upiScreen';
 import PrinterSettings from './screens/settings/printers';
 import AutoUpdaterWrapper from './contexts/autoUpdaterContext';
 import RouteSettings from './screens/settings/routes/routeSettings';
+import CalculatorWrapper from './contexts/calculatorWrapper';
+import ReceivePendingUser from './screens/receivePendingUser/receivePendingUser';
 
 const myNewTheme = {
   10: '#010304',
@@ -77,92 +79,104 @@ export default function App({ routeProps, startRoute, printData }) {
     <FluentProvider theme={lightTheme}>
       <AutoUpdaterWrapper>
         <LoginWrapper>
-          <AllUsersContext>
-            <UserContext>
-              <SettingsContext>
-                <Router>
-                  <TabNavigator>
-                    <Routes>
-                      <Route path="/" element={<AllSupplyReportsScreen />} />
-                      <Route
-                        path="/createSupplyReport"
-                        element={<CreateSupplyReportScreen />}
-                      />
-                      <Route
-                        path="/viewSupplyReport"
-                        element={<ViewSupplyReportScreen />}
-                      />
-                      <Route
-                        path="/pendingSupplyReports"
-                        element={<PendingSupplyReports />}
-                      />
-                      <Route
-                        path="/verifySupplyReport"
-                        element={<VerifySupplyReport />}
-                      />
-                      <Route
-                        path="/receiveSupplyReports"
-                        element={<ReceiveSupplyReportScreen />}
-                      />
-                      <Route path="/searchBills" element={<AllBillsScreen />} />
-                      <Route
-                        path="/receiveSRScreen"
-                        element={<ReceiveSRScreen />}
-                      />
-                      <Route
-                        path="/paymentReceipts"
-                        element={<PaymentReceipts />}
-                      />
-                      <Route
-                        path="/createPaymentReceipts"
-                        element={<CreatePaymentReceiptDialog />}
-                      />
-                      <Route path="/chequesList" element={<ChequesScreen />} />
-                      <Route
-                        path="/assignBills"
-                        element={<AssignBillScreen />}
-                      />
-                      <Route path="/settings" element={<SettingsScreen />} />
-                      <Route path="/bundles" element={<AllBundlesScreen />} />
-                      <Route
-                        path="/viewBundle"
-                        element={<ViewBundleScreen />}
-                      />
-                      <Route
-                        path="/receiveBundle"
-                        element={<ReceiveBundle />}
-                      />
-                      <Route
-                        path="/creditNotes"
-                        element={<CreditNoteScreen />}
-                      />
-                      <Route
-                        path="/partyListSettings"
-                        element={<PartyListScreen />}
-                      />
-                      <Route
-                        path="/createCreditNotes"
-                        element={<CreateCreditNoteScreen />}
-                      />
-                      <Route
-                        path="/partyDetails"
-                        element={<PartyDetailsScreen />}
-                      />
-                      <Route path="/upi" element={<UpiScreen />} />
-                      <Route
-                        path="/printerSettings"
-                        element={<PrinterSettings />}
-                      />
-                      <Route
-                        path="/routeSettings"
-                        element={<RouteSettings />}
-                      />
-                    </Routes>
-                  </TabNavigator>
-                </Router>
-              </SettingsContext>
-            </UserContext>
-          </AllUsersContext>
+          <CalculatorWrapper>
+            <AllUsersContext>
+              <UserContext>
+                <SettingsContext>
+                  <Router>
+                    <TabNavigator>
+                      <Routes>
+                        <Route path="/" element={<AllSupplyReportsScreen />} />
+                        <Route
+                          path="/createSupplyReport"
+                          element={<CreateSupplyReportScreen />}
+                        />
+                        <Route
+                          path="/viewSupplyReport"
+                          element={<ViewSupplyReportScreen />}
+                        />
+                        <Route
+                          path="/pendingSupplyReports"
+                          element={<PendingSupplyReports />}
+                        />
+                        <Route
+                          path="/verifySupplyReport"
+                          element={<VerifySupplyReport />}
+                        />
+                        <Route
+                          path="/receiveSupplyReports"
+                          element={<ReceiveSupplyReportScreen />}
+                        />
+                        <Route
+                          path="/searchBills"
+                          element={<AllBillsScreen />}
+                        />
+                        <Route
+                          path="/receiveSRScreen"
+                          element={<ReceiveSRScreen />}
+                        />
+                        <Route
+                          path="/paymentReceipts"
+                          element={<PaymentReceipts />}
+                        />
+                        <Route
+                          path="/createPaymentReceipts"
+                          element={<CreatePaymentReceiptDialog />}
+                        />
+                        <Route
+                          path="/chequesList"
+                          element={<ChequesScreen />}
+                        />
+                        <Route
+                          path="/assignBills"
+                          element={<AssignBillScreen />}
+                        />
+                        <Route path="/settings" element={<SettingsScreen />} />
+                        <Route path="/bundles" element={<AllBundlesScreen />} />
+                        <Route
+                          path="/viewBundle"
+                          element={<ViewBundleScreen />}
+                        />
+                        <Route
+                          path="/receiveBundle"
+                          element={<ReceiveBundle />}
+                        />
+                        <Route
+                          path="/creditNotes"
+                          element={<CreditNoteScreen />}
+                        />
+                        <Route
+                          path="/partyListSettings"
+                          element={<PartyListScreen />}
+                        />
+                        <Route
+                          path="/createCreditNotes"
+                          element={<CreateCreditNoteScreen />}
+                        />
+                        <Route
+                          path="/partyDetails"
+                          element={<PartyDetailsScreen />}
+                        />
+                        <Route path="/upi" element={<UpiScreen />} />
+                        <Route
+                          path="/printerSettings"
+                          element={<PrinterSettings />}
+                        />
+                        <Route
+                          path="/routeSettings"
+                          element={<RouteSettings />}
+                        />
+                        <Route
+                          path="/receivePendingUser"
+                          element={<ReceivePendingUser />}
+                        />
+                      </Routes>
+                    </TabNavigator>
+                  </Router>
+                </SettingsContext>
+              </UserContext>
+            </AllUsersContext>
+          </CalculatorWrapper>
         </LoginWrapper>
       </AutoUpdaterWrapper>
     </FluentProvider>

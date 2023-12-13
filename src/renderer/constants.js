@@ -9,6 +9,7 @@ export default {
       DISPATCHED: 'Dispatched',
       TOACCOUNTS: 'To Accounts',
       CANCELLED: 'CANCELLED',
+      DELIVERED: 'Delivered',
     },
     billBundleFlowStatus: {
       CREATED: 'CREATED',

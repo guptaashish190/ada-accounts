@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 import _ from 'lodash';
 import globalUtils from '../../services/globalUtils';
 
@@ -40,27 +41,30 @@ export default (data, isBundle) => {
       fontFamily: 'Arial',
     },
   });
-  commands.push({
-    type: 'text',
-    value: `Cases: ${data.numCases}, Polybags: ${data.numPolybags}, Packets: ${data.numPackets}`,
-    style: {
-      fontSize: '12px',
-      fontFamily: 'Arial',
-    },
-  });
-
-  commands.push({
-    type: 'text',
-    value: `Bills in hand`,
-    style: {
-      fontWeight: '700',
-      textAlign: 'center',
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      marginTop: '10px',
-      marginBottom: '5px',
-    },
-  });
+  if (!isBundle) {
+    commands.push({
+      type: 'text',
+      value: `Cases: ${data.numCases}, Polybags: ${data.numPolybags}, Packets: ${data.numPackets}`,
+      style: {
+        fontSize: '12px',
+        fontFamily: 'Arial',
+      },
+    });
+  }
+  if (data.bills?.length > 0) {
+    commands.push({
+      type: 'text',
+      value: `Bills in hand`,
+      style: {
+        fontWeight: '700',
+        textAlign: 'center',
+        fontSize: '14px',
+        fontFamily: 'Arial',
+        marginTop: '10px',
+        marginBottom: '5px',
+      },
+    });
+  }
 
   data.bills?.forEach((item) => {
     commands.push({
@@ -69,9 +73,10 @@ export default (data, isBundle) => {
         fontSize: '12px',
         fontFamily: 'Arial',
         paddingTop: '5px',
-        fontWeight: 'bold',
       },
-      value: item.billNumber,
+      value: `${_.startCase(removeSpaces(item.party.name).toLowerCase())} (${
+        item.party.area?.toUpperCase() || ''
+      })`,
     });
     commands.push({
       type: 'text',
@@ -79,31 +84,17 @@ export default (data, isBundle) => {
         fontSize: '12px',
         fontFamily: 'Arial',
       },
-      value: `${_.startCase(item.party.name.toLowerCase())}`,
+      value: `${item.billNumber}(${globalUtils.getCurrencyFormat(
+        item.balance,
+      )})`,
     });
-    commands.push({
-      type: 'text',
-      style: {
-        fontSize: '12px',
-        fontFamily: 'Arial',
-      },
-      value: `${item.party.area?.toUpperCase() || ''}`,
-    });
-    commands.push({
-      type: 'text',
-      style: {
-        fontSize: '12px',
-        fontFamily: 'Arial',
-      },
-      value: `Current Balance: ${globalUtils.getCurrencyFormat(item.balance)}`,
-    });
-
     if (!isBundle) {
       commands.push({
         type: 'text',
         style: {
-          fontSize: '14px',
+          fontSize: '12px',
           fontFamily: 'Arial',
+          fontWeight: 'bold',
         },
         value: item.bags
           ?.filter((x) => x.quantity > 0)
@@ -120,51 +111,66 @@ export default (data, isBundle) => {
       value: '',
     });
   });
-
+  commands.push({
+    type: 'text',
+    value: `Old Bills in hand`,
+    style: {
+      fontWeight: '700',
+      textAlign: 'center',
+      fontSize: '14px',
+      fontFamily: 'Arial',
+      marginTop: '10px',
+      marginBottom: '5px',
+    },
+  });
   if (data.oldBills?.length) {
-    commands.push({
-      type: 'text',
-      value: `Old Bills in hand`,
-      style: {
-        fontWeight: '700',
-        textAlign: 'center',
-        fontSize: '14px',
-        fontFamily: 'Arial',
-        marginTop: '10px',
-        marginBottom: '5px',
-      },
+    const groupedOrders = {};
+    for (const element of data.oldBills) {
+      if (groupedOrders[element.partyId] !== undefined) {
+        groupedOrders[element.partyId] = [
+          ...groupedOrders[element.partyId],
+          element,
+        ];
+      } else {
+        groupedOrders[element.partyId] = [element];
+      }
+    }
+
+    Object.values(groupedOrders).forEach((x) => {
+      commands.push({
+        type: 'text',
+        style: {
+          fontSize: '11px',
+          fontFamily: 'Arial',
+          paddingTop: '5px',
+          fontWeight: 'bold',
+        },
+        value: `${_.startCase(x[0].party.name.toLowerCase())}`,
+      });
+      commands.push({
+        type: 'text',
+        style: {
+          fontSize: '11px',
+          fontFamily: 'Arial',
+          paddingTop: '5px',
+        },
+        value: x
+          .map(
+            (y) =>
+              `${y.billNumber}(${globalUtils.getCurrencyFormat(y.balance)})`,
+          )
+          .join(' , '),
+      });
+      commands.push({
+        type: 'text',
+        style: {
+          borderBottom: '1px solid #000',
+          paddingBottom: '5px',
+        },
+        value: '',
+      });
     });
   }
-  data.oldBills?.forEach((item) => {
-    commands.push({
-      type: 'text',
-      style: {
-        fontSize: '12px',
-        fontFamily: 'Arial',
-        paddingTop: '5px',
-        fontWeight: 'bold',
-      },
-      value: item.billNumber,
-    });
-    commands.push({
-      type: 'text',
-      style: {
-        fontSize: '12px',
-        fontFamily: 'Arial',
-      },
-      value: `${_.startCase(item.party.name.toLowerCase())}`,
-    });
-    commands.push({
-      type: 'text',
-      style: {
-        fontSize: '12px',
-        fontFamily: 'Arial',
-      },
-      value: `${
-        item.party.area?.toUpperCase() || ''
-      } : ${globalUtils.getCurrencyFormat(item.balance)}`,
-    });
-  });
   commands.push({
     type: 'text',
     value: '',
@@ -180,3 +186,7 @@ export default (data, isBundle) => {
   });
   return commands;
 };
+function removeSpaces(inputString) {
+  // Use a regular expression to replace consecutive spaces with a single space
+  return inputString.replace(/\s+/g, ' ');
+}

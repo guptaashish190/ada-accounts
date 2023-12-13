@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 import _ from 'lodash';
 import globalUtils from '../../services/globalUtils';
 
@@ -53,29 +54,47 @@ export default (data, isBundle) => {
     },
   });
 
-  // Received Bills
-  data.bills.forEach((item) => {
+  const groupedOrders = {};
+  for (const element of data.bills) {
+    if (groupedOrders[element.partyId] !== undefined) {
+      groupedOrders[element.partyId] = [
+        ...groupedOrders[element.partyId],
+        element,
+      ];
+    } else {
+      groupedOrders[element.partyId] = [element];
+    }
+  }
+  Object.values(groupedOrders).forEach((x) => {
     commands.push({
       type: 'text',
       style: {
-        fontSize: '12px',
+        fontSize: '11px',
         fontFamily: 'Arial',
         paddingTop: '5px',
         fontWeight: 'bold',
       },
-      value: item.billNumber,
+      value: `${_.startCase(x[0].party.name.toLowerCase())}`,
     });
     commands.push({
       type: 'text',
       style: {
-        fontSize: '12px',
+        fontSize: '11px',
         fontFamily: 'Arial',
-        paddingBottom: '5px',
-        borderBottom: '1px solid #000',
+        paddingTop: '5px',
       },
-      value: `${_.startCase(item.party.name.toLowerCase())}`,
+      value: x.map((y) => `${y.billNumber}`).join(' , '),
+    });
+    commands.push({
+      type: 'text',
+      style: {
+        borderBottom: '1px solid #000',
+        paddingBottom: '5px',
+      },
+      value: '',
     });
   });
+
   if (data.otherAdjustedBills && data.otherAdjustedBills.length) {
     // Other Adjusted Bills
     commands.push({

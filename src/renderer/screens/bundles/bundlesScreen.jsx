@@ -1,12 +1,21 @@
-import { collection, getDocs, limit } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Card, Tab, TabList, Text } from '@fluentui/react-components';
+import { DatePicker } from '@fluentui/react-datepicker-compat';
+import {
+  Button,
+  Card,
+  Spinner,
+  Tab,
+  TabList,
+  Text,
+} from '@fluentui/react-components';
 import { firebaseDB } from '../../firebaseInit';
 import './style.css';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 import constants from '../../constants';
+import { VerticalSpace2 } from '../../common/verticalSpace';
 
 const statusColors = {
   [constants.firebase.billBundleFlowStatus.CREATED]: '#00A9A5',
@@ -17,13 +26,33 @@ const statusColors = {
 export default function AllBundlesScreen() {
   const [bundles, setbundles] = useState([]);
 
+  const [date1, setDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
 
-  const fetchbundles = async () => {
+  const fetchbundles = async (date) => {
     setLoading(true);
     try {
       const bundlesCollection = collection(firebaseDB, 'billBundles');
-      const querySnapshot = await getDocs(bundlesCollection, limit(30));
+      let dynamicQuery = bundlesCollection;
+      const dateFrom = new Date(date);
+      dateFrom.setHours(0);
+      dateFrom.setMinutes(0);
+      dateFrom.setSeconds(1);
+      const dateTo = new Date(date);
+      dateTo.setHours(23);
+      dateTo.setMinutes(59);
+      dateTo.setSeconds(59);
+      console.log(dateFrom.toLocaleString(), dateTo.toLocaleString());
+      dynamicQuery = query(
+        dynamicQuery,
+        where('timestamp', '>=', dateFrom.getTime()),
+      );
+      dynamicQuery = query(
+        dynamicQuery,
+        where('timestamp', '<=', dateTo.getTime()),
+      );
+
+      const querySnapshot = await getDocs(dynamicQuery);
 
       const reportsData = [];
       querySnapshot.forEach((doc) => {
@@ -42,21 +71,36 @@ export default function AllBundlesScreen() {
     fetchbundles();
   }, []);
 
-  if (loading) return <Loader />;
-
   return (
     <center>
       <div className="all-bundles-container">
-        <h3>All Bundles</h3>
-        {bundles.map((sr, i) => {
-          return <BundlesRow key={`bundle-row-${sr.id}`} index={i} data={sr} />;
-        })}
+        <h3>All Bundles</h3>{' '}
+        <DatePicker
+          size="large"
+          className=" filter-input"
+          onSelectDate={(d) => fetchbundles(d)}
+          placeholder="Date"
+          value={date1}
+        />
+        <VerticalSpace2 />
+        {loading ? (
+          <Spinner />
+        ) : (
+          bundles.map((sr, i) => {
+            return (
+              <BundlesRow key={`bundle-row-${sr.id}`} index={i} data={sr} />
+            );
+          })
+        )}
+        {bundles.length === 0 ? (
+          <div style={{ color: 'lightgrey' }}>No Bundles Found</div>
+        ) : null}
       </div>
     </center>
   );
 }
 
-function BundlesRow({ data, index }) {
+export function BundlesRow({ data, index }) {
   const navigate = useNavigate();
   const [assignedUser, setAssignedUser] = useState();
 
