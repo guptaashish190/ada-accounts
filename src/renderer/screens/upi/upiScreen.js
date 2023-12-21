@@ -1,6 +1,7 @@
 /* eslint-disable no-restricted-syntax */
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import {
+  Timestamp,
   collection,
   doc,
   getDoc,
@@ -182,7 +183,7 @@ function UPIDialog({ data, createdBy }) {
         {
           amount: data.amount,
           adjustedBills: adjustedBills.map((x) => x.id),
-          timestamp: new Date().getTime(),
+          timestamp: Timestamp.now().toMillis(),
           mode: 'UPI',
         },
       ];

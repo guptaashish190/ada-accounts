@@ -22,7 +22,14 @@ import {
 } from '@fluentui/react-icons';
 import shortid from 'shortid';
 import { useLocation } from 'react-router-dom';
-import { addDoc, collection, doc, setDoc, updateDoc } from 'firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore';
 import BillSelector from '../../components/billSelector/billSelector';
 import AllUsersContext, { useAuthUser } from '../../contexts/allUsersContext';
 import constants from '../../constants';
@@ -156,7 +163,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       if (save) {
         supplyReport = {
           ...prefillSupplyReport,
-          timestamp: new Date().getTime(),
+          timestamp: Timestamp.now().toMillis(),
           numCases: getTotalCases(),
           numPackets: getTotalPackets(),
           numPolybags: getTotalPolyBags(),
@@ -166,7 +173,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
         };
       } else {
         supplyReport = {
-          timestamp: new Date().getTime(),
+          timestamp: Timestamp.now().toMillis(),
           numCases: getTotalCases(),
           numPackets: getTotalPackets(),
           numPolybags: getTotalPolyBags(),

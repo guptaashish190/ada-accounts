@@ -21,6 +21,7 @@ import {
   Tooltip,
 } from '@fluentui/react-components';
 import {
+  Timestamp,
   addDoc,
   collection,
   getDocs,
@@ -301,7 +302,7 @@ function ChequeEntryDialog({ onClose }) {
         amount,
         notes,
         chequeDate: chequeDate.getTime(),
-        timestamp: new Date().getTime(),
+        timestamp: Timestamp.now().toMillis(),
         entryNumber: newEntryNumber,
       });
       globalUtils.incrementReceiptCounter(constants.newReceiptCounters.CHEQUES);

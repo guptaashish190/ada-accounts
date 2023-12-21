@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Timestamp,
   addDoc,
   collection,
   doc,
@@ -67,7 +68,7 @@ export default function AssignBillScreen() {
 
       addDoc(billBundlesRef, {
         status: constants.firebase.billBundleFlowStatus.CREATED,
-        timestamp: new Date().getTime(),
+        timestamp: Timestamp.now().toMillis(),
         assignedTo: selectedUser.uid,
         bills: addedBills.filter((x) => x.balance !== 0).map((x) => x.id),
       });

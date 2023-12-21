@@ -4,6 +4,7 @@
 /* eslint-disable no-restricted-syntax */
 
 import {
+  Timestamp,
   collection,
   doc,
   getDoc,
@@ -125,7 +126,7 @@ export default function ReceiveBundle() {
 
           const addedPayments = oab1.payments.map((oab1p) => ({
             ...oab1p,
-            timestamp: new Date().getTime(),
+            timestamp: Timestamp.now().toMillis(),
             bundleId: bundle.id,
             orderId: oab1.id,
           }));

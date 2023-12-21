@@ -28,6 +28,7 @@ import {
   Option,
 } from '@fluentui/react-components';
 import {
+  Timestamp,
   addDoc,
   collection,
   getDoc,
@@ -103,7 +104,7 @@ export default function CreatePaymentReceiptDialog({
         const docRef = await addDoc(cashReceiptsCollectionRef, {
           supplyReportId: state?.supplyReportId || '',
           prItems: updatedPrItems,
-          timestamp: new Date().getTime(),
+          timestamp: Timestamp.now().toMillis(),
           createdByUserId: getAuth().currentUser.uid,
           paymentFromUserId: paymentFrom,
         });

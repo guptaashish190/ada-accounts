@@ -5,6 +5,7 @@
 /* eslint-disable no-restricted-syntax */
 
 import {
+  Timestamp,
   collection,
   doc,
   getDoc,
@@ -41,41 +42,77 @@ import './style.css';
 import firebaseApp, { firebaseDB } from '../../../firebaseInit';
 import AdjustAmountDialog from '../adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../../constants';
+import BillRow from './billRow';
 
 export default function ReceiveSRScreen() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const { supplyReport } = state;
   const [allBills, setAllBills] = useState([]);
+  const [groupedOldBills, setGroupedOldBills] = useState([]);
+  const [groupedSupplementaryBills, setGroupedSupplementaryBills] = useState(
+    [],
+  );
   const [receivedBills, setReceivedBills] = useState([]);
   const [returnedBills, setReturnedBills] = useState([]);
   const [openAdjustAmountDialog, setOpenAdjustAmountDialog] = useState();
   const [otherAdjustedBills, setOtherAdjustedBills] = useState([]);
 
-  const [loading, setLoading] = useState(false);
+  const toasterId = useId('toaster');
+  const { dispatchToast } = useToastController(toasterId);
 
+  const [loading, setLoading] = useState(false);
   const getAllBills = async () => {
-    setLoading(true);
     try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds([
-        ...supplyReport.orders,
-        ...supplyReport.attachedBills,
-        ...supplyReport.supplementaryBills,
-      ]);
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        supplyReport.orders,
+      );
 
       fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
       fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
       setAllBills(fetchedOrders);
-
-      setLoading(false);
     } catch (e) {
-      setLoading(false);
       console.error(e);
     }
   };
+  const getGroupedBills = async (orderIds) => {
+    try {
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(orderIds);
+      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      const groupedOrders = {};
+      for (const element of fetchedOrders) {
+        if (groupedOrders[element.partyId] !== undefined) {
+          groupedOrders[element.partyId] = [
+            ...groupedOrders[element.partyId],
+            element,
+          ];
+        } else {
+          groupedOrders[element.partyId] = [element];
+        }
+      }
+      return groupedOrders;
+    } catch (e) {
+      console.error(e);
+    }
+    return [];
+  };
 
-  const toasterId = useId('toaster');
-  const { dispatchToast } = useToastController(toasterId);
+  const init = async () => {
+    setLoading(true);
+    await getAllBills();
+    const obg = await getGroupedBills(supplyReport.attachedBills);
+    const sbg = await getGroupedBills(supplyReport.supplementaryBills);
+    console.log(obg);
+    console.log(sbg);
+    setGroupedOldBills(obg || []);
+    setGroupedSupplementaryBills(sbg || []);
+    setLoading(false);
+  };
+
+  useState(() => {
+    init();
+  }, []);
 
   const receiveBill = (bi) => {
     setReceivedBills((r) => [...r, bi]);
@@ -122,7 +159,7 @@ export default function ReceiveSRScreen() {
             ...rb2.flow,
             {
               employeeId: getAuth(firebaseApp).currentUser.uid,
-              timestamp: new Date().getTime(),
+              timestamp: Timestamp.now().toMillis(),
               type: 'Received Bill',
             },
           ],
@@ -151,7 +188,7 @@ export default function ReceiveSRScreen() {
             ...rb2.flow,
             {
               employeeId: getAuth(firebaseApp).currentUser.uid,
-              timestamp: new Date().getTime(),
+              timestamp: Timestamp.now().toMillis(),
               type: 'Goods Returned',
             },
           ],
@@ -185,7 +222,7 @@ export default function ReceiveSRScreen() {
 
           const addedPayments = oab1.payments.map((oab1p) => ({
             ...oab1p,
-            timestamp: new Date().getTime(),
+            timestamp: Timestamp.now().toMillis(),
             supplyReportId: supplyReport.id,
             orderId: oab1.id,
           }));
@@ -240,15 +277,15 @@ export default function ReceiveSRScreen() {
       state: { supplyReportId: supplyReport.id, prItems: updatedModelPrItems },
     });
   };
-
-  useState(() => {
-    getAllBills();
-  }, []);
-
   if (loading) return <Loader />;
 
   const allBillsReceived =
-    receivedBills.length + returnedBills.length === allBills.length;
+    receivedBills.length + returnedBills.length ===
+    [
+      ...supplyReport.orders,
+      ...supplyReport.supplementaryBills,
+      ...supplyReport.attachedBills,
+    ].length;
 
   return (
     <>
@@ -268,37 +305,163 @@ export default function ReceiveSRScreen() {
           <h3>Receive Supply Report: {supplyReport.receiptNumber}</h3>
           <VerticalSpace1 />
 
-          {allBills.map((bill, i) => {
+          {allBills.map((bill) => {
             return (
-              <BillRow
-                isReturned={
-                  returnedBills.findIndex((x) => x.id === bill.id) !== -1
-                }
-                onReturn={() => {
-                  setReturnedBills((x) => [...x, bill]);
-                }}
-                onReceive={(x) => {
-                  receiveBill(x);
-                }}
-                key={`rsr-${bill.id}`}
-                data={bill}
-                isReceived={
-                  receivedBills.findIndex((x) => x.id === bill.id) !== -1
-                }
-                index={i}
-                onUndo={() => {
-                  setReceivedBills((b) => b.filter((tb) => tb.id !== bill.id));
-                  setReturnedBills((b) => b.filter((tb) => tb.id !== bill.id));
-                }}
-                openAdjustDialog={(orderData, amount, type) => {
-                  setOpenAdjustAmountDialog({ orderData, amount, type });
-                }}
-                setOtherAdjustedBills={setOtherAdjustedBills}
-                otherAdjustedBills={otherAdjustedBills}
-              />
+              <div className="party-section-receive-sr">
+                <div className="title-sr">{bill.party?.name}</div>
+
+                <div className="party-bills-container">
+                  <BillRow
+                    isReturned={
+                      returnedBills.findIndex((x) => x.id === bill.id) !== -1
+                    }
+                    onReturn={() => {
+                      setReturnedBills((x) => [...x, bill]);
+                    }}
+                    onReceive={(x) => {
+                      receiveBill(x);
+                    }}
+                    key={`rsr-${bill.id}`}
+                    data={bill}
+                    isReceived={
+                      receivedBills.findIndex((x) => x.id === bill.id) !== -1
+                    }
+                    onUndo={() => {
+                      setReceivedBills((b) =>
+                        b.filter((tb) => tb.id !== bill.id),
+                      );
+                      setReturnedBills((b) =>
+                        b.filter((tb) => tb.id !== bill.id),
+                      );
+                    }}
+                    openAdjustDialog={(orderData, amount, type) => {
+                      setOpenAdjustAmountDialog({ orderData, amount, type });
+                    }}
+                    setOtherAdjustedBills={setOtherAdjustedBills}
+                    otherAdjustedBills={otherAdjustedBills}
+                  />
+                  {groupedOldBills[bill.partyId]?.map((oldBill) => {
+                    return (
+                      <BillRow
+                        isOld
+                        isReturned={
+                          returnedBills.findIndex(
+                            (x) => x.id === oldBill.id,
+                          ) !== -1
+                        }
+                        onReturn={() => {
+                          setReturnedBills((x) => [...x, oldBill]);
+                        }}
+                        onReceive={(x) => {
+                          receiveBill(x);
+                        }}
+                        key={`rsr-${oldBill.id}`}
+                        data={oldBill}
+                        isReceived={
+                          receivedBills.findIndex(
+                            (x) => x.id === oldBill.id,
+                          ) !== -1
+                        }
+                        onUndo={() => {
+                          setReceivedBills((b) =>
+                            b.filter((tb) => tb.id !== oldBill.id),
+                          );
+                          setReturnedBills((b) =>
+                            b.filter((tb) => tb.id !== oldBill.id),
+                          );
+                        }}
+                        openAdjustDialog={(orderData, amount, type) => {
+                          setOpenAdjustAmountDialog({
+                            orderData,
+                            amount,
+                            type,
+                          });
+                        }}
+                        setOtherAdjustedBills={setOtherAdjustedBills}
+                        otherAdjustedBills={otherAdjustedBills}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
+          {Object.values(groupedSupplementaryBills).length > 0 ? (
+            <div className="title-sr">SUPPLEMENTARY BILLS</div>
+          ) : null}
+          {Object.values(groupedSupplementaryBills).map((bills) => {
+            return (
+              <div>
+                <div className="title-sr">{bills[0].party?.name}</div>
+                <div className="party-bills-container">
+                  {groupedOldBills[bills[0].partyId]?.map((oldBill) => {
+                    return (
+                      <BillRow
+                        isOld
+                        isReturned={
+                          returnedBills.findIndex(
+                            (x) => x.id === oldBill.id,
+                          ) !== -1
+                        }
+                        onReturn={() => {
+                          setReturnedBills((x) => [...x, oldBill]);
+                        }}
+                        onReceive={(x) => {
+                          receiveBill(x);
+                        }}
+                        key={`rsr-${oldBill.id}`}
+                        data={oldBill}
+                        isReceived={
+                          receivedBills.findIndex(
+                            (x) => x.id === oldBill.id,
+                          ) !== -1
+                        }
+                        onUndo={() => {
+                          setReceivedBills((b) =>
+                            b.filter((tb) => tb.id !== oldBill.id),
+                          );
+                          setReturnedBills((b) =>
+                            b.filter((tb) => tb.id !== oldBill.id),
+                          );
+                        }}
+                        openAdjustDialog={(orderData, amount, type) => {
+                          setOpenAdjustAmountDialog({
+                            orderData,
+                            amount,
+                            type,
+                          });
+                        }}
+                        setOtherAdjustedBills={setOtherAdjustedBills}
+                        otherAdjustedBills={otherAdjustedBills}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+          <div>
+            {otherAdjustedBills.map((o) => {
+              return (
+                <Card
+                  appearance="outline"
+                  size="small"
+                  key={`cashotherbillrow-${o.id}`}
+                >
+                  <div>
+                    Adjusted {o.payments[0].type.toUpperCase()}
+                    {` `}
+                    <b>
+                      {globalUtils.getCurrencyFormat(o.payments[0].amount)}{' '}
+                    </b>
+                    against <b>{o.billNumber}</b>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </div>
+        <VerticalSpace1 />
         {allBillsReceived ? (
           <Button
             onClick={() => onComplete()}
@@ -314,298 +477,5 @@ export default function ReceiveSRScreen() {
         )}
       </center>
     </>
-  );
-}
-
-function BillRow({
-  data,
-  index,
-  onReceive,
-  isReceived,
-  isReturned,
-  onReturn,
-  onUndo,
-  openAdjustDialog,
-  otherAdjustedBills,
-  setOtherAdjustedBills,
-}) {
-  const [cash, setCash] = useState('');
-  const [cheque, setCheque] = useState('');
-  const [upi, setUpi] = useState('');
-  const [scheduleDate, setScheduleDate] = useState(
-    data.schedulePaymentDate ? new Date(data.schedulePaymentDate) : null,
-  );
-  const [notes, setNotes] = useState();
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const paytemp = data.flow[data.flow.length - 1]?.payload?.payments;
-    if (paytemp) {
-      paytemp.forEach((fetched) => {
-        if (fetched.type === 'Cash') {
-          setCash(fetched.amount);
-        }
-        if (fetched.type === 'Cheque') {
-          setCheque(fetched.amount);
-        }
-        if (fetched.type === 'UPI') {
-          setUpi(fetched.amount);
-        }
-      });
-    }
-  }, []);
-
-  const cashOtherBills = otherAdjustedBills.filter(
-    (o) => o.partyId === data.partyId && o.payments[0].type === 'cash',
-  );
-  const chequeOtherBills = otherAdjustedBills.filter(
-    (o) => o.partyId === data.partyId && o.payments[0].type === 'cheque',
-  );
-  const upiOtherBills = otherAdjustedBills.filter(
-    (o) => o.partyId === data.partyId && o.payments[0].type === 'upi',
-  );
-
-  const receive = () => {
-    let newPayments = data.payments || [];
-    // Remove payment for current bill in otherBills list and add to the current bill.
-    let cash1 = cash;
-    let cheque1 = cheque;
-    let upi1 = upi;
-
-    const currentCashPayment = cashOtherBills.find((o) => o.id === data.id);
-    const currentChequePayment = chequeOtherBills.find((o) => o.id === data.id);
-    const currentUpiPayment = upiOtherBills.find((o) => o.id === data.id);
-    if (currentCashPayment) {
-      setOtherAdjustedBills((oab) =>
-        oab.filter(
-          (oabf) => !(oabf.id === data.id && oabf.payments[0].type === 'cash'),
-        ),
-      );
-      cash1 = currentCashPayment.payments[0].amount;
-    }
-    if (currentChequePayment) {
-      setOtherAdjustedBills((oab) =>
-        oab.filter(
-          (oabf) =>
-            !(oabf.id === data.id && oabf.payments[0].type === 'cheque'),
-        ),
-      );
-      cheque1 = currentChequePayment.payments[0].amount;
-    }
-    if (currentUpiPayment) {
-      setOtherAdjustedBills((oab) =>
-        oab.filter(
-          (oabf) => !(oabf.id === data.id && oabf.payments[0].type === 'upi'),
-        ),
-      );
-      upi1 = currentUpiPayment.payments[0].amount;
-    }
-
-    newPayments = [
-      ...newPayments,
-      cash1.length > 0 && {
-        type: 'cash',
-        amount: cash1,
-      },
-      cheque1.length > 0 && {
-        type: 'cheque',
-        amount: cheque1,
-      },
-      upi1.length > 0 && {
-        type: 'upi',
-        amount: upi1,
-      },
-    ].filter(Boolean);
-    const tempBill = {
-      ...data,
-      payments: [...newPayments],
-      accountsNotes: notes,
-      ...(scheduleDate && { schedulePaymentDate: scheduleDate.getTime() }),
-      with: 'Accounts',
-    };
-
-    setCash(cash1);
-    setCheque(cheque1);
-    setUpi(upi1);
-
-    onReceive(tempBill);
-  };
-  const disabled = isReceived || isReturned;
-
-  return (
-    <div className="bill-row">
-      <center>
-        <div className="bill-row-top">
-          <Text style={{ fontWeight: 'bold' }}>
-            {index + 1}.{data.party?.name}
-          </Text>
-          <Text>{data.billNumber}</Text>
-          <Text>{data.fileNumber}</Text>
-          <Text>{globalUtils.getCurrencyFormat(data.orderAmount)}</Text>
-          <Text style={{ fontWeight: 'bold' }}>
-            BAL: {globalUtils.getCurrencyFormat(data.balance)}
-          </Text>
-          {disabled ? (
-            <Button onClick={() => onUndo()} appearance="subtle" size="large">
-              <Text
-                className={`undo-button ${
-                  isReceived ? 'received' : 'returned'
-                }`}
-              >
-                UNDO ({isReceived ? 'Received' : 'Returned'})
-              </Text>
-            </Button>
-          ) : (
-            <>
-              <Button onClick={onReturn} appearance="subtle">
-                RETURN
-              </Button>
-
-              <Button
-                onClick={() => receive()}
-                appearance="subtle"
-                size="large"
-              >
-                <Text className="receive-button">RECEIVE</Text>
-              </Button>
-            </>
-          )}
-        </div>
-      </center>
-      <center>
-        <div className="bill-row-bottom">
-          <Input
-            disabled={disabled || cashOtherBills.length}
-            className={`input ${disabled ? '' : 'payment'}`}
-            onChange={(_, e) => setCash(e.value)}
-            placeholder="Cash"
-            value={cash}
-            contentBefore="₹"
-            type="number"
-            contentAfter={
-              <ContentAfterInputReceive
-                otherBills={cashOtherBills}
-                setOtherAdjustedBills={setOtherAdjustedBills}
-                data={data}
-                setInputContent={setCash}
-                inputContent={cash}
-                type="cash"
-                openAdjustDialog={openAdjustDialog}
-              />
-            }
-          />
-          <Input
-            disabled={disabled || chequeOtherBills.length}
-            className={`input ${disabled ? '' : 'payment'}`}
-            onChange={(_, e) => setCheque(e.value)}
-            placeholder="Cheque"
-            contentBefore="₹"
-            value={cheque}
-            type="number"
-            contentAfter={
-              <ContentAfterInputReceive
-                otherBills={chequeOtherBills}
-                setOtherAdjustedBills={setOtherAdjustedBills}
-                data={data}
-                setInputContent={setCheque}
-                inputContent={cheque}
-                type="cheque"
-                openAdjustDialog={openAdjustDialog}
-              />
-            }
-          />
-          <Input
-            disabled={disabled || upiOtherBills.length}
-            className={`input ${disabled ? '' : 'payment'}`}
-            onChange={(_, e) => setUpi(e.value)}
-            placeholder="UPI"
-            value={upi}
-            contentBefore="₹"
-            type="number"
-            contentAfter={
-              <ContentAfterInputReceive
-                otherBills={upiOtherBills}
-                setOtherAdjustedBills={setOtherAdjustedBills}
-                data={data}
-                setInputContent={setUpi}
-                inputContent={upi}
-                type="upi"
-                openAdjustDialog={openAdjustDialog}
-              />
-            }
-          />
-          <Tooltip content="Scheduled for payment">
-            <DatePicker
-              disabled={disabled}
-              onSelectDate={setScheduleDate}
-              placeholder="Schedule"
-              value={scheduleDate}
-            />
-          </Tooltip>
-          <Tooltip content={data.accountsNotes}>
-            <Input
-              disabled={disabled}
-              value={notes}
-              onChange={(_, e) => setNotes(e.value)}
-              className="input"
-              placeholder="Accounts Notes"
-            />
-          </Tooltip>
-        </div>
-      </center>
-      <VerticalSpace1 />
-      <div>
-        {[...cashOtherBills, ...chequeOtherBills, ...upiOtherBills].map((o) => {
-          return (
-            <Card size="small" key={`cashotherbillrow-${o.id}`}>
-              <div>
-                Adjusted {o.payments[0].type.toUpperCase()}
-                {` `}
-                <b>{globalUtils.getCurrencyFormat(o.payments[0].amount)} </b>
-                against <b>{o.billNumber}</b>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ContentAfterInputReceive({
-  otherBills,
-  setOtherAdjustedBills,
-  data,
-  setInputContent,
-  inputContent,
-  type,
-  openAdjustDialog,
-}) {
-  return otherBills.length ? (
-    <div
-      onClick={() => {
-        setOtherAdjustedBills((od) =>
-          od.filter(
-            (odf) =>
-              !(odf.partyId === data.partyId && odf.payments[0].type === type),
-          ),
-        );
-        setInputContent('');
-      }}
-    >
-      <Dismiss12Filled />
-    </div>
-  ) : (
-    <div
-      onClick={() => {
-        if (inputContent.length) {
-          openAdjustDialog(data, `${inputContent}`, type);
-        }
-        setInputContent('');
-      }}
-    >
-      <Open12Filled />
-    </div>
   );
 }

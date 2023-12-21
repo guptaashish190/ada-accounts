@@ -15,7 +15,13 @@ import {
   useToastController,
 } from '@fluentui/react-components';
 import { Delete20Regular } from '@fluentui/react-icons';
-import { addDoc, collection, doc, updateDoc } from 'firebase/firestore';
+import {
+  Timestamp,
+  addDoc,
+  collection,
+  doc,
+  updateDoc,
+} from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import SupplementaryBillDialog from '../../verifySupplyReport/supplementaryBillDialog/supplementaryBillDialog';
 import globalUtils from '../../../services/globalUtils';
@@ -46,7 +52,7 @@ export default function CreateCreditNoteScreen() {
       setCreatingLoading(true);
       const cnCollRef = collection(firebaseDB, 'creditNotes');
       addDoc(cnCollRef, {
-        timestamp: new Date().getTime(),
+        timestamp: Timestamp.now().toMillis(),
         amount,
         remarks,
         partyId: bill.partyId,

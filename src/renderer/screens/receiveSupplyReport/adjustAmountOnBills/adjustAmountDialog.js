@@ -98,6 +98,10 @@ function AdjustAmountDialog({
                       adjusted={
                         adjustedBills.findIndex((f) => f.id === o.id) !== -1
                       }
+                      onUnAdjust={(amount) => {
+                        setAdjustedBills((b) => b.filter((x) => x.id != o.id));
+                        setAmountLeft((al) => al + amount);
+                      }}
                       onAdjust={(amount) => {
                         const newOrder = {
                           ...o,
@@ -108,7 +112,6 @@ function AdjustAmountDialog({
                             },
                           ],
                         };
-                        console.log(newOrder);
                         setAdjustedBills((b) => [...b, newOrder]);
                         setAmountLeft((al) => al - amount);
                       }}
@@ -123,7 +126,7 @@ function AdjustAmountDialog({
           </DialogContent>
           <DialogActions>
             <Button
-              disabled={!closeable}
+              disabled={adjustedBills.length !== 0}
               onClick={() => {
                 onDone();
               }}
@@ -149,7 +152,13 @@ function AdjustAmountDialog({
 
 export default AdjustAmountDialog;
 
-function AdjustAmountBillRow({ bill, onAdjust, adjusted, amountLeft }) {
+function AdjustAmountBillRow({
+  bill,
+  onAdjust,
+  adjusted,
+  amountLeft,
+  onUnAdjust,
+}) {
   const [amountToAdjust, setAmountToAdjust] = useState('');
   const [adjustedAmount, setAdjustedAmount] = useState();
 
@@ -158,7 +167,7 @@ function AdjustAmountBillRow({ bill, onAdjust, adjusted, amountLeft }) {
       if (amountLeft > bill.balance) {
         setAmountToAdjust(bill.balance);
       } else {
-        setAmountToAdjust(amountLeft.toString());
+        setAmountToAdjust(amountLeft?.toString());
       }
     }
   }, [amountLeft]);
@@ -187,7 +196,14 @@ function AdjustAmountBillRow({ bill, onAdjust, adjusted, amountLeft }) {
           placeholder={globalUtils.getCurrencyFormat(bill.orderAmount)}
         />
         {adjusted ? (
-          <Button style={{ color: '#06D6A0' }}>Adjusted</Button>
+          <Button
+            onClick={() => {
+              onUnAdjust(amountToAdjust);
+            }}
+            style={{ color: '#06D6A0' }}
+          >
+            Adjusted
+          </Button>
         ) : (
           <Button
             style={{ color: '#F25C54' }}

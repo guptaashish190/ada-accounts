@@ -22,7 +22,6 @@
 
 .tab-navigator .right {
   margin-top: 100px;
-  overflow: scroll;
   position: relative;
   padding: 10px;
   background-color: white;
@@ -30,12 +29,13 @@
 
 .tab-navigator .submenu-container {
   width: 100%;
-  background-color: antiquewhite;
+  background-color: #ffffff;
+  border-top: 1px solid grey;
 }
 
 .tab-navigator .menu-container {
   width: 100%;
-  background-color: aliceblue;
+  background-color: #ffffff;
   display: flex;
   justify-content: space-between;
 }

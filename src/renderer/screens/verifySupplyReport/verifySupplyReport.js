@@ -24,6 +24,7 @@ import {
   Edit12Filled,
 } from '@fluentui/react-icons';
 import {
+  Timestamp,
   collection,
   doc,
   getDoc,
@@ -100,7 +101,7 @@ export default function VerifySupplyReport() {
 
       updateDoc(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
-        dispatchTimestamp: new Date().getTime(),
+        dispatchTimestamp: Timestamp.now().toMillis(),
         attachedBills: attachedBills
           .filter((x) => x.balance !== 0)
           .map((b) => b.id),
@@ -138,7 +139,7 @@ export default function VerifySupplyReport() {
           ...bill1.flow,
           {
             employeeId: getAuth(firebaseApp).currentUser.uid,
-            timestamp: new Date().getTime(),
+            timestamp: Timestamp.now().toMillis(),
             type: 'Dispatched',
             comment: bill1.notes || '',
           },

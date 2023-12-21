@@ -1,15 +1,38 @@
 .receive-sr-container .bill-row-top {
   display: grid;
-  grid-template-columns: 5fr 1fr 1fr 2fr 2fr 2fr 1fr;
+  grid-template-columns: 5fr 1fr 2fr 2fr 4fr;
   align-items: center;
+  padding: 0 10px;
 }
+
+.receive-sr-container .party-bills-container {
+  margin: 10px;
+}
+
+.receive-sr-container .party-section-receive-sr {
+  border: 1px solid #698fff85;
+  margin-bottom: 30px;
+}
+
+.receive-sr-container .title-sr {
+  font-weight: bold;
+  padding: 10px;
+  background-color: #698fff31;
+}
+
 .receive-sr-container .bill-row-bottom {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: center;
 }
+
+.receive-sr-container .receive-return-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+}
+
 .receive-sr-container .bill-row {
-  margin-bottom: 30px;
   text-align: left;
   width: 90%;
 }
@@ -21,13 +44,14 @@
 .receive-sr-container .bill-row .input {
   margin: 0 10px;
 }
+
 .receive-sr-container .bill-row .receive-button {
   color: #f25c54 !important;
   font-weight: bold;
 }
 
 .receive-sr-container .input.payment {
-  border-color: #00a9a5;
+  border-color: #00a9a65d;
 }
 
 .receive-sr-container .bill-row .undo-button {
