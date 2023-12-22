@@ -46,6 +46,8 @@ import AutoUpdaterWrapper from './contexts/autoUpdaterContext';
 import RouteSettings from './screens/settings/routes/routeSettings';
 import CalculatorWrapper from './contexts/calculatorWrapper';
 import ReceivePendingUser from './screens/receivePendingUser/receivePendingUser';
+import ScheduledBillsScreen from './screens/scheduledBills/scheduledBillsScreen';
+import VoucherScreen from './screens/vouchers/vouchersScreen';
 
 const myNewTheme = {
   10: '#010304',
@@ -169,6 +171,11 @@ export default function App({ routeProps, startRoute, printData }) {
                         <Route
                           path="/receivePendingUser"
                           element={<ReceivePendingUser />}
+                        />
+                        <Route path="/vouchers" element={<VoucherScreen />} />
+                        <Route
+                          path="/scheduled"
+                          element={<ScheduledBillsScreen />}
                         />
                       </Routes>
                     </TabNavigator>

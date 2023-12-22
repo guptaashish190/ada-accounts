@@ -35,6 +35,7 @@ let childWindow: BrowserWindow | null = null;
 let allPrinters: Array<Object>;
 const store = new Store();
 let selectedPrinter: string;
+let printerOptions: string = '{}';
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -58,16 +59,38 @@ ipcMain.on('set-selected-printer', async (event, arg) => {
   event.sender.send('all-printers', { list: allPrinters, selectedPrinter });
 });
 
+ipcMain.on('set-printer-options', async (event, arg) => {
+  store.set('printer-options', arg);
+  printerOptions = arg;
+
+  console.log(arg);
+
+  event.sender.send('printer-options', { options: arg });
+});
+
+ipcMain.on('fetch-printer-options', async (event, arg) => {
+  const opt = store.get('printer-options');
+  console.log(opt);
+  if (opt) {
+    event.sender.send('printer-options', { options: opt });
+  }
+});
+
 const onPrint = async (data: PosPrintData[]) => {
   const options: PosPrintOptions = {
     preview: false,
     margin: '0 0 0 0',
     copies: 1,
+    silent: true,
     printerName: selectedPrinter,
     timeOutPerLine: 400,
-    pageSize: '58mm',
+    pageSize: {
+      width: 219,
+      height: 3000,
+    },
   };
-  PosPrinter.print(data, options);
+
+  PosPrinter.print(data, { ...options, ...JSON.parse(printerOptions) });
 };
 
 ipcMain.on('print', async (event, arg) => {

@@ -30,12 +30,13 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import BillSelector from '../../components/billSelector/billSelector';
 import AllUsersContext, { useAuthUser } from '../../contexts/allUsersContext';
 import constants from '../../constants';
 import { showToast } from '../../common/toaster';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
-import { firebaseDB } from '../../firebaseInit';
+import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 import { useSettingsContext } from '../../contexts/settingsContext';
@@ -91,6 +92,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       constants.newReceiptCounters.SUPPLYREPORTS,
     );
     setSrNumber(srNumber1);
+    return srNumber1;
   };
 
   useEffect(() => {
@@ -151,6 +153,10 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 
     try {
       setLoading(true);
+      const newSrNumber2 = await getNewSupplyReportNumber();
+      await bills.forEach(async (bill1) => {
+        await updateOrder(bill1);
+      });
       let reportDocRef;
       if (save) {
         reportDocRef = doc(firebaseDB, 'supplyReports', prefillSupplyReport.id);
@@ -183,7 +189,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           supplymanId: selectedSupplyman.uid,
           id: reportDocRef.id,
           status: constants.firebase.supplyReportStatus.TOACCOUNTS,
-          receiptNumber: srNumber,
+          receiptNumber: newSrNumber2,
         };
       }
       const docRef = setDoc(reportDocRef, supplyReport);
@@ -219,6 +225,30 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     }
   };
 
+  const updateOrder = async (bill1) => {
+    try {
+      // Create a reference to the specific order document
+      const orderRef = doc(firebaseDB, 'orders', bill1.id);
+
+      // Update the "orderStatus" field in the order document to "dispatched"
+      updateDoc(orderRef, {
+        orderStatus: constants.firebase.supplyReportStatus.TOACCOUNTS,
+
+        flow: [
+          ...bill1.flow,
+          {
+            employeeId: getAuth(firebaseApp).currentUser.uid,
+            timestamp: Timestamp.now().toMillis(),
+            type: constants.firebase.supplyReportStatus.TOACCOUNTS,
+          },
+        ],
+      });
+
+      console.log(`Order status updated to "dispatched"`);
+    } catch (error) {
+      console.error(`Error updating order  status:`, error);
+    }
+  };
   const onSave = () => {};
 
   const resetScreenState = () => {
@@ -380,7 +410,7 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
         id={inputId}
         style={{ marginRight: '20px', width: '100px' }}
         contentBefore="T-"
-        defaultValue={bill.billNumber || ''}
+        defaultValue={bill.billNumber.replace('T-', '') || ''}
         onChange={(x) => {
           const tempBill = { ...bill };
           tempBill.billNumber = `T-${x.target.value}`;

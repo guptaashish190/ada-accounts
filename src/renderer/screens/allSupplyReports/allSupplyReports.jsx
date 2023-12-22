@@ -33,7 +33,8 @@ export default function AllSupplyReportsScreen() {
   const [supplyman, setSupplyman] = useState();
   const [status, setStatus] = useState();
   const [srNumber, setSrNumber] = useState('');
-  const [date, setDate] = useState(new Date());
+  const [fromDate, setFromDate] = useState();
+  const [toDate, setToDate] = useState();
 
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
@@ -48,18 +49,18 @@ export default function AllSupplyReportsScreen() {
       supplymanId: supplyman,
       status,
       receiptNumber: srNumber && srNumber.length && `SR-${srNumber}`,
-      timestamp: date && date.getTime(),
+      timestamp: fromDate && toDate,
     };
 
     if (!clear) {
       for (const field in filters) {
         if (filters[field]) {
           if (field === 'timestamp') {
-            const dateFrom = new Date(date);
+            const dateFrom = fromDate ? new Date(fromDate) : new Date();
             dateFrom.setHours(0);
             dateFrom.setMinutes(0);
             dateFrom.setSeconds(1);
-            const dateTo = new Date(date);
+            const dateTo = new Date(toDate);
             dateTo.setHours(23);
             dateTo.setMinutes(59);
             dateTo.setSeconds(59);
@@ -122,7 +123,7 @@ export default function AllSupplyReportsScreen() {
     fetchData();
   };
   useEffect(() => {
-    onSearch();
+    onSearch(true);
   }, []);
 
   return (
@@ -172,10 +173,17 @@ export default function AllSupplyReportsScreen() {
           </Dropdown>
           <DatePicker
             className=" filter-input"
-            onSelectDate={setDate}
-            placeholder="Date"
-            value={date}
+            onSelectDate={setFromDate}
+            placeholder="From"
+            value={fromDate}
           />
+          <DatePicker
+            className=" filter-input"
+            onSelectDate={setToDate}
+            placeholder="To"
+            value={toDate}
+          />
+          <div />
           <Button
             onClick={() => {
               onSearch();
@@ -185,7 +193,8 @@ export default function AllSupplyReportsScreen() {
           </Button>
           <Button
             onClick={() => {
-              setDate(new Date());
+              setFromDate();
+              setToDate();
               setSrNumber('');
               setStatus(null);
               setSupplyman('');

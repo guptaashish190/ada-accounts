@@ -22,6 +22,7 @@ import {
   doc,
   onSnapshot,
   where,
+  or,
 } from 'firebase/firestore';
 import shortid from 'shortid';
 import firebaseApp, { firebaseDB } from '../../firebaseInit';
@@ -38,12 +39,20 @@ export default function BillSelector({ onBillsAdded }) {
     const ordersRef = collection(firebaseDB, 'orders');
     const q = query(
       ordersRef,
-      where(
-        'orderStatus',
-        '==',
-        constants.firebase.billFlowTypes.BILL_MODIFIED,
+      or(
+        where(
+          'orderStatus',
+          '==',
+          constants.firebase.billFlowTypes.BILL_MODIFIED,
+        ),
+        where(
+          'orderStatus',
+          '==',
+          constants.firebase.billFlowTypes.GOODS_RETURNED,
+        ),
       ),
     );
+
     const unsubscribe = onSnapshot(q, async (snapshot) => {
       const snapshotDocData = snapshot.docs.map((sn) => ({
         ...sn.data(),
@@ -162,7 +171,14 @@ function OrderRow({ order, onAddToggle, isSelected }) {
     >
       <div className="bill-number">{order.challanNumber?.toUpperCase()}</div>
       <div className="bill-name">
-        {order.party?.name} {order.fileNumber}
+        <div>
+          {order.party?.name} {order.fileNumber}
+          {globalUtils.getTimeFormat(order.creationTime)}
+        </div>
+        <span className="bill-number" style={{ fontSize: '0.8em' }}>
+          {' '}
+          {order.orderStatus}
+        </span>
       </div>
       <div className="bill-amount">₹{order.orderAmount}</div>
       <Button

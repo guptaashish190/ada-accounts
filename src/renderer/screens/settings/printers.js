@@ -1,15 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card } from '@fluentui/react-components';
+import { Button, Card, Textarea } from '@fluentui/react-components';
 import { VerticalSpace2 } from '../../common/verticalSpace';
 import constants from '../../constants';
 
 export default function PrinterSettings() {
   const [printers, setPrinters] = useState([]);
   const [selectedPrinter, setSelectedPrinter] = useState();
+  const [printerOptions, setPrinterOptions] = useState('');
 
   const sendMainMessage = async () => {
     const pr = await window.electron.ipcRenderer.sendMessage(
       'fetch-printers',
+      [],
+    );
+    const pr1 = await window.electron.ipcRenderer.sendMessage(
+      'fetch-printer-options',
       [],
     );
 
@@ -17,6 +22,9 @@ export default function PrinterSettings() {
       console.log(args);
       setPrinters(args.list);
       setSelectedPrinter(args.selectedPrinter);
+    });
+    window.electron.ipcRenderer.on('printer-options', (args) => {
+      setPrinterOptions(args.options);
     });
   };
 
@@ -30,10 +38,26 @@ export default function PrinterSettings() {
       data.displayName,
     );
   };
+  const setPrinterOptionsHandler = (data) => {
+    window.electron.ipcRenderer.sendMessage(
+      'set-printer-options',
+      printerOptions,
+    );
+  };
 
   return (
     <div>
       <Button onClick={() => sendMainMessage()}>Reload Printers</Button>
+      <br />
+      <br />
+      <Textarea
+        placeholder="Printer Options"
+        value={printerOptions}
+        onChange={(e) => setPrinterOptions(e.target.value)}
+      />
+      <Button onClick={() => setPrinterOptionsHandler()}>
+        Set Printer Options
+      </Button>
       <VerticalSpace2 />
       {printers.map((pri, i) => (
         <Button

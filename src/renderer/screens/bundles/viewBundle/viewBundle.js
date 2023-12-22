@@ -368,7 +368,7 @@ function OtherAdjustedBillsRow({ data, index }) {
     try {
       setLoading(true);
       // Fetch the order using orderId
-      const orderRef = doc(firebaseDB, 'orders', data.orderId);
+      const orderRef = doc(firebaseDB, 'orders', data.billId);
       const orderSnapshot = await getDoc(orderRef);
       if (orderSnapshot.exists()) {
         const fetchedOrder = orderSnapshot.data();

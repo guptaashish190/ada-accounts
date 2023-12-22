@@ -23,6 +23,7 @@ import {
   Field,
   Input,
   Text,
+  Toast,
   Toaster,
   Tooltip,
   makeStyles,
@@ -65,6 +66,9 @@ export default function BillRow({
 
   const navigate = useNavigate();
 
+  const toasterId = useId('toaster');
+  const { dispatchToast } = useToastController(toasterId);
+
   useEffect(() => {
     const paytemp = data.flow[data.flow.length - 1]?.payload?.payments;
     if (paytemp) {
@@ -102,6 +106,7 @@ export default function BillRow({
     const currentCashPayment = cashOtherBills.find((o) => o.id === data.id);
     const currentChequePayment = chequeOtherBills.find((o) => o.id === data.id);
     const currentUpiPayment = upiOtherBills.find((o) => o.id === data.id);
+
     if (currentCashPayment) {
       setOtherAdjustedBills((oab) =>
         oab.filter(
@@ -128,6 +133,13 @@ export default function BillRow({
       upi1 = currentUpiPayment.payments[0].amount;
     }
 
+    const totalBillPayament =
+      parseInt(cash1 || '0') + parseInt(upi1 || '0') + parseInt(cheque1 || '0');
+
+    if (!scheduleDate && totalBillPayament < data.balance) {
+      showToast(dispatchToast, 'Select a schedule date', 'error');
+      return;
+    }
     newPayments = [
       ...newPayments,
       cash1 > 0 && {
@@ -173,6 +185,7 @@ export default function BillRow({
       }
       className="bill-row"
     >
+      <Toaster toasterId={toasterId} />
       <center>
         <div className="bill-row-top">
           <Text>

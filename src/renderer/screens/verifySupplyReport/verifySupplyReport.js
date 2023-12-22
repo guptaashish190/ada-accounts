@@ -430,7 +430,9 @@ function OldBillRow({
         />
       </Tooltip>
 
-      <div>{globalUtils.getDaysPassed(oldbill.creationTime)}</div>
+      <div className="old-bill">
+        {globalUtils.getDaysPassed(oldbill.creationTime)}
+      </div>
       <div className="old-bill scheduled">
         {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true) || '--'}
       </div>
@@ -495,8 +497,8 @@ function SupplementaryBillRow({
     setParty(party1);
   };
   const scheduledForPaymentDate = () => {
-    if (oldbill.scheduledForPayment) {
-      const date = new Date(oldbill.scheduledForPayment);
+    if (oldbill.schedulePaymentDate) {
+      const date = new Date(oldbill.schedulePaymentDate);
       return date.toLocaleDateString();
     }
     return '--';

@@ -40,15 +40,33 @@ export default [
     key: 'tab-searchBills',
   },
   {
-    name: 'UPI',
+    name: 'Scheduled',
+    route: '/scheduled',
+    key: 'tab-scheduled',
+  },
+  {
+    name: 'Payments',
     route: '/upi',
     key: 'tab-upi',
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
   },
+
   {
     name: 'Receipts',
-    route: '/paymentReceipts',
+    route: '/receipts',
     key: 'tab-paymentreceipts',
+    submenu: [
+      {
+        name: 'Payments',
+        route: '/paymentReceipts',
+        key: 'tab-payments',
+      },
+      {
+        name: 'Vouchers',
+        route: '/vouchers',
+        key: 'tab-vouchers',
+      },
+    ],
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
   },
   {

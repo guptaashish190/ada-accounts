@@ -81,7 +81,7 @@ export default function ReceiveBundle() {
         })),
         otherAdjustedBills: otherAdjustedBills.map((oab1) => {
           return {
-            orderId: oab1.id,
+            billId: oab1.id,
             payments: oab1.payments,
           };
         }),
@@ -128,7 +128,7 @@ export default function ReceiveBundle() {
             ...oab1p,
             timestamp: Timestamp.now().toMillis(),
             bundleId: bundle.id,
-            orderId: oab1.id,
+            billId: oab1.id,
           }));
 
           newPayments = [...newPayments, ...addedPayments];

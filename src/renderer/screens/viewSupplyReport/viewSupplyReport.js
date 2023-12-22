@@ -44,7 +44,7 @@ import {
 } from '@fluentui/react-components';
 import { getAuth } from 'firebase/auth';
 
-import { Edit12Filled } from '@fluentui/react-icons';
+import { Edit12Filled, Dismiss16Filled } from '@fluentui/react-icons';
 import math, { asecDependencies, parse } from 'mathjs';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
@@ -69,7 +69,7 @@ export default function ViewSupplyReportScreen() {
   const [extraOldBills, setExtraOldBills] = useState([]);
   const [otherAdjustedBills, setOtherAdjustedBills] = useState([]);
   const [returnedGoods, setReturnedGoods] = useState([]);
-
+  const [editEnabled, setEditEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const toasterId = useId('toaster');
@@ -109,7 +109,7 @@ export default function ViewSupplyReportScreen() {
     setExtraOldBills(extraBills1);
 
     const otherAdjustedBills1 = await fetchBillData(
-      supplyReport.otherAdjustedBills?.map((x) => x.orderId),
+      supplyReport.otherAdjustedBills?.map((x) => x.billId),
     );
     setOtherAdjustedBills(
       otherAdjustedBills1.map((x, i) => ({
@@ -221,6 +221,7 @@ export default function ViewSupplyReportScreen() {
       otherAdjustedBills,
       returnedGoods,
     };
+
     window.electron.ipcRenderer.sendMessage(
       'print',
       supplyReportRecievingFormatGenerator(printData),
@@ -242,6 +243,18 @@ export default function ViewSupplyReportScreen() {
       setLoading(false);
       console.error(e);
     }
+  };
+
+  const removePartyFromSupplyReport = async (bill) => {
+    const supplyReportRef = doc(
+      firebaseDB,
+      'supplyReports',
+      supplyReportIdState || supplyReport.id,
+    );
+
+    updateDoc(supplyReportRef, {
+      orders: supplyReport.orders.filter((x) => x !== bill.id),
+    });
   };
 
   if (loading) return <Loader />;
@@ -272,13 +285,15 @@ export default function ViewSupplyReportScreen() {
                 allUsers.find((x) => x.uid === supplyReport.supplymanId)
                   ?.username
               }
-              <EditSupplymanDialog
-                currentUser={allUsers.find(
-                  (x) => x.uid === supplyReport.supplymanId,
-                )}
-                supplyReportId={supplyReport.id}
-                refresh={fetchSupplyReport}
-              />
+              {editEnabled ? (
+                <EditSupplymanDialog
+                  currentUser={allUsers.find(
+                    (x) => x.uid === supplyReport.supplymanId,
+                  )}
+                  supplyReportId={supplyReport.id}
+                  refresh={fetchSupplyReport}
+                />
+              ) : null}
             </div>
           </div>
           <div className="vsrc-detail-items">
@@ -311,6 +326,7 @@ export default function ViewSupplyReportScreen() {
         constants.firebase.supplyReportStatus.TOACCOUNTS ? (
           <Button onClick={() => onCancel()}>Cancel</Button>
         ) : null}
+        &nbsp;
         {supplyReport.status !==
           constants.firebase.supplyReportStatus.COMPLETED &&
         supplyReport.status !==
@@ -319,14 +335,32 @@ export default function ViewSupplyReportScreen() {
             Print Supply Report
           </Button>
         ) : null}
-
+        &nbsp;
         {supplyReport.status ===
         constants.firebase.supplyReportStatus.COMPLETED ? (
           <Button onClick={() => onPrintSupplyReportReceiving()}>
             Print Bill Receiving
           </Button>
         ) : null}
-
+        &nbsp;
+        {editEnabled ? (
+          <Button
+            appearance="primary"
+            onClick={() => {
+              setEditEnabled(false);
+            }}
+          >
+            Done
+          </Button>
+        ) : (
+          <Button
+            onClick={() => {
+              setEditEnabled(true);
+            }}
+          >
+            Edit
+          </Button>
+        )}
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>New Bills</h3>
         <table>
@@ -341,12 +375,14 @@ export default function ViewSupplyReportScreen() {
               <th>STATUS</th>
               <th>SCHEDULED</th>
               <th>ACC NOTES</th>
+              {/* {editEnabled ? <th>Remove</th> : null} */}
             </tr>
           </thead>
           <tbody>
             {allBills.map((bill, i) => {
               return (
                 <BillRow
+                  editEnabled={editEnabled}
                   showStatus
                   orderDetail={
                     supplyReport.orderDetails &&
@@ -355,12 +391,12 @@ export default function ViewSupplyReportScreen() {
                   key={`rsr-${bill.id}`}
                   data={bill}
                   index={i}
+                  remove={() => removePartyFromSupplyReport(bill)}
                 />
               );
             })}
           </tbody>
         </table>
-
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>Old Bills</h3>
         <table>
@@ -393,7 +429,6 @@ export default function ViewSupplyReportScreen() {
             })}
           </tbody>
         </table>
-
         {otherAdjustedBills?.length ? (
           <>
             <VerticalSpace2 />
@@ -401,7 +436,6 @@ export default function ViewSupplyReportScreen() {
             <OtherAdjustedBills otherAdjustedBills={otherAdjustedBills} />
           </>
         ) : null}
-
         {returnedGoods?.length ? (
           <>
             <VerticalSpace2 />
@@ -481,7 +515,14 @@ function OtherAdjustedBillsRow({ data, index }) {
   );
 }
 
-function BillRow({ data, index, orderDetail, showStatus }) {
+function BillRow({
+  data,
+  index,
+  orderDetail,
+  showStatus,
+  editEnabled,
+  remove,
+}) {
   const navigate = useNavigate();
 
   const getBalance = () => {
@@ -489,6 +530,14 @@ function BillRow({ data, index, orderDetail, showStatus }) {
       data.orderAmount -
       (data.payments?.reduce((acc, cur) => acc + parseInt(cur.amount), 0) || 0)
     );
+  };
+
+  const onRemove = () => {
+    const confirm = window.confirm(
+      `Confirm delete ${data.party.name} ${data.billNumber}`,
+    );
+
+    if (confirm) remove();
   };
 
   return (
@@ -526,6 +575,11 @@ function BillRow({ data, index, orderDetail, showStatus }) {
           : '--'}
       </TableCustomCell>
       <TableCustomCell>{orderDetail?.accountsNotes || '--'}</TableCustomCell>
+      {/* {editEnabled ? (
+        <Button onClick={() => onRemove()}>
+          <Dismiss16Filled />
+        </Button>
+      ) : null} */}
     </tr>
   );
 }

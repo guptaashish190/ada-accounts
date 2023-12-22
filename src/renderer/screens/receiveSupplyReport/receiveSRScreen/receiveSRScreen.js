@@ -99,7 +99,19 @@ export default function ReceiveSRScreen() {
     }
     return [];
   };
+  const getAllReturnedBills = async () => {
+    try {
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        supplyReport.returnedBills.map((x) => x.billId),
+      );
 
+      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      setReturnedBills(fetchedOrders);
+    } catch (e) {
+      console.error(e);
+    }
+  };
   const init = async () => {
     setLoading(true);
     if (isBundle) {
@@ -108,6 +120,7 @@ export default function ReceiveSRScreen() {
       setGroupedSupplementaryBills(obg || []);
     } else {
       await getAllBills();
+      await getAllReturnedBills();
     }
 
     if (!isBundle) {
@@ -166,7 +179,7 @@ export default function ReceiveSRScreen() {
         ],
         otherAdjustedBills: otherAdjustedBills.map((oab1) => {
           return {
-            orderId: oab1.id,
+            billId: oab1.id,
             payments: oab1.payments,
           };
         }),
@@ -260,7 +273,7 @@ export default function ReceiveSRScreen() {
             ...(isBundle
               ? { supplyReportId: supplyReport.id }
               : { bundleId: supplyReport.id }),
-            orderId: oab1.id,
+            billId: oab1.id,
           }));
 
           newPayments = [...newPayments, ...addedPayments];
@@ -336,7 +349,6 @@ export default function ReceiveSRScreen() {
           <VerticalSpace1 />
 
           {allBills.map((bill) => {
-            console.log(supplyReport.orderDetails, bill);
             return (
               <div className="party-section-receive-sr">
                 <div className="title-sr">{bill.party?.name}</div>

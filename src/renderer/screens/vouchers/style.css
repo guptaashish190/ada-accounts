@@ -1,0 +1,7 @@
+.pr-list-container {
+  width: 90%;
+}
+
+.pr-list-container .pr-receipt-row .pr-id {
+  font-weight: bold;
+}
