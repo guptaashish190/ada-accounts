@@ -53,7 +53,7 @@ export default [
 
   {
     name: 'Receipts',
-    route: '/receipts',
+    route: '/paymentReceipts',
     key: 'tab-paymentreceipts',
     submenu: [
       {

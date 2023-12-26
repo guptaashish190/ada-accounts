@@ -147,7 +147,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     });
 
     if (!billNumbersAdded) {
-      showToast(dispatchToast, 'Please enter bill numberds', 'error');
+      showToast(dispatchToast, 'Please enter bill numbers', 'error');
       return;
     }
 
@@ -282,7 +282,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
                 <BillRow
                   billsRefList={billListRefs}
                   editable={editable}
-                  index={i}
+                  index={i * 2}
                   key={`createsupplyreport-${b.id}`}
                   bill={b}
                   remove={() => {
@@ -396,12 +396,22 @@ function TotalBagsComponent({ cases, polybags, packet }) {
 function BillRow({ bill, updatedBill, remove, editable, index }) {
   const { settings } = useSettingsContext();
   const inputId = `createsupreport-bill-${index}`;
+  const inputId2 = `createsupreport-bill-${index + 1}`;
   const nextId = `createsupreport-bill-${index + 1}`;
+  const nextId2 = `createsupreport-bill-${index + 2}`;
+
   const handleKeyUp = (e) => {
     if (e.key === 'Enter') {
       document.getElementById(nextId)?.focus();
     }
   };
+
+  const handleKeyUp2 = (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById(nextId2)?.focus();
+    }
+  };
+
   return (
     <>
       <Text className="party-name">{bill.party?.name}</Text>
@@ -414,6 +424,18 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
         onChange={(x) => {
           const tempBill = { ...bill };
           tempBill.billNumber = `T-${x.target.value}`;
+          updatedBill(tempBill);
+        }}
+      />
+      <Input
+        onKeyDown={(e) => handleKeyUp2(e)}
+        id={`${inputId2}`}
+        style={{ marginRight: '20px', width: '100px' }}
+        contentBefore="₹"
+        placeholder="0"
+        onChange={(x) => {
+          const tempBill = { ...bill };
+          tempBill.billAmount = x.target.value;
           updatedBill(tempBill);
         }}
       />
@@ -488,6 +510,7 @@ function BillRowLabelHeader() {
     <>
       <Text className="party-name label-header">Party</Text>
       <Text className="bill-number label-header">Bill Number</Text>
+      <Text className="bill-number label-header">Final Amount</Text>
       <Text className="field label-header">File</Text>
 
       <Text className="field label-header">Area</Text>

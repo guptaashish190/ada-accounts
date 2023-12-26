@@ -112,6 +112,7 @@ export default function ReceiveSRScreen() {
       console.error(e);
     }
   };
+
   const init = async () => {
     setLoading(true);
     if (isBundle) {
@@ -145,8 +146,7 @@ export default function ReceiveSRScreen() {
   const allBillsReceived =
     receivedBills.length +
       returnedBills.length +
-      (supplyReport.orderDetails?.length || 0) +
-      (supplyReport.returnedBills?.length || 0) ===
+      (supplyReport.orderDetails?.length || 0) ===
     [
       ...dbBills,
       ...(supplyReport.supplementaryBills || []),
@@ -186,7 +186,6 @@ export default function ReceiveSRScreen() {
         ...(!isBundle
           ? {
               returnedBills: [
-                ...(supplyReportDataNew.returnedBills || []),
                 ...returnedBills.map((x) => ({
                   billId: x.id,
                   remarks: x.notes || '',
@@ -222,7 +221,7 @@ export default function ReceiveSRScreen() {
           ...(rb2.schedulePaymentDate
             ? { schedulePaymentDate: rb2.schedulePaymentDate }
             : {}),
-          accountsNotes: rb2.notes || '',
+          accountsNotes: rb2.accountsNotes || '',
         });
       }
 

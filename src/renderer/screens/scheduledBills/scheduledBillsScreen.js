@@ -25,10 +25,20 @@ export default function ScheduledBillsScreen() {
     try {
       setLoading(true);
       const ordersCollection = collection(firebaseDB, 'orders');
+      const dateFrom = new Date(fromDate);
+      dateFrom.setHours(0);
+      dateFrom.setMinutes(0);
+      dateFrom.setSeconds(0);
+
+      const dateTo = new Date(toDate);
+      dateTo.setHours(23);
+      dateTo.setMinutes(59);
+      dateTo.setSeconds(59);
+
       const q = query(
         ordersCollection,
-        where('schedulePaymentDate', '>=', fromDate.getTime()),
-        where('schedulePaymentDate', '<=', toDate.getTime()),
+        where('schedulePaymentDate', '>=', dateFrom.getTime()),
+        where('schedulePaymentDate', '<=', dateTo.getTime()),
         limit(1000),
         orderBy('schedulePaymentDate', 'desc'),
       );

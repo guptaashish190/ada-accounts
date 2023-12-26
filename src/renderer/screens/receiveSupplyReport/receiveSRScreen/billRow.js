@@ -59,6 +59,7 @@ export default function BillRow({
   const [cash, setCash] = useState('');
   const [cheque, setCheque] = useState('');
   const [upi, setUpi] = useState('');
+  const [otherPayment, setOtherPayment] = useState('');
   const [scheduleDate, setScheduleDate] = useState(
     data.schedulePaymentDate ? new Date(data.schedulePaymentDate) : null,
   );
@@ -133,8 +134,13 @@ export default function BillRow({
       upi1 = currentUpiPayment.payments[0].amount;
     }
 
+    const other1 = parseInt(otherPayment || '0');
+
     const totalBillPayament =
-      parseInt(cash1 || '0') + parseInt(upi1 || '0') + parseInt(cheque1 || '0');
+      parseInt(otherPayment || '0') +
+      parseInt(cash1 || '0') +
+      parseInt(upi1 || '0') +
+      parseInt(cheque1 || '0');
 
     if (!scheduleDate && totalBillPayament < data.balance) {
       showToast(dispatchToast, 'Select a schedule date', 'error');
@@ -154,10 +160,14 @@ export default function BillRow({
         type: 'upi',
         amount: upi1,
       },
+      other1 > 0 && {
+        type: 'other',
+        amount: other1,
+      },
     ].filter(Boolean);
     const tempBill = {
       ...data,
-      payments: [...newPayments],
+      payments: newPayments,
       accountsNotes: notes,
       ...(scheduleDate && { schedulePaymentDate: scheduleDate.getTime() }),
       with: 'Accounts',
@@ -288,6 +298,15 @@ export default function BillRow({
                 openAdjustDialog={openAdjustDialog}
               />
             }
+          />
+          <Input
+            disabled={disabled}
+            className={`input ${disabled ? '' : 'other'}`}
+            onChange={(_, e) => setOtherPayment(e.value)}
+            placeholder="Other Payment"
+            value={otherPayment}
+            contentBefore="₹"
+            type="number"
           />
           <Tooltip content="Scheduled for payment">
             <DatePicker

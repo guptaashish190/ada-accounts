@@ -26,23 +26,28 @@ const statusColors = {
 export default function AllBundlesScreen() {
   const [bundles, setbundles] = useState([]);
 
-  const [date1, setDate] = useState(new Date());
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
 
-  const fetchbundles = async (date) => {
+  const fetchbundles = async () => {
     setLoading(true);
     try {
       const bundlesCollection = collection(firebaseDB, 'billBundles');
       let dynamicQuery = bundlesCollection;
-      const dateFrom = new Date(date);
+
+      const dateFrom = new Date(fromDate);
       dateFrom.setHours(0);
       dateFrom.setMinutes(0);
-      dateFrom.setSeconds(1);
-      const dateTo = new Date(date);
+      dateFrom.setSeconds(0);
+
+      const dateTo = new Date(toDate);
       dateTo.setHours(23);
       dateTo.setMinutes(59);
       dateTo.setSeconds(59);
-      console.log(dateFrom.toLocaleString(), dateTo.toLocaleString());
+
+      console.log(fromDate, dateTo);
+
       dynamicQuery = query(
         dynamicQuery,
         where('timestamp', '>=', dateFrom.getTime()),
@@ -78,10 +83,24 @@ export default function AllBundlesScreen() {
         <DatePicker
           size="large"
           className=" filter-input"
-          onSelectDate={(d) => fetchbundles(d)}
-          placeholder="Date"
-          value={date1}
+          onSelectDate={(d) => setFromDate(d)}
+          placeholder="From Date"
+          value={fromDate}
         />
+        &nbsp;
+        <DatePicker
+          size="large"
+          className=" filter-input"
+          onSelectDate={(d) => {
+            setToDate(d);
+          }}
+          placeholder="To date"
+          value={toDate}
+        />
+        &nbsp;
+        <Button size="large" onClick={() => fetchbundles()}>
+          Get
+        </Button>
         <VerticalSpace2 />
         {loading ? (
           <Spinner />

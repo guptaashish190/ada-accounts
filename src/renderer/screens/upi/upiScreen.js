@@ -225,7 +225,7 @@ function UPIDialog({ data, createdBy }) {
         </DialogTrigger>
         <DialogSurface>
           <DialogBody>
-            <DialogTitle>Receive UPI</DialogTitle>
+            <DialogTitle>Receive Payment</DialogTitle>
             <DialogContent>
               <div
                 style={{
@@ -234,7 +234,11 @@ function UPIDialog({ data, createdBy }) {
                   justifyContent: 'space-between',
                 }}
               >
-                <Image width={300} src={data?.imageUrl} />
+                <Image
+                  width={300}
+                  style={{ objectFit: 'contain' }}
+                  src={data?.imageUrl}
+                />
                 <div style={{ marginLeft: '20px' }}>
                   <Text size={400}>
                     Party: <b>{data.party?.name}</b>

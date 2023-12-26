@@ -1,4 +1,5 @@
-.create-supply-report-screen-container {}
+.create-supply-report-screen-container {
+}
 
 .create-supply-report-screen-container .title {
   color: black;
@@ -6,7 +7,7 @@
 
 .create-supply-report-screen-container .bill-row-container {
   display: grid;
-  grid-template-columns: 5fr 3fr 1fr 2fr 2fr 2fr 2fr 1fr;
+  grid-template-columns: 5fr 2fr 2fr 1fr 2fr 2fr 2fr 2fr 1fr;
   row-gap: 10px;
 }
 
@@ -14,6 +15,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
+
   margin: 10px 50px;
 }
 

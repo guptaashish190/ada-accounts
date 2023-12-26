@@ -1,7 +1,8 @@
 import { Button, Card, Text } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { DatePicker } from '@fluentui/react-datepicker-compat';
 import CreatePaymentReceiptDialog from './createPaymentReceiptDialog/createPaymentReceiptDialog';
 import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
@@ -12,10 +13,28 @@ import { useAuthUser } from '../../contexts/allUsersContext';
 export default function PaymentReceipts() {
   const navigate = useNavigate();
   const [receipts, setReceipts] = useState([]);
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
 
   const fetchCashReceipts = async () => {
     const crColl = collection(firebaseDB, 'cashReceipts');
-    const crQuery = query(crColl, limit(50));
+
+    const dateFrom = new Date(fromDate);
+    dateFrom.setHours(0);
+    dateFrom.setMinutes(0);
+    dateFrom.setSeconds(0);
+
+    const dateTo = new Date(toDate);
+    dateTo.setHours(23);
+    dateTo.setMinutes(59);
+    dateTo.setSeconds(59);
+
+    const crQuery = query(
+      crColl,
+      where('timestamp', '>=', dateFrom.getTime()),
+      where('timestamp', '<=', dateTo.getTime()),
+    );
+
     const querySnapshot = await getDocs(crQuery);
     const receiptData = [];
     querySnapshot.forEach((doc) => {
@@ -24,6 +43,7 @@ export default function PaymentReceipts() {
         ...doc.data(),
       });
     });
+
     receiptData.sort((x, y) => y.timestamp - x.timestamp);
     setReceipts(receiptData);
   };
@@ -45,6 +65,30 @@ export default function PaymentReceipts() {
           Create
         </Button>
         <VerticalSpace1 />
+        <div>
+          <DatePicker
+            //   open={fromDateOpen}
+            className=" filter-input"
+            onSelectDate={(x) => {
+              setFromDate(x);
+            }}
+            placeholder="From"
+            value={fromDate}
+          />
+          &nbsp;
+          <DatePicker
+            //   open={toDateOpen}
+            className=" filter-input"
+            onSelectDate={(x) => {
+              setToDate(x);
+            }}
+            placeholder="To"
+            value={toDate}
+          />
+          &nbsp;
+          <Button onClick={() => fetchCashReceipts()}>Get</Button>
+        </div>
+        <VerticalSpace1 />
         <table>
           <thead>
             <tr>
@@ -52,6 +96,7 @@ export default function PaymentReceipts() {
               <th>Date</th>
               <th>Username</th>
               <th>Parties</th>
+              <th>Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -79,6 +124,14 @@ export default function PaymentReceipts() {
                     }
                   </td>
                   <td className="username">{rc.prItems.length}</td>
+                  <td className="username">
+                    {globalUtils.getCurrencyFormat(
+                      rc.prItems.reduce(
+                        (acc, current) => acc + (current.amount || 0),
+                        0,
+                      ),
+                    )}
+                  </td>
                 </tr>
               );
             })}

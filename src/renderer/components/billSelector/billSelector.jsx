@@ -43,7 +43,7 @@ export default function BillSelector({ onBillsAdded }) {
         where(
           'orderStatus',
           '==',
-          constants.firebase.billFlowTypes.BILL_MODIFIED,
+          constants.firebase.billFlowTypes.ORDER_PACKED,
         ),
         where(
           'orderStatus',
