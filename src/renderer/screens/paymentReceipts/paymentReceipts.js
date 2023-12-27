@@ -7,7 +7,7 @@ import CreatePaymentReceiptDialog from './createPaymentReceiptDialog/createPayme
 import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import './style.css';
-import { VerticalSpace1 } from '../../common/verticalSpace';
+import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import { useAuthUser } from '../../contexts/allUsersContext';
 
 export default function PaymentReceipts() {
@@ -65,6 +65,7 @@ export default function PaymentReceipts() {
           Create
         </Button>
         <VerticalSpace1 />
+
         <div>
           <DatePicker
             //   open={fromDateOpen}
@@ -88,7 +89,7 @@ export default function PaymentReceipts() {
           &nbsp;
           <Button onClick={() => fetchCashReceipts()}>Get</Button>
         </div>
-        <VerticalSpace1 />
+        <VerticalSpace2 />
         <table>
           <thead>
             <tr>

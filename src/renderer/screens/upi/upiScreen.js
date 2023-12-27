@@ -86,7 +86,7 @@ export default function UpiScreen() {
 
   return (
     <center>
-      <h3>Payments</h3>
+      <h3>Cheque/UPI</h3>
       {loading ? (
         <Spinner />
       ) : (

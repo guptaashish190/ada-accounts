@@ -79,15 +79,11 @@ ipcMain.on('fetch-printer-options', async (event, arg) => {
 const onPrint = async (data: PosPrintData[]) => {
   const options: PosPrintOptions = {
     preview: false,
-    margin: '0 0 0 0',
     copies: 1,
-    silent: true,
+    silent: false,
     printerName: selectedPrinter,
     timeOutPerLine: 400,
-    pageSize: {
-      width: 219,
-      height: 3000,
-    },
+    pageSize: '58mm',
   };
 
   PosPrinter.print(data, { ...options, ...JSON.parse(printerOptions) });

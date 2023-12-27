@@ -45,7 +45,7 @@ export default [
     key: 'tab-scheduled',
   },
   {
-    name: 'Payments',
+    name: 'Cheque/UPI',
     route: '/upi',
     key: 'tab-upi',
     allowJob: [constants.firebaseIds.JOBS.CASHIER],

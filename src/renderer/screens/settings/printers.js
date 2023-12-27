@@ -51,6 +51,8 @@ export default function PrinterSettings() {
       <br />
       <br />
       <Textarea
+        style={{ width: '300px', height: '400px' }}
+        size="large"
         placeholder="Printer Options"
         value={printerOptions}
         onChange={(e) => setPrinterOptions(e.target.value)}
