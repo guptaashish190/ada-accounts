@@ -200,6 +200,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
         updateDoc(orderRef, {
           bags: modifiedBill1.bags,
           billNumber: modifiedBill1.billNumber,
+          orderAmount: parseInt(modifiedBill1.orderAmount, 10),
         });
       }
       await globalUtils.incrementReceiptCounter(
@@ -435,7 +436,7 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
         placeholder="0"
         onChange={(x) => {
           const tempBill = { ...bill };
-          tempBill.billAmount = x.target.value;
+          tempBill.orderAmount = x.target.value;
           updatedBill(tempBill);
         }}
       />
