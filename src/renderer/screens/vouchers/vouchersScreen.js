@@ -1,4 +1,16 @@
-import { Button, Card, Text } from '@fluentui/react-components';
+import {
+  Button,
+  Card,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
+  Image,
+  Text,
+} from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
@@ -11,6 +23,7 @@ import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 
 import CreateVoucherDialog from './createVoucherDialog/createVoucherDialog';
 import { useAuthUser } from '../../contexts/allUsersContext';
+import voucherFormatGenerator from '../../common/printerDataGenerator/voucherFormatGenerator';
 
 export default function VoucherScreen() {
   const navigate = useNavigate();
@@ -50,18 +63,29 @@ export default function VoucherScreen() {
     setVouchers(vouchersData);
   };
 
+  const printVoucher = (voucher) => {
+    const printData = {
+      voucher,
+      username: allUsers.find((x) => x.uid === voucher.employeeId)?.username,
+      time: globalUtils.getTimeFormat(voucher.timestamp),
+      createdBy: allUsers.find((x) => x.uid === voucher.requesterId)?.username,
+    };
+    console.log(printData);
+    window.electron.ipcRenderer.sendMessage(
+      'print',
+      voucherFormatGenerator(printData),
+    );
+  };
+
   useEffect(() => {
     fetchVouchers();
   }, []);
-
-  console.log(allUsers);
 
   return (
     <center>
       <div className="pr-list-container">
         <h3>Vouchers</h3>
 
-        {/* <CreateVoucherDialog /> */}
         <VerticalSpace1 />
         <div>
           <DatePicker
@@ -75,7 +99,6 @@ export default function VoucherScreen() {
           />
           &nbsp;
           <DatePicker
-            //   open={toDateOpen}
             className=" filter-input"
             onSelectDate={(x) => {
               setToDate(x);
@@ -90,17 +113,20 @@ export default function VoucherScreen() {
         <table>
           <thead>
             <tr>
+              <th>Voucher</th>
               <th>Username</th>
               <th>Title</th>
               <th>Date</th>
               <th>Narration</th>
               <th>Amount</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {vouchers.map((rc, i) => {
               return (
                 <tr key={`vouchers-list-${rc.id}`} className="pr-receipt-row">
+                  <td>{rc.receiptNumber}</td>
                   <td>
                     {allUsers.find((x) => x.uid === rc.employeeId)?.username ||
                       '--'}
@@ -109,6 +135,36 @@ export default function VoucherScreen() {
                   <td>{globalUtils.getTimeFormat(rc.timestamp)}</td>
                   <td>{rc.narration}</td>
                   <td>{globalUtils.getCurrencyFormat(rc.amount)}</td>
+                  <td>
+                    <center>
+                      <Button onClick={() => printVoucher(rc)}>Print</Button>
+                      <br />
+                      <br />
+                      <Dialog>
+                        <DialogTrigger>
+                          <Button>View</Button>
+                        </DialogTrigger>
+                        <DialogSurface>
+                          <DialogBody>
+                            <DialogTitle>{rc.receiptNumber}</DialogTitle>
+                            <DialogContent>
+                              <center>
+                                {rc.images?.map((x) => {
+                                  return (
+                                    <Image
+                                      width={200}
+                                      src={x}
+                                      style={{ marginRight: '10px' }}
+                                    />
+                                  );
+                                })}
+                              </center>
+                            </DialogContent>
+                          </DialogBody>
+                        </DialogSurface>
+                      </Dialog>
+                    </center>
+                  </td>
                 </tr>
               );
             })}

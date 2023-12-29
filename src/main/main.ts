@@ -78,7 +78,7 @@ ipcMain.on('fetch-printer-options', async (event, arg) => {
 
 const onPrint = async (data: PosPrintData[]) => {
   const options: PosPrintOptions = {
-    preview: false,
+    preview: true,
     copies: 1,
     silent: false,
     printerName: selectedPrinter,
