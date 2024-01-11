@@ -176,6 +176,14 @@ export default function ViewSupplyReportScreen() {
         status: constants.firebase.supplyReportStatus.CANCELLED,
       });
 
+      supplyReport.orders.forEach((x) => {
+        const orderRef = doc(firebaseDB, 'orders', x);
+
+        updateDoc(orderRef, {
+          orderStatus: constants.firebase.billFlowTypes.SUPPLY_REPORT_CANCELLED,
+        });
+      });
+
       showToast(dispatchToast, 'Supply Report Cancelled', 'success');
       fetchSupplyReport();
       setLoading(false);

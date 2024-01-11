@@ -88,7 +88,19 @@ const onPrint = async (data: PosPrintData[]) => {
 
   PosPrinter.print(data, { ...options, ...JSON.parse(printerOptions) });
 };
+function printCurrentPage() {
+  if (mainWindow) {
+    mainWindow.webContents.print({}, (success, errorType) => {
+      if (!success) {
+        console.error(`Print failed: ${errorType}`);
+      }
+    });
+  }
+}
 
+ipcMain.on('printCurrentPage', async (event, arg) => {
+  printCurrentPage();
+});
 ipcMain.on('print', async (event, arg) => {
   onPrint(arg);
 });

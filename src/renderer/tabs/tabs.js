@@ -138,4 +138,16 @@ export default [
       },
     ],
   },
+  {
+    name: 'Reports',
+
+    key: 'tab-reports',
+    submenu: [
+      {
+        name: 'Supply',
+        route: '/daySupplyReportPrint',
+        key: 'tab-daysupplysreportprint',
+      },
+    ],
+  },
 ];

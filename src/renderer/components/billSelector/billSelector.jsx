@@ -50,6 +50,11 @@ export default function BillSelector({ onBillsAdded }) {
           '==',
           constants.firebase.billFlowTypes.GOODS_RETURNED,
         ),
+        where(
+          'orderStatus',
+          '==',
+          constants.firebase.billFlowTypes.SUPPLY_REPORT_CANCELLED,
+        ),
       ),
     );
 

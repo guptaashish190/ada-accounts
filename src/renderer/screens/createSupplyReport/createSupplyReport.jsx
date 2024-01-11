@@ -433,6 +433,7 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
         id={`${inputId2}`}
         style={{ marginRight: '20px', width: '100px' }}
         contentBefore="₹"
+        defaultValue={bill.orderAmount}
         placeholder="0"
         onChange={(x) => {
           const tempBill = { ...bill };

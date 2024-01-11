@@ -1,0 +1,75 @@
+.print-supply-reports-container .supply-report-row {
+  cursor: pointer;
+  width: 70vw;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  background-color: #ddd;
+}
+
+.print-supply-reports-container .supply-report-row .sr-id {
+  font-weight: bold;
+}
+
+.print-supply-reports-container .supply-report-row .sr-parties-length {
+  color: rgba(128, 128, 128, 0.816);
+}
+
+.print-supply-reports-container .supply-report-row .sr-supplyman {
+  color: var(--green);
+}
+
+.print-supply-reports-container .all-bills-search-input-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 10px;
+  width: 70%;
+  row-gap: 10px;
+  margin: 30px 0;
+}
+
+.print-supply-reports-container .supply-report-print-bill-detail {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  width: 70vw;
+}
+
+.print-supply-reports-container .supply-report-print-bill-detail div {
+  border: 1px solid #ddd;
+  padding: 5px;
+}
+
+.print-supply-reports-container .supply-report-row span {
+  text-align: center;
+  padding: 5px;
+}
+
+@media print {
+  body,
+  html {
+    height: 100% !important;
+    width: 100% !important;
+    display: inline-block;
+  }
+  .tab-navigator .left {
+    display: none;
+  }
+
+  h3 {
+    font-size: 14px !important;
+  }
+
+  .print-supply-reports-container .all-bills-search-input-container {
+    display: none;
+  }
+
+  .print-supply-reports-container .supply-report-row span {
+    font-weight: bold !important;
+    border: 1px solid #ddd !important;
+
+    font-size: 12px !important;
+  }
+
+  * {
+    font-size: 10px !important;
+  }
+}

@@ -48,6 +48,7 @@ import CalculatorWrapper from './contexts/calculatorWrapper';
 import ReceivePendingUser from './screens/receivePendingUser/receivePendingUser';
 import ScheduledBillsScreen from './screens/scheduledBills/scheduledBillsScreen';
 import VoucherScreen from './screens/vouchers/vouchersScreen';
+import DaySupplyReportPrint from './screens/reports/daySupplyReport/daySupplyReport';
 
 const myNewTheme = {
   10: '#010304',
@@ -176,6 +177,10 @@ export default function App({ routeProps, startRoute, printData }) {
                         <Route
                           path="/scheduled"
                           element={<ScheduledBillsScreen />}
+                        />
+                        <Route
+                          path="/daySupplyReportPrint"
+                          element={<DaySupplyReportPrint />}
                         />
                       </Routes>
                     </TabNavigator>

@@ -26,6 +26,7 @@ export default {
       DISPATCH_RECEIVED: 'Dispatch Received',
       DELIVERED: 'Delivered',
       GOODS_RETURNED: 'Goods Returned',
+      SUPPLY_REPORT_CANCELLED: 'Supply Report Cancelled',
     },
   },
   newReceiptCounters: {

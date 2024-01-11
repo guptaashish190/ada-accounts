@@ -50,7 +50,7 @@ export default function ChequesScreen() {
       const qs = query(
         chequeCollection,
         orderBy('entryNumber', 'desc'),
-        limit(10),
+        limit(100),
       );
       const querySnapshot = await getDocs(qs);
       const chequesData = [];
@@ -143,41 +143,59 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
   const [chequeNumber, setChequeNumber] = useState('');
   const [dateFrom, setDateFrom] = useState();
   const [dateTo, setDateTo] = useState();
+  const [creationDateFrom, setCreationDateFrom] = useState();
+  const [creationDateTo, setCreationDateTo] = useState();
 
   const onFilter = async () => {
     try {
       const chequesRef = collection(firebaseDB, 'cheques');
 
       let dynamicQuery = chequesRef;
+      let isFiltered = false;
 
       if (party) {
         dynamicQuery = query(dynamicQuery, where('partyId', '==', party.id));
+        isFiltered = true;
       }
       if (chequeNumber.length) {
         dynamicQuery = query(
           dynamicQuery,
           where('chequeNumber', '==', chequeNumber),
         );
+        isFiltered = true;
       }
       if (dateFrom && dateTo) {
+        const dateTo1 = new Date(dateTo);
+        dateTo1.setHours(11);
+        dateTo1.setMinutes(59);
+        dateTo1.setSeconds(59);
+
         dynamicQuery = query(
           dynamicQuery,
           where('chequeDate', '>=', dateFrom.getTime()),
-          where('chequeDate', '<=', dateTo.getTime()),
+          where('chequeDate', '<=', dateTo1.getTime()),
         );
+        isFiltered = true;
       }
 
-      if (dateFrom && dateTo) {
+      if (creationDateFrom && creationDateTo) {
+        const creationDateTo1 = new Date(creationDateTo);
+        creationDateTo1.setHours(11);
+        creationDateTo1.setMinutes(59);
+        creationDateTo1.setSeconds(59);
         dynamicQuery = query(
           dynamicQuery,
-          orderBy('chequeDate', 'desc'),
-          limit(10),
+          where('timestamp', '>=', creationDateFrom.getTime()),
+          where('timestamp', '<=', creationDateTo1.getTime()),
         );
-      } else {
+        isFiltered = true;
+      }
+
+      if (!isFiltered) {
         dynamicQuery = query(
           dynamicQuery,
           orderBy('entryNumber', 'desc'),
-          limit(10),
+          limit(100),
         );
       }
 
@@ -228,6 +246,22 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
         />
       </div>
 
+      <div className="filter-section-item">
+        <DatePicker
+          className=" filter-input"
+          placeholder="Creation Date From"
+          value={creationDateFrom}
+          onSelectDate={setCreationDateFrom}
+        />
+      </div>
+      <div className="filter-section-item">
+        <DatePicker
+          className=" filter-input"
+          placeholder="Creation Date To"
+          value={creationDateTo}
+          onSelectDate={setCreationDateTo}
+        />
+      </div>
       <Button
         onClick={() => {
           onFilter();
@@ -242,6 +276,8 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
           setDateFrom();
           setDateTo();
           clearFilters();
+          setCreationDateFrom();
+          setCreationDateTo();
         }}
       >
         Clear Filters

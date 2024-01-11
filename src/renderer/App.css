@@ -9,7 +9,7 @@ body {
   overflow-y: hidden;
   margin: 0;
 
-
+  print-color-adjust: exact;
 }
 
 * {
@@ -47,36 +47,6 @@ table td {
 
 .filter-input {
   border: 1px solid #ddd !important;
-}
-
-@media print {
-  * {
-    text-transform: capitalize;
-    font-size: 10px !important;
-    text-align: left;
-    border: none !important;
-    text-wrap: wrap;
-  }
-
-  th,
-  td {
-    width: 100px;
-  }
-
-  body {
-    width: 80mm;
-    /* Adjust to match your receipt paper width */
-    margin: 0;
-    /* Adjust margins as needed */
-    padding: 0;
-    font-family: 'Courier New', monospace;
-  }
-
-  .print-button {
-    display: none;
-  }
-
-  /* etc */
 }
 
 .version-name {
