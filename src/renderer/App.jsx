@@ -49,6 +49,8 @@ import ReceivePendingUser from './screens/receivePendingUser/receivePendingUser'
 import ScheduledBillsScreen from './screens/scheduledBills/scheduledBillsScreen';
 import VoucherScreen from './screens/vouchers/vouchersScreen';
 import DaySupplyReportPrint from './screens/reports/daySupplyReport/daySupplyReport';
+import ExpenseReport from './screens/reports/expenseReport/expenseReport';
+import CashReport from './screens/reports/cashReport/cashReport';
 
 const myNewTheme = {
   10: '#010304',
@@ -181,6 +183,14 @@ export default function App({ routeProps, startRoute, printData }) {
                         <Route
                           path="/daySupplyReportPrint"
                           element={<DaySupplyReportPrint />}
+                        />
+                        <Route
+                          path="/expenseReport"
+                          element={<ExpenseReport />}
+                        />
+                        <Route
+                          path="/collectionReport"
+                          element={<CashReport />}
                         />
                       </Routes>
                     </TabNavigator>

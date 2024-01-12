@@ -232,7 +232,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
       <div className="filter-section-item">
         <DatePicker
           className=" filter-input"
-          placeholder="Date From"
+          placeholder="Cheque Date From"
           value={dateFrom}
           onSelectDate={setDateFrom}
         />
@@ -240,7 +240,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
       <div className="filter-section-item">
         <DatePicker
           className=" filter-input"
-          placeholder="Date To"
+          placeholder="Cheque Date To"
           value={dateTo}
           onSelectDate={setDateTo}
         />
@@ -249,7 +249,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
       <div className="filter-section-item">
         <DatePicker
           className=" filter-input"
-          placeholder="Creation Date From"
+          placeholder="Entry Date From"
           value={creationDateFrom}
           onSelectDate={setCreationDateFrom}
         />
@@ -257,7 +257,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
       <div className="filter-section-item">
         <DatePicker
           className=" filter-input"
-          placeholder="Creation Date To"
+          placeholder="Entry Date To"
           value={creationDateTo}
           onSelectDate={setCreationDateTo}
         />

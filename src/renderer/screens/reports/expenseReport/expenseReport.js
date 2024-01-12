@@ -28,9 +28,9 @@ import { firebaseDB } from '../../../firebaseInit';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
 
-export default function DaySupplyReportPrint() {
-  const [supplyReports, setSupplyReports] = useState([]);
-
+export default function ExpenseReport() {
+  const [expenseVouchers, setExpenseVouchers] = useState({});
+  const [total, setTotal] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [loading, setLoading] = useState(false);
@@ -47,10 +47,10 @@ export default function DaySupplyReportPrint() {
     window.electron.ipcRenderer.sendMessage('printCurrentPage');
   };
   const onSearch = (clear) => {
-    const supplyReportRef = collection(firebaseDB, 'supplyReports');
+    const vouchersRef = collection(firebaseDB, 'vouchers');
 
     // Build the query dynamically based on non-empty filter fields
-    let dynamicQuery = supplyReportRef;
+    let dynamicQuery = vouchersRef;
 
     const dateFrom = new Date(selectedDate);
     dateFrom.setHours(0);
@@ -63,8 +63,8 @@ export default function DaySupplyReportPrint() {
 
     dynamicQuery = query(
       dynamicQuery,
-      where('dispatchTimestamp', '>=', dateFrom.getTime()),
-      where('dispatchTimestamp', '<=', dateTo.getTime()),
+      where('timestamp', '>=', dateFrom.getTime()),
+      where('timestamp', '<=', dateTo.getTime()),
     );
 
     // Fetch parties based on the dynamic query
@@ -72,18 +72,24 @@ export default function DaySupplyReportPrint() {
       setLoading(true);
       try {
         const querySnapshot = await getDocs(dynamicQuery);
-        let supplyReportData = querySnapshot.docs.map((doc) => ({
+        const vouchersData = querySnapshot.docs.map((doc) => ({
           ...doc.data(),
           id: doc.id,
         }));
-        supplyReportData = supplyReportData.sort(
-          (rd1, rd2) => rd1.dispatchTimestamp - rd2.dispatchTimestamp,
-        );
 
-        supplyReportData = supplyReportData.filter(
-          (x) => x.status !== constants.firebase.supplyReportStatus.TOACCOUNTS,
-        );
-        setSupplyReports(supplyReportData);
+        const groupedData = {};
+        let total1 = 0;
+        vouchersData.forEach((vd) => {
+          if (!groupedData[vd.type]) {
+            groupedData[vd.type] = [];
+          }
+          if (groupedData[vd.type].findIndex((x) => x.id === vd.id) === -1) {
+            groupedData[vd.type].push(vd);
+            total1 += vd.amount;
+          }
+        });
+        setTotal(total1);
+        setExpenseVouchers(groupedData);
       } catch (error) {
         console.error('Error fetching supply reports:', error);
       }
@@ -100,9 +106,8 @@ export default function DaySupplyReportPrint() {
     <center>
       <div className="print-supply-reports-container">
         <h3>
-          Day Supply Report - {globalUtils.getTimeFormat(selectedDate, true)}
+          Expense Report - {globalUtils.getTimeFormat(selectedDate, true)}
         </h3>
-
         <div className="all-bills-search-input-container">
           <DatePicker
             className=" filter-input"
@@ -125,68 +130,41 @@ export default function DaySupplyReportPrint() {
           <Spinner />
         ) : (
           <div ref={printingRef}>
-            {supplyReports.map((sr, i) => {
+            {Object.keys(expenseVouchers).map((sr, i) => {
               return (
-                <SupplyReportRow
-                  key={`supply-report-all-list-${sr.id}`}
+                <VoucherRow
+                  key={`expense-report-all-list-${sr}`}
                   index={i}
-                  data={sr}
+                  header={sr}
+                  data={expenseVouchers[sr]}
                 />
               );
             })}
           </div>
         )}
-        {!loading && supplyReports.length === 0 ? (
-          <div>No Supply Reports found</div>
+        {!loading && Object.keys(expenseVouchers).length === 0 ? (
+          <div>No vouchers found</div>
         ) : null}
+        <h3>Total Expense - {globalUtils.getCurrencyFormat(total)}</h3>
       </div>
-
       <div>*** End of Report ***</div>
     </center>
   );
 }
 
-function SupplyReportRow({ data, index }) {
+function VoucherRow({ data, index, header }) {
   const navigate = useNavigate();
-  const [supplyman, setSupplyman] = useState();
 
-  const getSupplyman = async () => {
-    const user = await globalUtils.fetchUserById(data.supplymanId);
-    setSupplyman(user);
-  };
-
-  useEffect(() => {
-    getSupplyman();
-  }, []);
   return (
     <table>
       <thead className="supply-report-row">
-        <th>
-          <Text className="sr-id">{data.receiptNumber}</Text>
-        </th>
-        <th>
-          <Text className="sr-timestamp">
-            {globalUtils.getTimeFormat(data.timestamp, true)}
-          </Text>
-        </th>
-        <th>
-          <Text className="sr-parties-length">
-            {data.orders.length +
-              (data.attachedBills?.length || 0) +
-              (data.supplementaryBills?.length || 0)}{' '}
-            Bills{' '}
-          </Text>
-        </th>
-        <th>
-          {' '}
-          <Text className="sr-supplyman">
-            {globalUtils.getDayTime(data.dispatchTimestamp)}
-          </Text>
+        <th colSpan="5">
+          <Text className="sr-id">{header}</Text>
         </th>
       </thead>
 
-      {data.orders.map((x) => (
-        <SupplyReportOrderRow billId={x} />
+      {data.map((x) => (
+        <VoucherDetailRow key={`expense${x.id}`} data={x} />
       ))}
 
       <br />
@@ -194,42 +172,20 @@ function SupplyReportRow({ data, index }) {
   );
 }
 
-function SupplyReportOrderRow({ billId }) {
-  const [order, setOrder] = useState();
-  const [loading, setLoading] = useState(false);
+function VoucherDetailRow({ data }) {
   const { allUsers } = useAuthUser();
-  const fetchOrder = async () => {
-    setLoading(true);
-    try {
-      const order1 = await globalUtils.fetchOrdersByIds([billId]);
-      const newOrder = await globalUtils.fetchPartyInfoForOrders(order1);
-      setOrder(newOrder[0]);
-    } catch (e) {
-      console.log(e);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchOrder();
-  }, []);
-
-  if (loading) return <Spinner />;
-  if (!order) return <div>Error loading order</div>;
 
   return (
     <tbody className="supply-report-print-bill-detail">
-      <td style={{ width: '40%' }}>{order.party.name}</td>
-      <td style={{ width: '10%' }}>{order.billNumber}</td>
-      <td style={{ width: '10%' }}>
-        {globalUtils.getCurrencyFormat(order.orderAmount)}
-      </td>
+      <td style={{ width: '10%' }}>{data.receiptNumber}</td>
+      <td style={{ width: '15%' }}>{data.type}</td>
       <td style={{ width: '20%' }}>
-        {order.bags
-          .filter((x) => x.quantity > 0)
-          .map((x) => `${x.quantity} ${x.bagType}`)
-          .join(',')}
+        {allUsers.find((x) => x.uid === data.employeeId)?.username}
       </td>
+      <td style={{ width: '10%' }}>
+        {globalUtils.getCurrencyFormat(data.amount)}
+      </td>
+      <td style={{ width: '30%' }}>{data.narration}</td>
     </tbody>
   );
 }

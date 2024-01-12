@@ -148,6 +148,16 @@ export default [
         route: '/daySupplyReportPrint',
         key: 'tab-daysupplysreportprint',
       },
+      {
+        name: 'Expense',
+        route: '/expenseReport',
+        key: 'tab-expensereport',
+      },
+      {
+        name: 'Collection',
+        route: '/collectionReport',
+        key: 'tab-collectionreport',
+      },
     ],
   },
 ];
