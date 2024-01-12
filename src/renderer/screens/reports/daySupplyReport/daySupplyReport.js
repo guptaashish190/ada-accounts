@@ -1,6 +1,14 @@
 /* eslint-disable no-restricted-syntax */
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import {
+  collection,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  where,
+} from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import {
   Button,
@@ -29,6 +37,11 @@ export default function DaySupplyReportPrint() {
   const { allUsers } = useAuthUser();
 
   const printingRef = useRef();
+  // const handlePrint = useReactToPrint({
+  //   copyStyles: true,
+
+  //   content: () => printingRef.current,
+  // });
 
   const handlePrint = () => {
     window.electron.ipcRenderer.sendMessage('printCurrentPage');
@@ -47,14 +60,13 @@ export default function DaySupplyReportPrint() {
     dateTo.setHours(23);
     dateTo.setMinutes(59);
     dateTo.setSeconds(59);
-    console.log(dateFrom.toLocaleString(), dateTo.toLocaleString());
+
     dynamicQuery = query(
       dynamicQuery,
-      where('timestamp', '>=', dateFrom.getTime()),
-      where('timestamp', '<=', dateTo.getTime()),
+      where('dispatchTimestamp', '>=', dateFrom.getTime()),
+      where('dispatchTimestamp', '<=', dateTo.getTime()),
     );
 
-    dynamicQuery = query(dynamicQuery);
     // Fetch parties based on the dynamic query
     const fetchData = async () => {
       setLoading(true);
@@ -65,7 +77,7 @@ export default function DaySupplyReportPrint() {
           id: doc.id,
         }));
         supplyReportData = supplyReportData.sort(
-          (rd1, rd2) => rd2.receiptNumber.slice(3) - rd1.receiptNumber.slice(3),
+          (rd1, rd2) => rd1.dispatchTimestamp - rd2.dispatchTimestamp,
         );
 
         supplyReportData = supplyReportData.filter(
@@ -148,9 +160,6 @@ function SupplyReportRow({ data, index }) {
     <>
       <div className="supply-report-row">
         <Text className="sr-id">{data.receiptNumber}</Text>
-        <Text className="sr-timestamp">
-          {globalUtils.getTimeFormat(data.timestamp, true)}
-        </Text>
         <Text className="sr-parties-length">
           {data.orders.length +
             (data.attachedBills?.length || 0) +
@@ -158,6 +167,9 @@ function SupplyReportRow({ data, index }) {
           Bills{' '}
         </Text>
         <Text className="sr-supplyman">{supplyman?.username}</Text>
+        <Text className="sr-supplyman">
+          {globalUtils.getDayTime(data.dispatchTimestamp)}
+        </Text>
       </div>
 
       <div>
@@ -199,7 +211,12 @@ function SupplyReportOrderRow({ billId }) {
       <div>{order.party.name}</div>
       <div>{order.billNumber}</div>
       <div>{globalUtils.getCurrencyFormat(order.orderAmount)}</div>
-      <div>MR: {allUsers.find((x) => x.uid === order.mrId)?.username}</div>
+      <div>
+        {order.bags
+          .filter((x) => x.quantity > 0)
+          .map((x) => `${x.quantity} ${x.bagType}`)
+          .join(',')}
+      </div>
     </div>
   );
 }

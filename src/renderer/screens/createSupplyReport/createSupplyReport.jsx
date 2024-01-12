@@ -114,13 +114,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     setModifiedBills([...modifiedBills, ...toAddBills]);
   };
 
-  const getTotalCases = () =>
-    modifiedBills.reduce((acc, cur) => acc + cur.bags[0].quantity, 0);
-  const getTotalPackets = () =>
-    modifiedBills.reduce((acc, cur) => acc + cur.bags[1].quantity, 0);
-  const getTotalPolyBags = () =>
-    modifiedBills.reduce((acc, cur) => acc + cur.bags[2].quantity, 0);
-
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
@@ -170,9 +163,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
         supplyReport = {
           ...prefillSupplyReport,
           timestamp: Timestamp.now().toMillis(),
-          numCases: getTotalCases(),
-          numPackets: getTotalPackets(),
-          numPolybags: getTotalPolyBags(),
+          numCases: globalUtils.getTotalCases(modifiedBills),
+          numPackets: globalUtils.getTotalPackets(modifiedBills),
+          numPolybags: globalUtils.getTotalPolyBags(modifiedBills),
           note: notes,
           orders: bills.map((b) => b.id),
           supplymanId: selectedSupplyman.uid,
@@ -180,9 +173,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       } else {
         supplyReport = {
           timestamp: Timestamp.now().toMillis(),
-          numCases: getTotalCases(),
-          numPackets: getTotalPackets(),
-          numPolybags: getTotalPolyBags(),
+          numCases: globalUtils.getTotalCases(modifiedBills),
+          numPackets: globalUtils.getTotalPackets(modifiedBills),
+          numPolybags: globalUtils.getTotalPolyBags(modifiedBills),
           isCompleted: false,
           note: notes,
           orders: bills.map((b) => b.id),
@@ -309,9 +302,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           {bills.length !== 0 ? (
             <>
               <TotalBagsComponent
-                cases={getTotalCases()}
-                polybags={getTotalPolyBags()}
-                packet={getTotalPackets()}
+                cases={globalUtils.getTotalCases(modifiedBills)}
+                polybags={globalUtils.getTotalPolyBags(modifiedBills)}
+                packet={globalUtils.getTotalPackets(modifiedBills)}
               />
               <VerticalSpace2 />
               <SelectUserDropdown

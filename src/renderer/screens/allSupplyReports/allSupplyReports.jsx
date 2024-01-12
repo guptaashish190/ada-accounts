@@ -51,6 +51,7 @@ export default function AllSupplyReportsScreen() {
       receiptNumber: srNumber && srNumber.length && `SR-${srNumber}`,
       timestamp: fromDate && toDate,
     };
+    if (Object.keys(filters).length === 0) return;
 
     if (!clear) {
       for (const field in filters) {
@@ -64,7 +65,7 @@ export default function AllSupplyReportsScreen() {
             dateTo.setHours(23);
             dateTo.setMinutes(59);
             dateTo.setSeconds(59);
-            console.log(dateFrom.toLocaleString(), dateTo.toLocaleString());
+
             dynamicQuery = query(
               dynamicQuery,
               where(field, '>=', dateFrom.getTime()),

@@ -13,6 +13,7 @@ import path from 'path';
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
+import fs from 'fs';
 import {
   PosPrintData,
   PosPrinter,
@@ -90,11 +91,38 @@ const onPrint = async (data: PosPrintData[]) => {
 };
 function printCurrentPage() {
   if (mainWindow) {
-    mainWindow.webContents.print({}, (success, errorType) => {
-      if (!success) {
-        console.error(`Print failed: ${errorType}`);
-      }
+    mainWindow.webContents.print({
+      pageSize: 'A4',
+      margins: {
+        marginType: 'custom',
+        bottom: 100,
+      },
+      landscape: false,
+      printBackground: true,
     });
+    // mainWindow.webContents
+    //   .printToPDF({
+    //     pageSize: 'A4',
+    //     landscape: false,
+    //     margins: {
+    //       top: 0,
+    //       left: 2,
+    //       right: 2,
+    //       bottom: 10,
+    //     },
+    //     printBackground: true,
+    //   })
+    //   .then((val) => {
+    //     fs.writeFile('output.pdf', val, (error) => {
+    //       // getTitle of Window
+
+    //       if (error) throw error;
+    //       console.log('Write PDF successfully.');
+    //     });
+    //   })
+    //   .catch((e) => {
+    //     console.log(e);
+    //   });
   }
 }
 

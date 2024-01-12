@@ -86,6 +86,7 @@ export default function AllBillsScreen() {
       mrId: queryMR,
     };
 
+    if (Object.keys(filters).length === 0) return;
     for (const field in filters) {
       if (filters[field]) {
         dynamicQuery = query(dynamicQuery, where(field, '==', filters[field]));

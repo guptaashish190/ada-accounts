@@ -104,6 +104,7 @@
     "electron-store": "^8.1.0",
     "electron-updater": "^6.1.4",
     "firebase": "^10.4.0",
+    "html-to-image": "^1.11.11",
     "lodash": "^4.17.21",
     "mathjs": "^11.11.1",
     "node-printer": "^1.0.4",

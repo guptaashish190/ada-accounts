@@ -142,6 +142,18 @@ export default {
     const daysPassed = Math.floor(timeDifferenceMillis / (1000 * 60 * 60 * 24));
     return daysPassed;
   },
+  getDayTime: (millisecondsSinceEpoch) => {
+    const timeOptions = {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    };
+    const date = new Date(millisecondsSinceEpoch).toLocaleTimeString(
+      'en-GB',
+      timeOptions,
+    );
+    return date;
+  },
   getTimeFormat: (
     millisecondsSinceEpoch,
     dateOnly = false,
@@ -155,8 +167,9 @@ export default {
       return 'Tomorrow';
     }
     if (dateOnly) {
-      return new Date(millisecondsSinceEpoch).toLocaleDateString();
+      return new Date(millisecondsSinceEpoch).toLocaleDateString('en-GB');
     }
+
     const timeOptions = {
       weekday: 'short',
       year: 'numeric',
@@ -167,7 +180,7 @@ export default {
     };
 
     const date = new Date(millisecondsSinceEpoch).toLocaleTimeString(
-      'en-us',
+      'en-GB',
       timeOptions,
     );
     return date;
@@ -202,6 +215,13 @@ export default {
       });
     }
   },
+
+  getTotalCases: (bills) =>
+    bills.reduce((acc, cur) => acc + cur.bags[0].quantity, 0),
+  getTotalPackets: (bills) =>
+    bills.reduce((acc, cur) => acc + cur.bags[1].quantity, 0),
+  getTotalPolyBags: (bills) =>
+    bills.reduce((acc, cur) => acc + cur.bags[2].quantity, 0),
 };
 
 export const useDebounce = (value, delay = 500) => {

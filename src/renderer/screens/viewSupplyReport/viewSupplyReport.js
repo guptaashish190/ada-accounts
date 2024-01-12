@@ -208,9 +208,9 @@ export default function ViewSupplyReportScreen() {
       receiptNumber: supplyReport.receiptNumber,
       bills: allBills,
       oldBills: extraOldBills,
-      numCases: supplyReport.numCases,
-      numPolybags: supplyReport.numPolybags,
-      numPackets: supplyReport.numPackets,
+      numCases: globalUtils.getTotalCases(allBills),
+      numPolybags: globalUtils.getTotalPolyBags(allBills),
+      numPackets: globalUtils.getTotalPackets(allBills),
     };
     window.electron.ipcRenderer.sendMessage(
       'print',

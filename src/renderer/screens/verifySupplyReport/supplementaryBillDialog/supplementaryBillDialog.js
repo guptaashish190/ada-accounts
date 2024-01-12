@@ -85,6 +85,7 @@ export default function SupplementaryBillDialog({
       partyId: queryPartyId,
       billNumber: queryBillNumber ? `T-${queryBillNumber}` : null,
     };
+    if (Object.keys(filters).length === 0) return;
 
     for (const field in filters) {
       if (filters[field]) {
