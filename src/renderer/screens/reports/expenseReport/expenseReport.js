@@ -166,8 +166,6 @@ function VoucherRow({ data, index, header }) {
       {data.map((x) => (
         <VoucherDetailRow key={`expense${x.id}`} data={x} />
       ))}
-
-      <br />
     </table>
   );
 }

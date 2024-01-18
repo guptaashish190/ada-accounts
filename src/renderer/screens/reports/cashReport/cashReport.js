@@ -36,7 +36,6 @@ export default function CashReport() {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [loading, setLoading] = useState(false);
-  const { allUsers } = useAuthUser();
 
   const printingRef = useRef();
   // const handlePrint = useReactToPrint({
@@ -155,16 +154,8 @@ export default function CashReport() {
 
 function CashReportRow({ data, index }) {
   const navigate = useNavigate();
-  const [supplyman, setSupplyman] = useState();
 
-  const getSupplyman = async () => {
-    const user = await globalUtils.fetchUserById(data.paymentFromUserId);
-    setSupplyman(user);
-  };
-
-  useEffect(() => {
-    getSupplyman();
-  }, []);
+  const { allUsers } = useAuthUser();
   return (
     <table>
       <thead className="supply-report-row">
@@ -172,7 +163,11 @@ function CashReportRow({ data, index }) {
           <Text className="sr-id">{data.cashReceiptNumber}</Text>
         </th>
         <th />
-        <th />
+        <th>
+          <Text className="sr-id">
+            {allUsers.find((x) => x.uid === data.paymentFromUserId)?.username}
+          </Text>
+        </th>
 
         <th>
           {' '}
@@ -185,8 +180,6 @@ function CashReportRow({ data, index }) {
       {data.prItems.map((x) => (
         <SupplyReportOrderRow prItem={x} />
       ))}
-
-      <br />
     </table>
   );
 }

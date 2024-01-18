@@ -89,7 +89,11 @@ export default function SupplementaryBillDialog({
 
     for (const field in filters) {
       if (filters[field]) {
-        dynamicQuery = query(dynamicQuery, where(field, '==', filters[field]));
+        dynamicQuery = query(
+          dynamicQuery,
+          where(field, '==', filters[field]),
+          where('balance', '!=', 0),
+        );
       }
     }
     dynamicQuery = query(dynamicQuery, limit(10));

@@ -148,16 +148,9 @@ export default function DaySupplyReportPrint() {
 
 function SupplyReportRow({ data, index }) {
   const navigate = useNavigate();
-  const [supplyman, setSupplyman] = useState();
 
-  const getSupplyman = async () => {
-    const user = await globalUtils.fetchUserById(data.supplymanId);
-    setSupplyman(user);
-  };
+  const { allUsers } = useAuthUser();
 
-  useEffect(() => {
-    getSupplyman();
-  }, []);
   return (
     <table>
       <thead className="supply-report-row">
@@ -166,7 +159,7 @@ function SupplyReportRow({ data, index }) {
         </th>
         <th>
           <Text className="sr-timestamp">
-            {globalUtils.getTimeFormat(data.timestamp, true)}
+            {allUsers.find((x) => x.uid === data.supplymanId)?.username}
           </Text>
         </th>
         <th>
@@ -188,8 +181,6 @@ function SupplyReportRow({ data, index }) {
       {data.orders.map((x) => (
         <SupplyReportOrderRow billId={x} />
       ))}
-
-      <br />
     </table>
   );
 }
@@ -197,7 +188,6 @@ function SupplyReportRow({ data, index }) {
 function SupplyReportOrderRow({ billId }) {
   const [order, setOrder] = useState();
   const [loading, setLoading] = useState(false);
-  const { allUsers } = useAuthUser();
   const fetchOrder = async () => {
     setLoading(true);
     try {
