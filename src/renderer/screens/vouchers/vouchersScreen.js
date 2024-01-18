@@ -87,6 +87,8 @@ export default function VoucherScreen() {
         <h3>Vouchers</h3>
 
         <VerticalSpace1 />
+        <CreateVoucherDialog />
+        <VerticalSpace1 />
         <div>
           <DatePicker
             //   open={fromDateOpen}

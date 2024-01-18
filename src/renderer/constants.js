@@ -50,6 +50,10 @@ export default {
       name: 'CREDITNOTE',
       prefix: 'CN',
     },
+    VOUCHERS: {
+      name: 'VOUCHERS',
+      prefix: 'VR',
+    },
   },
   colors: {
     success: '#66bb6a',

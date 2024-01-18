@@ -26,7 +26,7 @@ export default function ReceivePendingUser() {
       const q = query(
         bundlesCollection,
         where('status', '==', constants.firebase.billBundleFlowStatus.HANDOVER),
-        where('assignedTo', '==', selectedUser.uid),
+        where('assignedTo', '==', selectedUser),
       );
 
       const querySnapshot = await getDocs(q);
@@ -86,14 +86,11 @@ export default function ReceivePendingUser() {
       <Dropdown
         size="large"
         onOptionSelect={(_, e) => setSelectedUser(e.optionValue)}
-        className="dropdown  filter-input"
+        className="dropdown filter-input"
         placeholder="Select User"
       >
-        <Option text={null} value={null} key="accounts-none-dropdown">
-          None
-        </Option>
         {allUsers.map((user) => (
-          <Option text={user.username} value={user} key={user.uid}>
+          <Option text={user.username} value={user.uid} key={user.uid}>
             {user.username}
           </Option>
         ))}

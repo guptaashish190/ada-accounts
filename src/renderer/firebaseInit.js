@@ -1,6 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
+import { getStorage } from 'firebase/storage';
 import {
   connectFirestoreEmulator,
   disableNetwork,
@@ -36,3 +37,4 @@ export default firebaseApp;
 export const firebaseDB = getFirestore(firebaseApp);
 // connectFirestoreEmulator(firebaseDB, '127.0.0.1', 8080);
 const analytics = getAnalytics(firebaseApp);
+export const firebaseStorage = getStorage(firebaseApp);

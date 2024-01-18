@@ -1,3 +1,6 @@
+/* eslint-disable no-alert */
+/* eslint-disable jsx-a11y/no-static-element-interactions */
+/* eslint-disable jsx-a11y/click-events-have-key-events */
 /* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable no-unreachable */
 import React, { useEffect, useState } from 'react';
@@ -27,6 +30,7 @@ import {
   Dropdown,
   Option,
   Textarea,
+  Image,
 } from '@fluentui/react-components';
 import {
   Timestamp,
@@ -37,10 +41,16 @@ import {
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
+import { Delete12Filled } from '@fluentui/react-icons';
 import { getAuth } from 'firebase/auth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
-import firebaseApp, { firebaseDB } from '../../../firebaseInit';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { File } from 'buffer';
+import firebaseApp, {
+  firebaseDB,
+  firebaseStorage,
+} from '../../../firebaseInit';
 import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import './style.css';
@@ -58,6 +68,7 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
   const [user, setUser] = useState();
   const [amount, setAmount] = useState();
   const [narration, setNarration] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const toasterId = useId('toaster');
@@ -67,27 +78,67 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
 
   const { allUsers } = useAuthUser();
 
-  const createVoucher = () => {
+  const uploadImages = async () => {
+    try {
+      const imageUrls = [];
+      const time = Timestamp.now().toMillis();
+      let i = 0;
+      const user1 = allUsers.find((x) => x.uid === user);
+      if (selectedFiles.length > 0) {
+        // Create a reference to 'images/mountains.jpg'
+        const uRef = ref(
+          firebaseStorage,
+          `vouchers/${user1.username}-${time}-${i}'`,
+        );
+
+        const uploadedImage = await uploadBytes(uRef, selectedFiles[i]);
+        const url = await getDownloadURL(uploadedImage.ref);
+        imageUrls.push(url);
+        i += 1;
+      }
+      return imageUrls;
+    } catch (e) {
+      console.log(e);
+    }
+
+    return [];
+  };
+
+  const createVoucher = async () => {
     if (type == null || user == null || amount <= 0 || narration.length === 0) {
       window.alert('Enter all the details.');
     }
 
-    console.log({
-      type,
-      employeeId: user,
-      narration,
-      amount,
-    });
-
-    return;
+    setLoading(true);
+    const images = await uploadImages();
     const voucherRef = collection(firebaseDB, 'vouchers');
 
+    const newEntryNumber = await globalUtils.getNewReceiptNumber(
+      constants.newReceiptCounters.VOUCHERS,
+    );
     addDoc(voucherRef, {
       type,
       employeeId: user,
+      receiptNumber: newEntryNumber,
       narration,
       amount,
-      timestamp: new Date().getTime(),
+      images,
+      requesterId: getAuth(firebaseApp).currentUser.uid,
+      timestamp: Timestamp.now().toMillis(),
+    });
+    globalUtils.incrementReceiptCounter(constants.newReceiptCounters.VOUCHERS);
+    setLoading(false);
+    setOpen(false);
+    setSelectedFiles([]);
+    setUser();
+    setAmount();
+    setNarration();
+  };
+
+  const openFileDialog = async () => {
+    window.electron.ipcRenderer.sendMessage('open-file-dialog');
+    window.electron.ipcRenderer.once('selected-files', (files) => {
+      setSelectedFiles((x) => [...x, ...files]);
     });
   };
 
@@ -149,7 +200,37 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
               style={{ width: '60%' }}
               placeholder="Narration"
             />{' '}
-            <br /> <br />
+            <br />
+            <br />
+            <input
+              type="file"
+              multiple
+              onChange={(e) => {
+                setSelectedFiles((x) => [...x, ...Array.from(e.target.files)]);
+              }}
+            />
+            {/* <Button onClick={() => openFileDialog()}>Add Receipt Files</Button> */}
+            <br />
+            <br />
+            <div style={{ display: 'flex', flexDirection: 'row' }}>
+              {selectedFiles.map((x) => (
+                <div className="voucher-image">
+                  <div
+                    onClick={() =>
+                      setSelectedFiles((y) => y.filter((z) => z !== x))
+                    }
+                    className="voucher-image-delete"
+                  >
+                    <Delete12Filled />
+                  </div>
+                  <Image
+                    className="voucher-selected-files"
+                    style={{ width: '100px' }}
+                    src={`file://${x.path}`}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </DialogContent>
         <DialogActions>

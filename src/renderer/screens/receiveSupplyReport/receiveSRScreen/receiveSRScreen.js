@@ -321,7 +321,11 @@ export default function ReceiveSRScreen() {
 
     navigate('/createPaymentReceipts', {
       replace: true,
-      state: { supplyReportId: supplyReport.id, prItems: updatedModelPrItems },
+      state: {
+        supplyReportId: supplyReport.id,
+        prItems: updatedModelPrItems,
+        supplymanId: supplyReport.supplymanId,
+      },
     });
   };
   if (loading) return <Loader />;

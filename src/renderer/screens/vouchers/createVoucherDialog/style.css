@@ -34,3 +34,14 @@
   font-size: 1.2em;
   text-align: right;
 }
+
+.create-payment-receipt-container .voucher-image {
+  border: 1px solid #ddd;
+  display: inline;
+  position: relative;
+  margin: 10px;
+}
+
+.create-payment-receipt-container .voucher-image-delete {
+  position: absolute;
+}

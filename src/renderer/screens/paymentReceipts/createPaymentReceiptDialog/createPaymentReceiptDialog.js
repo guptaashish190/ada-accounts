@@ -62,7 +62,7 @@ export default function CreatePaymentReceiptDialog({
   const [editable, setEditable] = useState(inputsEnabled || !state?.view);
   const { dispatchToast } = useToastController(toasterId);
   const [currentReceiptNumber, setCurrentReceiptNumber] = useState();
-  const [paymentFrom, setPaymentFrom] = useState();
+  const [paymentFrom, setPaymentFrom] = useState(state?.supplymanId);
   const { allUsers } = useAuthUser();
 
   const getTotal = () => {
@@ -255,6 +255,10 @@ export default function CreatePaymentReceiptDialog({
                 onOptionSelect={(_, e) => setPaymentFrom(e.optionValue)}
                 className="dropdown filter-input"
                 placeholder="Username"
+                defaultValue={
+                  allUsers.find((x) => x.uid === paymentFrom).username
+                }
+                defaultSelectedOptions={[paymentFrom]}
               >
                 {allUsers.map((user) => (
                   <Option text={user.username} value={user.uid} key={user.uid}>

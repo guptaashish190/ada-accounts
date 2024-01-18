@@ -10,7 +10,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import fs from 'fs';
@@ -63,9 +63,6 @@ ipcMain.on('set-selected-printer', async (event, arg) => {
 ipcMain.on('set-printer-options', async (event, arg) => {
   store.set('printer-options', arg);
   printerOptions = arg;
-
-  console.log(arg);
-
   event.sender.send('printer-options', { options: arg });
 });
 
@@ -75,6 +72,24 @@ ipcMain.on('fetch-printer-options', async (event, arg) => {
   if (opt) {
     event.sender.send('printer-options', { options: opt });
   }
+});
+
+ipcMain.on('open-file-dialog', (event) => {
+  if (!mainWindow) return;
+  dialog
+    .showOpenDialog(mainWindow, {
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Images', extensions: ['jpg', 'png', 'gif'] }],
+    })
+    .then((result) => {
+      if (!result.canceled) {
+        event.reply('selected-files', result.filePaths);
+        console.log(result.filePaths);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+    });
 });
 
 const onPrint = async (data: PosPrintData[]) => {
@@ -194,6 +209,8 @@ const createWindow = async () => {
     icon: getAssetPath('icon.png'),
 
     webPreferences: {
+      nodeIntegration: true,
+      webSecurity: false,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
