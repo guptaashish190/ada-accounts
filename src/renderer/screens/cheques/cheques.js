@@ -183,6 +183,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
         creationDateTo1.setHours(11);
         creationDateTo1.setMinutes(59);
         creationDateTo1.setSeconds(59);
+        console.log(creationDateFrom, creationDateTo1);
         dynamicQuery = query(
           dynamicQuery,
           where('timestamp', '>=', creationDateFrom.getTime()),

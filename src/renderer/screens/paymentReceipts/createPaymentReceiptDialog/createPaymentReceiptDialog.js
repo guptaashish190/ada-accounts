@@ -256,7 +256,7 @@ export default function CreatePaymentReceiptDialog({
                 className="dropdown filter-input"
                 placeholder="Username"
                 defaultValue={
-                  allUsers.find((x) => x.uid === paymentFrom).username
+                  allUsers.find((x) => x.uid === paymentFrom)?.username
                 }
                 defaultSelectedOptions={[paymentFrom]}
               >

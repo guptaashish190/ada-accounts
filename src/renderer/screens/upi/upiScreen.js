@@ -28,6 +28,7 @@ import {
   Text,
 } from '@fluentui/react-components';
 import { getAuth } from 'firebase/auth';
+import { DatePicker } from '@fluentui/react-datepicker-compat';
 import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
@@ -41,48 +42,80 @@ export default function UpiScreen() {
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
 
-  const fetchData = async () => {
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
+
+  const fetchUpi = async () => {
+    setLoading(true);
+    try {
+      const upiCollection = collection(firebaseDB, 'upi');
+      let dynamicQuery = upiCollection;
+
+      const dateFrom = new Date(fromDate);
+
+      const dateTo = new Date(toDate);
+      dateTo.setHours(23);
+      dateTo.setMinutes(59);
+      dateTo.setSeconds(59);
+
+      dynamicQuery = query(
+        dynamicQuery,
+        where('timestamp', '>=', dateFrom.getTime()),
+        where('isReceived', '==', true),
+      );
+      dynamicQuery = query(
+        dynamicQuery,
+        where('timestamp', '<=', dateTo.getTime()),
+        where('isReceived', '==', true),
+      );
+
+      const querySnapshot = await getDocs(dynamicQuery);
+
+      const reportsData = [];
+      querySnapshot.forEach((doc1) => {
+        reportsData.push({ id: doc.id, ...doc1.data() });
+      });
+
+      reportsData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
+      const dataWithParty2 =
+        await globalUtils.fetchPartyInfoForOrders(reportsData);
+      setReceivedUpiItems(dataWithParty2);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching supply reports:', error);
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchUpi();
+    fetcUnreceived();
+  }, []);
+
+  const fetcUnreceived = async () => {
     try {
       setLoading(true);
       const q = query(
         collection(firebaseDB, 'upi'),
         where('isReceived', '==', false),
       );
-      const q2 = query(
-        collection(firebaseDB, 'upi'),
-        where('isReceived', '==', true),
-        limit(50),
-      );
+
       const querySnapshot = await getDocs(q);
-      const querySnapshot2 = await getDocs(q2);
 
       const documents = [];
-      const documents2 = [];
+
       querySnapshot.forEach((doc1) => {
         // You can access the document data here using doc.data()
         documents.push({ id: doc1.id, ...doc1.data() });
       });
-      querySnapshot2.forEach((doc1) => {
-        // You can access the document data here using doc.data()
-        documents2.push({ id: doc1.id, ...doc1.data() });
-      });
 
       const dataWithParty =
         await globalUtils.fetchPartyInfoForOrders(documents);
-      const dataWithParty2 =
-        await globalUtils.fetchPartyInfoForOrders(documents2);
       setUnReceivedUpiItems(dataWithParty || []);
-      setReceivedUpiItems(dataWithParty2 || []);
-      console.log(dataWithParty, dataWithParty2);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
     setLoading(false);
   };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   return (
     <center>
@@ -91,9 +124,33 @@ export default function UpiScreen() {
         <Spinner />
       ) : (
         <div>
+          <div>
+            <DatePicker
+              size="large"
+              className=" filter-input"
+              onSelectDate={(d) => setFromDate(d)}
+              placeholder="From Date"
+              value={fromDate}
+            />
+            &nbsp;
+            <DatePicker
+              size="large"
+              className=" filter-input"
+              onSelectDate={(d) => {
+                setToDate(d);
+              }}
+              placeholder="To date"
+              value={toDate}
+            />
+            &nbsp;
+            <Button size="large" onClick={() => fetchUpi()}>
+              Get
+            </Button>
+          </div>
           <table>
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Party</th>
                 <th>Amount</th>
                 <th>Status</th>
@@ -126,6 +183,7 @@ function UpiItemRow({ data }) {
   const { allUsers } = useAuthUser();
   return (
     <tr>
+      <td>{globalUtils.getTimeFormat(data.timestamp, true)}</td>
       <td>{data.party?.name}</td>
       <td>{globalUtils.getCurrencyFormat(data.amount)}</td>
       <td

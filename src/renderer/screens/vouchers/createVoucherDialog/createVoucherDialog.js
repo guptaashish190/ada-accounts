@@ -105,8 +105,15 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
   };
 
   const createVoucher = async () => {
-    if (type == null || user == null || amount <= 0 || narration.length === 0) {
+    if (
+      type == null ||
+      user == null ||
+      amount <= 0 ||
+      narration.length === 0 ||
+      selectedFiles.length === 0
+    ) {
       window.alert('Enter all the details.');
+      return;
     }
 
     setLoading(true);
@@ -121,7 +128,7 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
       employeeId: user,
       receiptNumber: newEntryNumber,
       narration,
-      amount,
+      amount: parseInt(amount, 10),
       images,
       requesterId: getAuth(firebaseApp).currentUser.uid,
       timestamp: Timestamp.now().toMillis(),
@@ -242,12 +249,14 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
   );
 }
 const TYPES = [
+  'Petrol',
+  'Parking',
+  'Refreshment',
   'Office Expense',
+  'Travelling Expense',
+  'Repair and Maintenance',
   'Frieght Inward',
   'Frieght Outward',
-  'Parking',
-  'Petrol',
   'Vehicle Repair',
-  'Refreshment',
   'Other',
 ];

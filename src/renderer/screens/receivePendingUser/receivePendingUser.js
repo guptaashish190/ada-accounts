@@ -52,7 +52,7 @@ export default function ReceivePendingUser() {
       const q = query(
         supplyReportColl,
         where('status', '==', constants.firebase.supplyReportStatus.DELIVERED),
-        where('supplymanId', '==', selectedUser.uid),
+        where('supplymanId', '==', selectedUser),
       );
       const querySnapshot = await getDocs(q);
 
@@ -78,7 +78,7 @@ export default function ReceivePendingUser() {
   };
 
   useEffect(() => {
-    if (selectedUser?.uid) fetchPending();
+    if (selectedUser) fetchPending();
   }, [selectedUser]);
 
   return (
