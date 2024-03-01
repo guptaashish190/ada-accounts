@@ -37,7 +37,6 @@ import {
   useId,
   useToastController,
 } from '@fluentui/react-components';
-import { getAuth } from 'firebase/auth';
 import math, { parse } from 'mathjs';
 import Loader from '../../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';

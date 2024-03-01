@@ -1,9 +1,10 @@
 import { Button, Image, Input, Spinner } from '@fluentui/react-components';
 import React, { useState } from 'react';
 import './style.css';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { VerticalSpace1, VerticalSpace2 } from '../common/verticalSpace';
 import Logo from '../assets/images/logo.png';
+import { firebaseAuth } from '../firebaseInit';
 
 export default function LoginScreen() {
   const [username, setUsername] = useState('');
@@ -15,9 +16,8 @@ export default function LoginScreen() {
     try {
       setLogginIn(true);
       try {
-        const auth = getAuth();
         await signInWithEmailAndPassword(
-          auth,
+          firebaseAuth,
           `${username}@gmail.com`,
           password,
         );

@@ -5,7 +5,9 @@
 /* eslint-disable no-restricted-syntax */
 
 import {
+  FieldValue,
   Timestamp,
+  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -32,14 +34,13 @@ import {
 } from '@fluentui/react-components';
 
 import { Open12Filled, Dismiss12Filled } from '@fluentui/react-icons';
-import { getAuth } from 'firebase/auth';
 import math, { parse } from 'mathjs';
 import Loader from '../../../common/loader';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
 import globalUtils from '../../../services/globalUtils';
 import { showToast } from '../../../common/toaster';
 import './style.css';
-import firebaseApp, { firebaseDB } from '../../../firebaseInit';
+import firebaseApp, { firebaseAuth, firebaseDB } from '../../../firebaseInit';
 import AdjustAmountDialog from '../adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../../constants';
 import BillRow from './billRow';
@@ -193,22 +194,24 @@ export default function ReceiveSRScreen() {
               ],
             }
           : {}),
-        receivedBy: getAuth(firebaseApp).currentUser.uid,
+        receivedBy: firebaseAuth.currentUser.uid,
       });
 
       // update current bills with balance and updated flow
       for await (const rb2 of receivedBills) {
         const orderRef = doc(firebaseDB, 'orders', rb2.id);
-
+        const orderData = await getDoc(orderRef);
+        const paymentsObj = orderData.data().payments || [];
         updateDoc(orderRef, {
           flow: [
             ...rb2.flow,
             {
-              employeeId: getAuth(firebaseApp).currentUser.uid,
+              employeeId: firebaseAuth.currentUser.uid,
               timestamp: Timestamp.now().toMillis(),
               type: 'Received Bill',
             },
           ],
+          payments: [...paymentsObj, ...rb2.payments],
           balance:
             rb2.balance -
             rb2.payments.reduce(
@@ -233,7 +236,7 @@ export default function ReceiveSRScreen() {
           flow: [
             ...rb2.flow,
             {
-              employeeId: getAuth(firebaseApp).currentUser.uid,
+              employeeId: firebaseAuth.currentUser.uid,
               timestamp: Timestamp.now().toMillis(),
               type: 'Goods Returned',
             },

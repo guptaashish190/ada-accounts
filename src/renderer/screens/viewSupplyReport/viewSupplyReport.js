@@ -42,8 +42,6 @@ import {
   DialogActions,
   DialogContent,
 } from '@fluentui/react-components';
-import { getAuth } from 'firebase/auth';
-
 import { Edit12Filled, Dismiss16Filled } from '@fluentui/react-icons';
 import math, { asecDependencies, parse } from 'mathjs';
 import Loader from '../../common/loader';

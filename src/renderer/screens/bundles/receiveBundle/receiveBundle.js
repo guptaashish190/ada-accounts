@@ -31,14 +31,13 @@ import {
 } from '@fluentui/react-components';
 
 import { Open12Filled, Dismiss12Filled } from '@fluentui/react-icons';
-import { getAuth } from 'firebase/auth';
 import math, { parse } from 'mathjs';
 import Loader from '../../../common/loader';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
 import globalUtils from '../../../services/globalUtils';
 import { showToast } from '../../../common/toaster';
 import './style.css';
-import firebaseApp, { firebaseDB } from '../../../firebaseInit';
+import firebaseApp, { firebaseAuth, firebaseDB } from '../../../firebaseInit';
 import constants from '../../../constants';
 import AdjustAmountDialog from '../../receiveSupplyReport/adjustAmountOnBills/adjustAmountDialog';
 
@@ -85,7 +84,7 @@ export default function ReceiveBundle() {
             payments: oab1.payments,
           };
         }),
-        receivedBy: getAuth(firebaseApp).currentUser.uid,
+        receivedBy: firebaseAuth.currentUser.uid,
       });
 
       // update current bills with balance and updated flow

@@ -36,11 +36,10 @@ import {
 } from 'firebase/firestore';
 import shortid from 'shortid';
 import { evaluate } from 'mathjs';
-import { getAuth } from 'firebase/auth';
 import globalUtils from '../../services/globalUtils';
 import { showToast } from '../../common/toaster';
 import './style.css';
-import firebaseApp, { firebaseDB } from '../../firebaseInit';
+import firebaseApp, { firebaseAuth, firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import SupplementaryBillDialog from './supplementaryBillDialog/supplementaryBillDialog';
@@ -137,7 +136,7 @@ export default function VerifySupplyReport() {
         flow: [
           ...bill1.flow,
           {
-            employeeId: getAuth(firebaseApp).currentUser.uid,
+            employeeId: firebaseAuth.currentUser.uid,
             timestamp: Timestamp.now().toMillis(),
             type: 'Dispatched',
             comment: bill1.notes || '',

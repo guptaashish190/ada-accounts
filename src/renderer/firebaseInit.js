@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
-import { getStorage } from 'firebase/storage';
+import { connectStorageEmulator, getStorage } from 'firebase/storage';
 import {
   connectFirestoreEmulator,
   disableNetwork,
@@ -10,6 +10,7 @@ import {
   persistentLocalCache,
   persistentMultipleTabManager,
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -34,7 +35,13 @@ initializeFirestore(firebaseApp, {
 });
 
 export default firebaseApp;
+
 export const firebaseDB = getFirestore(firebaseApp);
-// connectFirestoreEmulator(firebaseDB, '127.0.0.1', 8080);
+// connectFirestoreEmulator(firebaseDB, '127.0.0.1', '8080');
+
 const analytics = getAnalytics(firebaseApp);
+
 export const firebaseStorage = getStorage(firebaseApp);
+// connectStorageEmulator(firebaseDB, '127.0.0.1', '9199');
+
+export const firebaseAuth = getAuth(firebaseApp);

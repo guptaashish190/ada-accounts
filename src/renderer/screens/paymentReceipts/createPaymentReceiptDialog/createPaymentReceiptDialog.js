@@ -36,9 +36,8 @@ import {
   runTransaction,
   serverTimestamp,
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
 import { useLocation, useNavigate } from 'react-router-dom';
-import firebaseApp, { firebaseDB } from '../../../firebaseInit';
+import firebaseApp, { firebaseAuth, firebaseDB } from '../../../firebaseInit';
 import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import './style.css';
@@ -105,7 +104,7 @@ export default function CreatePaymentReceiptDialog({
           supplyReportId: state?.supplyReportId || '',
           prItems: updatedPrItems,
           timestamp: Timestamp.now().toMillis(),
-          createdByUserId: getAuth().currentUser.uid,
+          createdByUserId: firebaseAuth.currentUser.uid,
           paymentFromUserId: paymentFrom,
         });
 
@@ -165,7 +164,7 @@ export default function CreatePaymentReceiptDialog({
     } else {
       printDataNew = {
         time: globalUtils.getTimeFormat(new Date()),
-        createdBy: allUsers.find((x) => x.uid === getAuth().currentUser.uid)
+        createdBy: allUsers.find((x) => x.uid === firebaseAuth.currentUser.uid)
           ?.username,
         user: allUsers.find((x) => x.uid === paymentFrom)?.username,
         items: prItems,

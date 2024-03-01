@@ -42,12 +42,12 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { Delete12Filled } from '@fluentui/react-icons';
-import { getAuth } from 'firebase/auth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { File } from 'buffer';
 import firebaseApp, {
+  firebaseAuth,
   firebaseDB,
   firebaseStorage,
 } from '../../../firebaseInit';
@@ -130,7 +130,7 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
       narration,
       amount: parseInt(amount, 10),
       images,
-      requesterId: getAuth(firebaseApp).currentUser.uid,
+      requesterId: firebaseAuth.currentUser.uid,
       timestamp: Timestamp.now().toMillis(),
     });
     globalUtils.incrementReceiptCounter(constants.newReceiptCounters.VOUCHERS);

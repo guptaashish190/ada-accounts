@@ -27,9 +27,8 @@ import {
   Spinner,
   Text,
 } from '@fluentui/react-components';
-import { getAuth } from 'firebase/auth';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
-import { firebaseDB } from '../../firebaseInit';
+import { firebaseAuth, firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import { useAuthUser } from '../../contexts/allUsersContext';
@@ -221,7 +220,10 @@ function UPIDialog({ data, createdBy }) {
         for await (const oab of adjustedBills) {
           const orderRef = doc(firebaseDB, 'orders', oab.id);
 
+          const orderData = await getDoc(orderRef);
+          const paymentsObj = orderData.data().payments || [];
           updateDoc(orderRef, {
+            payments: [...paymentsObj, ...oab.payments],
             balance:
               oab.balance -
               oab.payments.reduce(
@@ -251,7 +253,7 @@ function UPIDialog({ data, createdBy }) {
 
       const upiRef = doc(firebaseDB, 'upi', data.id);
       updateDoc(upiRef, {
-        receivedBy: getAuth().currentUser.uid,
+        receivedBy: firebaseAuth.currentUser.uid,
         isReceived: true,
         bills: adjustedBills.map((x) => x.billNumber),
       });

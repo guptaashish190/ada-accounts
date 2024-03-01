@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import firebase from 'firebase/app'; // Make sure to import the Firebase SDK
-import { getAuth } from 'firebase/auth';
 import { Spinner } from '@fluentui/react-components';
 import LoginScreen from './login/login';
 import Loader from './common/loader';
+import { firebaseAuth } from './firebaseInit';
 
 function LoginWrapper({ children }) {
   const [user, setUser] = useState(null);
@@ -11,7 +11,7 @@ function LoginWrapper({ children }) {
 
   useEffect(() => {
     // Check if a user is already signed in using Firebase
-    const unsubscribe = getAuth().onAuthStateChanged((authUser) => {
+    const unsubscribe = firebaseAuth.onAuthStateChanged((authUser) => {
       if (authUser) {
         // User is signed in
         setUser(authUser);

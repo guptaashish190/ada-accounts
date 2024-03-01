@@ -1,6 +1,5 @@
 /* eslint-disable react/jsx-no-constructed-context-values */
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getAuth } from 'firebase/auth';
 import { Spinner } from '@fluentui/react-components';
 import { collection, onSnapshot } from 'firebase/firestore';
 import globalUtils from '../services/globalUtils';

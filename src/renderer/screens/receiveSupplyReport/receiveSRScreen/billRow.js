@@ -32,7 +32,6 @@ import {
 } from '@fluentui/react-components';
 
 import { Open12Filled, Dismiss12Filled } from '@fluentui/react-icons';
-import { getAuth } from 'firebase/auth';
 import math, { parse } from 'mathjs';
 import Loader from '../../../common/loader';
 import { VerticalSpace1 } from '../../../common/verticalSpace';

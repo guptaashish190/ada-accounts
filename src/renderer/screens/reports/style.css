@@ -42,12 +42,16 @@
     width: 100% !important;
     margin-top: 20px;
     page-break-after: always;
+
   }
 
   .tab-navigator .left {
     display: none;
   }
 
+  .tab-navigator .right {
+    margin-top: 0px;
+  }
 
   h3 {
     font-size: 18px !important;

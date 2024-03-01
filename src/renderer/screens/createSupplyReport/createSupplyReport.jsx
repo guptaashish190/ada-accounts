@@ -30,13 +30,12 @@ import {
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
 import BillSelector from '../../components/billSelector/billSelector';
 import AllUsersContext, { useAuthUser } from '../../contexts/allUsersContext';
 import constants from '../../constants';
 import { showToast } from '../../common/toaster';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
-import firebaseApp, { firebaseDB } from '../../firebaseInit';
+import firebaseApp, { firebaseAuth, firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 import { useSettingsContext } from '../../contexts/settingsContext';
@@ -231,7 +230,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
         flow: [
           ...bill1.flow,
           {
-            employeeId: getAuth(firebaseApp).currentUser.uid,
+            employeeId: firebaseAuth.currentUser.uid,
             timestamp: Timestamp.now().toMillis(),
             type: constants.firebase.supplyReportStatus.TOACCOUNTS,
           },

@@ -22,12 +22,11 @@ import {
   doc,
   updateDoc,
 } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
 import SupplementaryBillDialog from '../../verifySupplyReport/supplementaryBillDialog/supplementaryBillDialog';
 import globalUtils from '../../../services/globalUtils';
 import './style.css';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
-import { firebaseDB } from '../../../firebaseInit';
+import { firebaseAuth, firebaseDB } from '../../../firebaseInit';
 import { showToast } from '../../../common/toaster';
 import constants from '../../../constants';
 
@@ -56,7 +55,7 @@ export default function CreateCreditNoteScreen() {
         amount,
         remarks,
         partyId: bill.partyId,
-        createdBy: getAuth().currentUser.uid,
+        createdBy: firebaseAuth.currentUser.uid,
         receiptNumber: newReciptNumber,
       });
 

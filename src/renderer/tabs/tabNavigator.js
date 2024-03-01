@@ -3,13 +3,13 @@ import './tabNavigator.css';
 import { Button, Image, Tab, TabList, Text } from '@fluentui/react-components';
 import { SignOut20Filled } from '@fluentui/react-icons';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getAuth } from 'firebase/auth';
 import Logo from '../assets/images/logo.png';
 
 import { useCurrentUser } from '../contexts/userContext';
 import constants from '../constants';
 import tabs from './tabs';
 import config from '../config';
+import { firebaseAuth } from '../firebaseInit';
 
 export default function TabNavigator({ children }) {
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ export default function TabNavigator({ children }) {
               key="logout-buttpn"
               appearance="subtle"
               onClick={() => {
-                getAuth().signOut();
+                firebaseAuth.signOut();
               }}
             >
               <SignOut20Filled />
