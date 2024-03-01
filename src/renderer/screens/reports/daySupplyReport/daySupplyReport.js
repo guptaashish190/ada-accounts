@@ -30,27 +30,23 @@ import constants from '../../../constants';
 
 export default function DaySupplyReportPrint() {
   const [supplyReports, setSupplyReports] = useState([]);
-
+  const [unSuppliedOrders, setUnSuppliedOrders] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
 
-  const printingRef = useRef();
-  // const handlePrint = useReactToPrint({
-  //   copyStyles: true,
-
-  //   content: () => printingRef.current,
-  // });
-
   const handlePrint = () => {
     window.electron.ipcRenderer.sendMessage('printCurrentPage');
   };
+
   const onSearch = (clear) => {
     const supplyReportRef = collection(firebaseDB, 'supplyReports');
+    const ordersRef = collection(firebaseDB, 'orders');
 
     // Build the query dynamically based on non-empty filter fields
     let dynamicQuery = supplyReportRef;
+    let dynamicQueryOrder = ordersRef;
 
     const dateFrom = new Date(selectedDate);
     dateFrom.setHours(0);
@@ -65,6 +61,13 @@ export default function DaySupplyReportPrint() {
       dynamicQuery,
       where('dispatchTimestamp', '>=', dateFrom.getTime()),
       where('dispatchTimestamp', '<=', dateTo.getTime()),
+    );
+
+    dynamicQueryOrder = query(
+      dynamicQueryOrder,
+      where('billCreationTime', '>=', dateFrom.getTime()),
+      where('billCreationTime', '<=', dateTo.getTime()),
+      where('supplyReportId', '==', ''),
     );
 
     // Fetch parties based on the dynamic query
@@ -83,7 +86,13 @@ export default function DaySupplyReportPrint() {
         supplyReportData = supplyReportData.filter(
           (x) => x.status !== constants.firebase.supplyReportStatus.TOACCOUNTS,
         );
+        const querySnapshotunsupplier = await getDocs(dynamicQueryOrder);
+        const unSuppliedOrders1 = querySnapshotunsupplier.docs.map((doc) => ({
+          ...doc.data(),
+        }));
+
         setSupplyReports(supplyReportData);
+        setUnSuppliedOrders(unSuppliedOrders1);
       } catch (error) {
         console.error('Error fetching supply reports:', error);
       }
@@ -124,7 +133,7 @@ export default function DaySupplyReportPrint() {
         {loading ? (
           <Spinner />
         ) : (
-          <div ref={printingRef}>
+          <div>
             {supplyReports.map((sr, i) => {
               return (
                 <SupplyReportRow
@@ -134,6 +143,14 @@ export default function DaySupplyReportPrint() {
                 />
               );
             })}
+            <h2>
+              {unSuppliedOrders.length === 0 ? 'No ' : ''}Unsupplied Bills
+            </h2>
+            <table>
+              {unSuppliedOrders?.map((unso) => {
+                return <SupplyReportOrderRow billId={unso.id} />;
+              })}
+            </table>
           </div>
         )}
         {!loading && supplyReports.length === 0 ? (
@@ -176,6 +193,8 @@ function SupplyReportRow({ data, index }) {
             {globalUtils.getDayTime(data.dispatchTimestamp)}
           </Text>
         </th>
+        <th>Payment</th>
+        <th>Remarks</th>
       </thead>
 
       {data.orders.map((x) => (
@@ -207,9 +226,14 @@ function SupplyReportOrderRow({ billId }) {
   if (loading) return <Spinner />;
   if (!order) return <div>Error loading order</div>;
 
+  const getPaymentSum = order.payments?.reduce(
+    (acc, current) => acc + (parseInt(current.amount, 10) || 0),
+    0,
+  );
+
   return (
     <tbody className="supply-report-print-bill-detail">
-      <td style={{ width: '40%' }}>{order.party.name}</td>
+      <td style={{ width: '20%' }}>{order.party.name}</td>
       <td style={{ width: '10%' }}>{order.billNumber}</td>
       <td style={{ width: '10%' }}>
         {globalUtils.getCurrencyFormat(order.orderAmount)}
@@ -220,6 +244,11 @@ function SupplyReportOrderRow({ billId }) {
           .map((x) => `${x.quantity} ${x.bagType}`)
           .join(',')}
       </td>
+
+      <td style={{ width: '10%' }}>
+        {globalUtils.getCurrencyFormat(getPaymentSum) || '--'}
+      </td>
+      <td style={{ width: '20%' }}>{order.accountsNotes || '--'}</td>
     </tbody>
   );
 }
