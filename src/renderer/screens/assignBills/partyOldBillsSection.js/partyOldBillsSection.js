@@ -216,7 +216,7 @@ function OldBillRow({
         {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true, true) ||
           '--'}
       </div>
-      <Tooltip content={oldbill.accountNotes}>
+      <Tooltip content={oldbill.accountsNotes}>
         <Input
           disabled={disabled}
           style={{ width: '100px' }}

@@ -158,11 +158,11 @@ export default [
         route: '/collectionReport',
         key: 'tab-collectionreport',
       },
-      {
-        name: 'Sale Report',
-        route: '/saleReport',
-        key: 'tab-saleReport',
-      },
+      // {
+      //   name: 'Sale Report',
+      //   route: '/saleReport',
+      //   key: 'tab-saleReport',
+      // },
     ],
   },
 ];

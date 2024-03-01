@@ -577,10 +577,10 @@ function BillRow({
       ) : null}
       <TableCustomCell>
         {orderDetail?.schedulePaymentDate
-          ? globalUtils?.getTimeFormat(orderDetail.schedulePaymentDate, true)
+          ? globalUtils?.getTimeFormat(data.schedulePaymentDate, true)
           : '--'}
       </TableCustomCell>
-      <TableCustomCell>{orderDetail?.accountsNotes || '--'}</TableCustomCell>
+      <TableCustomCell>{data?.accountsNotes || '--'}</TableCustomCell>
       {/* {editEnabled ? (
         <Button onClick={() => onRemove()}>
           <Dismiss16Filled />

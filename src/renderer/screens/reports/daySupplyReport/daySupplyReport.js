@@ -1,10 +1,12 @@
 /* eslint-disable no-restricted-syntax */
 import {
   collection,
+  doc,
   getDocs,
   limit,
   orderBy,
   query,
+  updateDoc,
   where,
 } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
@@ -32,6 +34,8 @@ export default function DaySupplyReportPrint() {
   const [supplyReports, setSupplyReports] = useState([]);
   const [unSuppliedOrders, setUnSuppliedOrders] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [allowEditRemark, setAllowEditRemarks] = useState(false);
+  const [newRemarks, setNewRemarks] = useState({});
 
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
@@ -75,9 +79,9 @@ export default function DaySupplyReportPrint() {
       setLoading(true);
       try {
         const querySnapshot = await getDocs(dynamicQuery);
-        let supplyReportData = querySnapshot.docs.map((doc) => ({
-          ...doc.data(),
-          id: doc.id,
+        let supplyReportData = querySnapshot.docs.map((doc1) => ({
+          ...doc1.data(),
+          id: doc1.id,
         }));
         supplyReportData = supplyReportData.sort(
           (rd1, rd2) => rd1.dispatchTimestamp - rd2.dispatchTimestamp,
@@ -87,8 +91,8 @@ export default function DaySupplyReportPrint() {
           (x) => x.status !== constants.firebase.supplyReportStatus.TOACCOUNTS,
         );
         const querySnapshotunsupplier = await getDocs(dynamicQueryOrder);
-        const unSuppliedOrders1 = querySnapshotunsupplier.docs.map((doc) => ({
-          ...doc.data(),
+        const unSuppliedOrders1 = querySnapshotunsupplier.docs.map((doc1) => ({
+          ...doc1.data(),
         }));
 
         setSupplyReports(supplyReportData);
@@ -101,6 +105,30 @@ export default function DaySupplyReportPrint() {
 
     fetchData();
   };
+
+  const submitRemarks = async () => {
+    if (!allowEditRemark) {
+      setAllowEditRemarks(true);
+      return;
+    }
+    if (Object.keys(newRemarks).length === 0) {
+      setAllowEditRemarks(false);
+      return;
+    }
+    try {
+      Object.keys(newRemarks).forEach(async (orderId) => {
+        const orderRef = doc(firebaseDB, 'orders', orderId);
+        await updateDoc(orderRef, {
+          accountsNotes: newRemarks[orderId],
+        });
+      });
+      setAllowEditRemarks(false);
+      onSearch();
+    } catch (e) {
+      alert('Error updating remarks');
+    }
+  };
+
   useEffect(() => {
     onSearch(true);
   }, []);
@@ -128,7 +156,12 @@ export default function DaySupplyReportPrint() {
             Search
           </Button>
 
-          <Button onClick={handlePrint}>Print</Button>
+          <Button disabled={allowEditRemark} onClick={handlePrint}>
+            Print
+          </Button>
+          <Button onClick={() => submitRemarks()}>
+            {allowEditRemark ? 'Save Remarks' : 'Edit Remarks'}
+          </Button>
         </div>
         {loading ? (
           <Spinner />
@@ -140,6 +173,8 @@ export default function DaySupplyReportPrint() {
                   key={`supply-report-all-list-${sr.id}`}
                   index={i}
                   data={sr}
+                  editRemarks={allowEditRemark}
+                  setRemarks={setNewRemarks}
                 />
               );
             })}
@@ -147,8 +182,34 @@ export default function DaySupplyReportPrint() {
               {unSuppliedOrders.length === 0 ? 'No ' : ''}Unsupplied Bills
             </h2>
             <table>
+              <thead className="supply-report-row">
+                <th>
+                  <Text>Party Name</Text>
+                </th>
+                <th>
+                  <Text>Bill Number</Text>
+                </th>
+                <th>
+                  <Text>Amount</Text>
+                </th>
+                <th>
+                  <Text>Goods</Text>
+                </th>
+                <th>
+                  <Text>Payment</Text>
+                </th>
+                <th>
+                  <Text>Remarks</Text>
+                </th>
+              </thead>
               {unSuppliedOrders?.map((unso) => {
-                return <SupplyReportOrderRow billId={unso.id} />;
+                return (
+                  <SupplyReportOrderRow
+                    editRemarks={allowEditRemark}
+                    billId={unso.id}
+                    setRemarks={setNewRemarks}
+                  />
+                );
               })}
             </table>
           </div>
@@ -163,7 +224,7 @@ export default function DaySupplyReportPrint() {
   );
 }
 
-function SupplyReportRow({ data, index }) {
+function SupplyReportRow({ data, index, editRemarks, setRemarks }) {
   const navigate = useNavigate();
 
   const { allUsers } = useAuthUser();
@@ -198,13 +259,17 @@ function SupplyReportRow({ data, index }) {
       </thead>
 
       {data.orders.map((x) => (
-        <SupplyReportOrderRow billId={x} />
+        <SupplyReportOrderRow
+          setRemarks={setRemarks}
+          editRemarks={editRemarks}
+          billId={x}
+        />
       ))}
     </table>
   );
 }
 
-function SupplyReportOrderRow({ billId }) {
+function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
   const [order, setOrder] = useState();
   const [loading, setLoading] = useState(false);
   const fetchOrder = async () => {
@@ -248,7 +313,20 @@ function SupplyReportOrderRow({ billId }) {
       <td style={{ width: '10%' }}>
         {globalUtils.getCurrencyFormat(getPaymentSum) || '--'}
       </td>
-      <td style={{ width: '20%' }}>{order.accountsNotes || '--'}</td>
+      <td style={{ width: '20%' }}>
+        {editRemarks ? (
+          <Input
+            size="small"
+            appearance="outline"
+            onChange={(e) =>
+              setRemarks((x) => ({ ...x, [order.id]: e.target.value }))
+            }
+            defaultValue={order.accountsNotes}
+          />
+        ) : (
+          order.accountsNotes
+        )}
+      </td>
     </tbody>
   );
 }
