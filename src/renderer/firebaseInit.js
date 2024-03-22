@@ -37,11 +37,11 @@ initializeFirestore(firebaseApp, {
 export default firebaseApp;
 
 export const firebaseDB = getFirestore(firebaseApp);
-// connectFirestoreEmulator(firebaseDB, '127.0.0.1', '8080');
+connectFirestoreEmulator(firebaseDB, '127.0.0.1', '8080');
 
 const analytics = getAnalytics(firebaseApp);
 
 export const firebaseStorage = getStorage(firebaseApp);
-// connectStorageEmulator(firebaseDB, '127.0.0.1', '9199');
+connectStorageEmulator(firebaseDB, '127.0.0.1', '9199');
 
 export const firebaseAuth = getAuth(firebaseApp);

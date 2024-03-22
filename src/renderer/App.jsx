@@ -51,7 +51,7 @@ import VoucherScreen from './screens/vouchers/vouchersScreen';
 import DaySupplyReportPrint from './screens/reports/daySupplyReport/daySupplyReport';
 import ExpenseReport from './screens/reports/expenseReport/expenseReport';
 import CashReport from './screens/reports/cashReport/cashReport';
-import SaleReportScreen from './screens/reports/saleReport/saleReport';
+import SaleReport from './screens/reports/saleReport/saleReport';
 
 const myNewTheme = {
   10: '#010304',
@@ -193,10 +193,7 @@ export default function App({ routeProps, startRoute, printData }) {
                           path="/collectionReport"
                           element={<CashReport />}
                         />
-                        <Route
-                          path="/saleReport"
-                          element={<SaleReportScreen />}
-                        />
+                        <Route path="/saleReport" element={<SaleReport />} />
                       </Routes>
                     </TabNavigator>
                   </Router>

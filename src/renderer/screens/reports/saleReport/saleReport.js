@@ -1,10 +1,12 @@
 /* eslint-disable no-restricted-syntax */
 import {
   collection,
+  doc,
   getDocs,
   limit,
   orderBy,
   query,
+  updateDoc,
   where,
 } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
@@ -13,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
+  Checkbox,
   Dropdown,
   Input,
   Option,
@@ -28,10 +31,14 @@ import { firebaseDB } from '../../../firebaseInit';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
 
-export default function SaleReportScreen() {
-  const [bills, setBills] = useState([]);
-
+export default function SaleReport() {
+  const [todaysBills, setTodaysBills] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [allowEditRemark, setAllowEditRemarks] = useState(false);
+  const [newRemarks, setNewRemarks] = useState({});
+
+  // filters
+  const [filterNoPayments, setFilterNoPayments] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
@@ -39,11 +46,11 @@ export default function SaleReportScreen() {
   const handlePrint = () => {
     window.electron.ipcRenderer.sendMessage('printCurrentPage');
   };
-  const onSearch = (clear) => {
-    const saleRef = collection(firebaseDB, 'orders');
 
-    // Build the query dynamically based on non-empty filter fields
-    let dynamicQuery = saleRef;
+  const onSearch = (clear) => {
+    const ordersRef = collection(firebaseDB, 'orders');
+
+    let dynamicQueryOrder = ordersRef;
 
     const dateFrom = new Date(selectedDate);
     dateFrom.setHours(0);
@@ -54,8 +61,8 @@ export default function SaleReportScreen() {
     dateTo.setMinutes(59);
     dateTo.setSeconds(59);
 
-    dynamicQuery = query(
-      dynamicQuery,
+    dynamicQueryOrder = query(
+      dynamicQueryOrder,
       where('billCreationTime', '>=', dateFrom.getTime()),
       where('billCreationTime', '<=', dateTo.getTime()),
     );
@@ -64,24 +71,52 @@ export default function SaleReportScreen() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const querySnapshot = await getDocs(dynamicQuery);
-        let saleReportData = querySnapshot.docs.map((doc) => ({
-          ...doc.data(),
-          id: doc.id,
+        const querySnapshotunsupplier = await getDocs(dynamicQueryOrder);
+        const todaysBills1 = querySnapshotunsupplier.docs.map((doc1) => ({
+          ...doc1.data(),
         }));
-        saleReportData = saleReportData.sort(
-          (rd1, rd2) => rd1.billCreationTime - rd2.billCreationTime,
-        );
+        const mrWise = {};
+        todaysBills1.forEach((elem) => {
+          if (mrWise[elem.mrId] === undefined) {
+            mrWise[elem.mrId] = [elem];
+          } else {
+            mrWise[elem.mrId].push(elem);
+          }
+        });
 
-        setBills(saleReportData);
+        setTodaysBills(mrWise);
       } catch (error) {
-        console.error('Error fetching all bills', error);
+        console.error('Error fetching supply reports:', error);
       }
       setLoading(false);
     };
 
     fetchData();
   };
+
+  const submitRemarks = async () => {
+    if (!allowEditRemark) {
+      setAllowEditRemarks(true);
+      return;
+    }
+    if (Object.keys(newRemarks).length === 0) {
+      setAllowEditRemarks(false);
+      return;
+    }
+    try {
+      Object.keys(newRemarks).forEach(async (orderId) => {
+        const orderRef = doc(firebaseDB, 'orders', orderId);
+        await updateDoc(orderRef, {
+          accountsNotes: newRemarks[orderId],
+        });
+      });
+      setAllowEditRemarks(false);
+      onSearch();
+    } catch (e) {
+      alert('Error updating remarks');
+    }
+  };
+
   useEffect(() => {
     onSearch(true);
   }, []);
@@ -100,7 +135,6 @@ export default function SaleReportScreen() {
             placeholder="From"
             value={selectedDate}
           />
-
           <Button
             onClick={() => {
               onSearch();
@@ -108,28 +142,63 @@ export default function SaleReportScreen() {
           >
             Search
           </Button>
-
-          <Button onClick={handlePrint}>Print</Button>
+          <Button disabled={allowEditRemark} onClick={handlePrint}>
+            Print
+          </Button>
+          <Button onClick={() => submitRemarks()}>
+            {allowEditRemark ? 'Save Remarks' : 'Edit Remarks'}
+          </Button>
+          <span>
+            <Checkbox
+              checked={filterNoPayments}
+              onChange={(ev, data) => setFilterNoPayments(data.checked)}
+            />{' '}
+            Filter no payments
+          </span>
         </div>
         {loading ? (
           <Spinner />
         ) : (
-          <table>
-            <thead>
-              <th>Bill Number</th>
-              <th>Party Name</th>
-              <th>Bill Date</th>
-              <th>Amount</th>
-              <th>Payment</th>
-              <th>Remarks</th>
-            </thead>
-            {bills.map((x, i) => {
-              return <SupplyReportOrderRow order={x} />;
+          <div>
+            <h2>{todaysBills.length === 0 ? 'No ' : ''}All Bills</h2>
+
+            {Object.keys(todaysBills)?.map((unso) => {
+              return (
+                <table>
+                  <thead className="supply-report-row">
+                    <th>
+                      <Text>
+                        MR: {allUsers.find((x) => x.uid === unso)?.username}
+                      </Text>
+                    </th>
+                    <th>
+                      <Text>Bill Number</Text>
+                    </th>
+                    <th>
+                      <Text>Bill Amount</Text>
+                    </th>
+                    <th>
+                      <Text>Payment Received</Text>
+                    </th>
+                    <th>
+                      <Text>Remarks</Text>
+                    </th>
+                  </thead>
+                  {todaysBills[unso].map((x) => (
+                    <TodaysBillRow
+                      filterNoPayments={filterNoPayments}
+                      editRemarks={allowEditRemark}
+                      billId={x.id}
+                      setRemarks={setNewRemarks}
+                    />
+                  ))}
+                </table>
+              );
             })}
-          </table>
+          </div>
         )}
-        {!loading && bills.length === 0 ? (
-          <div>No Supply Reports found</div>
+        {!loading && todaysBills.length === 0 ? (
+          <div>No bills found</div>
         ) : null}
       </div>
 
@@ -138,15 +207,15 @@ export default function SaleReportScreen() {
   );
 }
 
-function SupplyReportOrderRow({ order }) {
+function TodaysBillRow({ billId, editRemarks, setRemarks, filterNoPayments }) {
+  const [order, setOrder] = useState();
   const [loading, setLoading] = useState(false);
-  const [party, setParty] = useState();
-  const fetchParty = async () => {
+  const fetchOrder = async () => {
     setLoading(true);
     try {
-      const newOrder = await globalUtils.fetchPartyInfoForOrders([order]);
-      setParty(newOrder[0]);
-      console.log(newOrder);
+      const order1 = await globalUtils.fetchOrdersByIds([billId]);
+      const newOrder = await globalUtils.fetchPartyInfoForOrders(order1);
+      setOrder(newOrder[0]);
     } catch (e) {
       console.log(e);
     }
@@ -154,27 +223,53 @@ function SupplyReportOrderRow({ order }) {
   };
 
   useEffect(() => {
-    fetchParty();
+    fetchOrder();
   }, []);
 
   if (loading) return <Spinner />;
-  if (!party) return <div>Error loading order</div>;
+  if (!loading && !order) return <div>Error loading order</div>;
+
   const getPaymentSum = order.payments?.reduce(
     (acc, current) => acc + (parseInt(current.amount, 10) || 0),
     0,
   );
+
+  if (!loading && order && filterNoPayments && getPaymentSum) {
+    return null;
+  }
+  console.log(getPaymentSum);
   return (
-    <tbody className="sale-report-print-bill-detail">
-      <td style={{ width: '10%' }}>{order.billNumber || '--'}</td>
-      <td style={{ width: '40%' }}>{party.party.name}</td>
-      <td style={{ width: '10%' }}>
-        {globalUtils.getTimeFormat(order.billCreationTime, true)}
-      </td>
+    <tbody className="supply-report-print-bill-detail">
+      <td style={{ width: '20%' }}>{order.party.name}</td>
+      <td style={{ width: '10%' }}>{order.billNumber}</td>
       <td style={{ width: '10%' }}>
         {globalUtils.getCurrencyFormat(order.orderAmount)}
       </td>
-      <td>{globalUtils.getCurrencyFormat(getPaymentSum) || '--'}</td>
-      <td>{order.accountsNotes || '--'}</td>
+      {/* <td style={{ width: '20%' }}>
+        {order.bags
+          .filter((x) => x.quantity > 0)
+          .map((x) => `${x.quantity} ${x.bagType}`)
+          .join(',')}
+      </td> */}
+
+      <td style={{ width: '10%' }}>
+        <b> {globalUtils.getCurrencyFormat(getPaymentSum) || '--'}</b>
+      </td>
+      <td style={{ width: '20%' }}>
+        {editRemarks ? (
+          <Input
+            size="small"
+            appearance="outline"
+            onChange={(e) =>
+              setRemarks((x) => ({ ...x, [order.id]: e.target.value }))
+            }
+            defaultValue={order.accountsNotes}
+          />
+        ) : (
+          order.accountsNotes
+        )}
+      </td>
+      {/* <td>{order.orderStatus}</td> */}
     </tbody>
   );
 }
