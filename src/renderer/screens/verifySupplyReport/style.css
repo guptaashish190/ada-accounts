@@ -14,8 +14,12 @@
   color: grey;
 }
 
-.verify-supply-report .party-section-container .party-info-header .amount {
+.verify-supply-report .party-opening-row{
   font-weight: bold;
+  font-size: 1.1em;
+  color: rgb(116, 116, 116);
+  margin: 20px 0;
+  
 }
 
 .verify-supply-report .party-old-bills {
@@ -35,9 +39,6 @@
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
 }
 
-.verify-supply-report .old-bill.amount {
-  font-weight: bold;
-}
 
 .verify-supply-report .old-bill {
   padding: 5px 0;

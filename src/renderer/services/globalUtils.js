@@ -84,14 +84,18 @@ export default {
     try {
       const updatedOrders = await Promise.all(
         orders.map(async (order) => {
-          const partyRef = doc(firebaseDB, 'parties', order.partyId); // Replace 'parties' with your collection name
+          try {
+            const partyRef = doc(firebaseDB, 'parties', order.partyId); // Replace 'parties' with your collection name
 
-          const partySnapshot = await getDoc(partyRef);
+            const partySnapshot = await getDoc(partyRef);
 
-          if (partySnapshot.exists()) {
-            const partyData = partySnapshot.data();
-            // Replace the partyId with the party object
-            return { ...order, party: partyData };
+            if (partySnapshot.exists()) {
+              const partyData = partySnapshot.data();
+              // Replace the partyId with the party object
+              return { ...order, party: partyData };
+            }
+          } catch (e) {
+            console.error(e);
           }
           // If the party document doesn't exist, you can handle this case as needed.
           // For example, you can return the order as is or mark it as an invalid order.
@@ -217,11 +221,20 @@ export default {
   },
 
   getTotalCases: (bills) =>
-    bills.reduce((acc, cur) => acc + cur.bags[0].quantity, 0),
+    bills.reduce((acc, cur) => {
+      if (!cur.bags) return 0;
+      return acc + cur.bags[0].quantity;
+    }, 0),
   getTotalPackets: (bills) =>
-    bills.reduce((acc, cur) => acc + cur.bags[1].quantity, 0),
+    bills.reduce((acc, cur) => {
+      if (!cur.bags) return 0;
+      return acc + cur.bags[1].quantity;
+    }, 0),
   getTotalPolyBags: (bills) =>
-    bills.reduce((acc, cur) => acc + cur.bags[2].quantity, 0),
+    bills.reduce((acc, cur) => {
+      if (!cur.bags) return 0;
+      return acc + cur.bags[2].quantity;
+    }, 0),
 };
 
 export const useDebounce = (value, delay = 500) => {

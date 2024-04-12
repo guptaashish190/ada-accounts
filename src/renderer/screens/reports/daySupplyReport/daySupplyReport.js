@@ -192,9 +192,9 @@ export default function DaySupplyReportPrint() {
                 <th>
                   <Text>Amount</Text>
                 </th>
-                <th>
+                {/* <th>
                   <Text>Goods</Text>
-                </th>
+                </th> */}
                 <th>
                   <Text>Payment</Text>
                 </th>
@@ -240,14 +240,7 @@ function SupplyReportRow({ data, index, editRemarks, setRemarks }) {
             {allUsers.find((x) => x.uid === data.supplymanId)?.username}
           </Text>
         </th>
-        <th>
-          <Text className="sr-parties-length">
-            {data.orders.length +
-              (data.attachedBills?.length || 0) +
-              (data.supplementaryBills?.length || 0)}{' '}
-            Bills{' '}
-          </Text>
-        </th>
+
         <th>
           {' '}
           <Text className="sr-supplyman">
@@ -298,22 +291,24 @@ function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
 
   return (
     <tbody className="supply-report-print-bill-detail">
-      <td style={{ width: '20%' }}>{order.party.name}</td>
-      <td style={{ width: '10%' }}>{order.billNumber}</td>
-      <td style={{ width: '10%' }}>
+      <td style={{ width: '30vw' }}>{order.party?.name}</td>
+      <td style={{ width: '10vw' }}>{order.billNumber}</td>
+      <td style={{ width: '10vw' }}>
         {globalUtils.getCurrencyFormat(order.orderAmount)}
       </td>
-      <td style={{ width: '20%' }}>
+      {/* <td style={{ width: '20vw' }}>
         {order.bags
-          .filter((x) => x.quantity > 0)
-          .map((x) => `${x.quantity} ${x.bagType}`)
-          .join(',')}
-      </td>
+          ? order.bags
+              .filter((x) => x.quantity > 0)
+              .map((x) => `${x.quantity} ${x.bagType}`)
+              .join(',')
+          : ''}
+      </td> */}
 
-      <td style={{ width: '10%' }}>
+      <td style={{ width: '10vw' }}>
         {globalUtils.getCurrencyFormat(getPaymentSum) || '--'}
       </td>
-      <td style={{ width: '20%' }}>
+      <td style={{ width: '20vw' }}>
         {editRemarks ? (
           <Input
             size="small"

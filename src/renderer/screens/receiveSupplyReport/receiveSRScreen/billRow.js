@@ -51,9 +51,6 @@ export default function BillRow({
   isReturned,
   onReturn,
   onUndo,
-  openAdjustDialog,
-  otherAdjustedBills,
-  setOtherAdjustedBills,
 }) {
   const [cash, setCash] = useState('');
   const [cheque, setCheque] = useState('');
@@ -70,7 +67,9 @@ export default function BillRow({
   const { dispatchToast } = useToastController(toasterId);
 
   useEffect(() => {
-    const paytemp = data.flow[data.flow.length - 1]?.payload?.payments;
+    const paytemp = data.flow
+      ? data.flow[data.flow.length - 1]?.payload?.payments
+      : false;
     if (paytemp) {
       paytemp.forEach((fetched) => {
         if (fetched.type === 'Cash') {
@@ -86,82 +85,37 @@ export default function BillRow({
     }
   }, []);
 
-  const cashOtherBills = otherAdjustedBills.filter(
-    (o) => o.partyId === data.partyId && o.payments[0].type === 'cash',
-  );
-  const chequeOtherBills = otherAdjustedBills.filter(
-    (o) => o.partyId === data.partyId && o.payments[0].type === 'cheque',
-  );
-  const upiOtherBills = otherAdjustedBills.filter(
-    (o) => o.partyId === data.partyId && o.payments[0].type === 'upi',
-  );
-
   const receive = () => {
     let newPayments = data.payments || [];
-    // Remove payment for current bill in otherBills list and add to the current bill.
-    let cash1 = cash;
-    let cheque1 = cheque;
-    let upi1 = upi;
-
-    const currentCashPayment = cashOtherBills.find((o) => o.id === data.id);
-    const currentChequePayment = chequeOtherBills.find((o) => o.id === data.id);
-    const currentUpiPayment = upiOtherBills.find((o) => o.id === data.id);
-
-    if (currentCashPayment) {
-      setOtherAdjustedBills((oab) =>
-        oab.filter(
-          (oabf) => !(oabf.id === data.id && oabf.payments[0].type === 'cash'),
-        ),
-      );
-      cash1 = currentCashPayment.payments[0].amount;
-    }
-    if (currentChequePayment) {
-      setOtherAdjustedBills((oab) =>
-        oab.filter(
-          (oabf) =>
-            !(oabf.id === data.id && oabf.payments[0].type === 'cheque'),
-        ),
-      );
-      cheque1 = currentChequePayment.payments[0].amount;
-    }
-    if (currentUpiPayment) {
-      setOtherAdjustedBills((oab) =>
-        oab.filter(
-          (oabf) => !(oabf.id === data.id && oabf.payments[0].type === 'upi'),
-        ),
-      );
-      upi1 = currentUpiPayment.payments[0].amount;
-    }
-
-    const other1 = parseInt(otherPayment || '0');
+    // Remove payment for current bi
 
     const totalBillPayament =
       parseInt(otherPayment || '0') +
-      parseInt(cash1 || '0') +
-      parseInt(upi1 || '0') +
-      parseInt(cheque1 || '0');
+      parseInt(cash || '0') +
+      parseInt(upi || '0') +
+      parseInt(cheque || '0');
 
-    if (!scheduleDate && totalBillPayament < data.balance) {
-      showToast(dispatchToast, 'Select a schedule date', 'error');
-      return;
-    }
+    // if (!scheduleDate && totalBillPayament < data.balance) {
+    //   showToast(dispatchToast, 'Select a schedule date', 'error');
+    //   return;
+    // }
     newPayments = [
       ...newPayments,
-      cash1 > 0 && {
+      cash > 0 && {
         type: 'cash',
-        amount: cash1,
+        amount: cash,
       },
-      cheque1 > 0 && {
+      cheque > 0 && {
         type: 'cheque',
-        amount: cheque1,
+        amount: cheque,
       },
-      upi1 > 0 && {
+      upi > 0 && {
         type: 'upi',
-        amount: upi1,
+        amount: upi,
       },
-      other1 > 0 && {
+      otherPayment > 0 && {
         type: 'other',
-        amount: other1,
+        amount: otherPayment,
       },
     ].filter(Boolean);
     const tempBill = {
@@ -171,10 +125,6 @@ export default function BillRow({
       ...(scheduleDate && { schedulePaymentDate: scheduleDate.getTime() }),
       with: 'Accounts',
     };
-
-    setCash(cash1);
-    setCheque(cheque1);
-    setUpi(upi1);
 
     onReceive(tempBill);
   };
@@ -239,64 +189,28 @@ export default function BillRow({
         </div>
         <div className="bill-row-bottom">
           <Input
-            disabled={disabled || cashOtherBills.length}
             className={`input ${disabled ? '' : 'payment'}`}
             onChange={(_, e) => setCash(e.value)}
             placeholder="Cash"
             value={cash}
             contentBefore="₹"
             type="number"
-            contentAfter={
-              <ContentAfterInputReceive
-                otherBills={cashOtherBills}
-                setOtherAdjustedBills={setOtherAdjustedBills}
-                data={data}
-                setInputContent={setCash}
-                inputContent={cash}
-                type="cash"
-                openAdjustDialog={openAdjustDialog}
-              />
-            }
           />
           <Input
-            disabled={disabled || chequeOtherBills.length}
             className={`input ${disabled ? '' : 'payment'}`}
             onChange={(_, e) => setCheque(e.value)}
             placeholder="Cheque"
             contentBefore="₹"
             value={cheque}
             type="number"
-            contentAfter={
-              <ContentAfterInputReceive
-                otherBills={chequeOtherBills}
-                setOtherAdjustedBills={setOtherAdjustedBills}
-                data={data}
-                setInputContent={setCheque}
-                inputContent={cheque}
-                type="cheque"
-                openAdjustDialog={openAdjustDialog}
-              />
-            }
           />
           <Input
-            disabled={disabled || upiOtherBills.length}
             className={`input ${disabled ? '' : 'payment'}`}
             onChange={(_, e) => setUpi(e.value)}
             placeholder="UPI"
             value={upi}
             contentBefore="₹"
             type="number"
-            contentAfter={
-              <ContentAfterInputReceive
-                otherBills={upiOtherBills}
-                setOtherAdjustedBills={setOtherAdjustedBills}
-                data={data}
-                setInputContent={setUpi}
-                inputContent={upi}
-                type="upi"
-                openAdjustDialog={openAdjustDialog}
-              />
-            }
           />
           <Input
             disabled={disabled}
@@ -327,43 +241,6 @@ export default function BillRow({
         </div>
       </center>
       <VerticalSpace1 />
-    </div>
-  );
-}
-
-function ContentAfterInputReceive({
-  otherBills,
-  setOtherAdjustedBills,
-  data,
-  setInputContent,
-  inputContent,
-  type,
-  openAdjustDialog,
-}) {
-  return otherBills.length ? (
-    <div
-      onClick={() => {
-        setOtherAdjustedBills((od) =>
-          od.filter(
-            (odf) =>
-              !(odf.partyId === data.partyId && odf.payments[0].type === type),
-          ),
-        );
-        setInputContent('');
-      }}
-    >
-      <Dismiss12Filled />
-    </div>
-  ) : (
-    <div
-      onClick={() => {
-        if (inputContent.length) {
-          openAdjustDialog(data, `${inputContent}`, type);
-        }
-        setInputContent('');
-      }}
-    >
-      <Open12Filled />
     </div>
   );
 }

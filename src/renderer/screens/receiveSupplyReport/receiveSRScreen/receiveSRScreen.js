@@ -57,8 +57,6 @@ export default function ReceiveSRScreen() {
   );
   const [receivedBills, setReceivedBills] = useState([]);
   const [returnedBills, setReturnedBills] = useState([]);
-  const [openAdjustAmountDialog, setOpenAdjustAmountDialog] = useState();
-  const [otherAdjustedBills, setOtherAdjustedBills] = useState([]);
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
@@ -178,12 +176,6 @@ export default function ReceiveSRScreen() {
             with: rb.with,
           })),
         ],
-        otherAdjustedBills: otherAdjustedBills.map((oab1) => {
-          return {
-            billId: oab1.id,
-            payments: oab1.payments,
-          };
-        }),
         ...(!isBundle
           ? {
               returnedBills: [
@@ -212,12 +204,6 @@ export default function ReceiveSRScreen() {
             },
           ],
           payments: [...paymentsObj, ...rb2.payments],
-          balance:
-            rb2.balance -
-            rb2.payments.reduce(
-              (acc, cur) => acc + parseInt(cur.amount, 10),
-              0,
-            ),
           flowCompleted: true,
           orderStatus: 'Received Bill',
           with: rb2.with,
@@ -247,43 +233,6 @@ export default function ReceiveSRScreen() {
           accountsNotes: rb2.notes || '',
         });
       }
-      // Update  balance of other bills adjusted
-      for await (const oab of otherAdjustedBills) {
-        const orderRef = doc(firebaseDB, 'orders', oab.id);
-
-        updateDoc(orderRef, {
-          balance:
-            oab.balance -
-            oab.payments.reduce(
-              (acc, cur) => acc + parseInt(cur.amount, 10),
-              0,
-            ),
-        });
-      }
-
-      // update party payments
-      for await (const oab1 of [...receivedBills, ...otherAdjustedBills]) {
-        if (oab1.payments?.length) {
-          const partyRef = doc(firebaseDB, 'parties', oab1.partyId);
-
-          const partySnapshot = await getDoc(partyRef);
-          let newPayments = partySnapshot.data().payments || [];
-
-          const addedPayments = oab1.payments.map((oab1p) => ({
-            ...oab1p,
-            timestamp: Timestamp.now().toMillis(),
-            ...(isBundle
-              ? { supplyReportId: supplyReport.id }
-              : { bundleId: supplyReport.id }),
-            billId: oab1.id,
-          }));
-
-          newPayments = [...newPayments, ...addedPayments];
-          updateDoc(partyRef, {
-            payments: newPayments,
-          });
-        }
-      }
 
       showToast(dispatchToast, 'All Bills Received', 'success');
       onCreateCashReceipt();
@@ -297,7 +246,7 @@ export default function ReceiveSRScreen() {
   const onCreateCashReceipt = () => {
     const prItems = {};
 
-    [...receivedBills, ...otherAdjustedBills].forEach((cRBill) => {
+    receivedBills.forEach((cRBill) => {
       if (cRBill.payments?.length) {
         cRBill.payments.forEach((crBillP) => {
           if (crBillP.type === 'cash') {
@@ -336,16 +285,7 @@ export default function ReceiveSRScreen() {
   return (
     <>
       <Toaster toasterId={toasterId} />
-      <AdjustAmountDialog
-        adjustedBills={otherAdjustedBills}
-        setAdjustedBills={setOtherAdjustedBills}
-        party={openAdjustAmountDialog?.orderData.party}
-        amountToAdjust={openAdjustAmountDialog?.amount}
-        type={openAdjustAmountDialog?.type}
-        onDone={() => {
-          setOpenAdjustAmountDialog();
-        }}
-      />
+
       <center>
         <div className="receive-sr-container">
           <h3>
@@ -384,11 +324,6 @@ export default function ReceiveSRScreen() {
                         b.filter((tb) => tb.id !== bill.id),
                       );
                     }}
-                    openAdjustDialog={(orderData, amount, type) => {
-                      setOpenAdjustAmountDialog({ orderData, amount, type });
-                    }}
-                    setOtherAdjustedBills={setOtherAdjustedBills}
-                    otherAdjustedBills={otherAdjustedBills}
                   />
                   {groupedOldBills[bill.partyId]?.map((oldBill) => {
                     return (
@@ -421,39 +356,10 @@ export default function ReceiveSRScreen() {
                             b.filter((tb) => tb.id !== oldBill.id),
                           );
                         }}
-                        openAdjustDialog={(orderData, amount, type) => {
-                          setOpenAdjustAmountDialog({
-                            orderData,
-                            amount,
-                            type,
-                          });
-                        }}
-                        setOtherAdjustedBills={setOtherAdjustedBills}
-                        otherAdjustedBills={otherAdjustedBills}
                       />
                     );
                   })}
                 </div>
-                {otherAdjustedBills
-                  .filter((x) => x.partyId === bill.party.id)
-                  .map((o) => {
-                    return (
-                      <div
-                        className="cashadjustedbillrows"
-                        size="small"
-                        key={`cashotherbillrow-${o.id}`}
-                      >
-                        <div>
-                          Adjusted {o.payments[0].type.toUpperCase()}
-                          {` `}
-                          {globalUtils.getCurrencyFormat(
-                            o.payments[0].amount,
-                          )}{' '}
-                          against {o.billNumber}
-                        </div>
-                      </div>
-                    );
-                  })}
               </div>
             );
           })}
@@ -495,15 +401,6 @@ export default function ReceiveSRScreen() {
                               b.filter((tb) => tb.id !== oldBill.id),
                             );
                           }}
-                          openAdjustDialog={(orderData, amount, type) => {
-                            setOpenAdjustAmountDialog({
-                              orderData,
-                              amount,
-                              type,
-                            });
-                          }}
-                          setOtherAdjustedBills={setOtherAdjustedBills}
-                          otherAdjustedBills={otherAdjustedBills}
                         />
                       );
                     },

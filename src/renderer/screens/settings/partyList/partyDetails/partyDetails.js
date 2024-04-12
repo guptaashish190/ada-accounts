@@ -18,7 +18,9 @@ import {
   DialogTrigger,
   Spinner,
 } from '@fluentui/react-components';
+import { confirmAlert } from 'react-confirm-alert';
 import { firebaseDB } from '../../../../firebaseInit';
+import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
 import './style.css';
 import BillDetailDialog from '../../../allBills/billDetail/billDetail';
 import globalUtils from '../../../../services/globalUtils';
@@ -101,9 +103,6 @@ export default function PartyDetailsScreen() {
   };
 
   const onDelete = async () => {
-    const confirm = window.confirm('Delete Party?');
-    if (!confirm) return;
-
     setLoading(true);
     const partyRef = doc(firebaseDB, 'parties', partyId);
 
@@ -135,7 +134,26 @@ export default function PartyDetailsScreen() {
           ) : null}
         </h3>
         {party && user?.isManager ? (
-          <Button onClick={() => onDelete()}>Delete Party</Button>
+          <Button
+            onClick={() => {
+              confirmAlert({
+                title: 'Confirm to submit',
+                message: 'Are you sure to do this.',
+                buttons: [
+                  {
+                    label: 'Yes',
+                    onClick: () => onDelete(),
+                  },
+                  {
+                    label: 'No',
+                    onClick: () => {},
+                  },
+                ],
+              });
+            }}
+          >
+            Delete Party
+          </Button>
         ) : null}
         <VerticalSpace1 />
         <div className="vsrc-detail-items-container">

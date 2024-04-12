@@ -87,30 +87,16 @@ export default function ReceiveBundle() {
         receivedBy: firebaseAuth.currentUser.uid,
       });
 
-      // update current bills with balance and updated flow
+      // update current bills updated flow
       for await (const rb2 of receivedBills) {
         const orderRef = doc(firebaseDB, 'orders', rb2.id);
 
         updateDoc(orderRef, {
-          balance:
-            rb2.balance -
-            rb2.payments.reduce((acc, cur) => acc + cur.amount, 0),
           with: rb2.with,
           ...(rb2.schedulePaymentDate
             ? { schedulePaymentDate: rb2.schedulePaymentDate }
             : {}),
           accountsNotes: rb2.accountsNotes || '',
-        });
-      }
-
-      // Update  balance of other bills adjusted
-      for await (const oab of otherAdjustedBills) {
-        const orderRef = doc(firebaseDB, 'orders', oab.id);
-
-        updateDoc(orderRef, {
-          balance:
-            oab.balance -
-            oab.payments.reduce((acc, cur) => acc + cur.amount, 0),
         });
       }
 

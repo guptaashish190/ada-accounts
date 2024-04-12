@@ -120,24 +120,24 @@ export default [
       },
     ],
   },
-  {
-    name: 'Credit Notes',
+  // {
+  //   name: 'Credit Notes',
 
-    key: 'tab-creditNotes',
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
-    submenu: [
-      {
-        name: 'Credit Notes',
-        route: '/creditNotes',
-        key: 'tab-creditNotes',
-      },
-      {
-        name: 'Create C/N',
-        route: '/createCreditNotes',
-        key: 'tab-createcreditNotes',
-      },
-    ],
-  },
+  //   key: 'tab-creditNotes',
+  //   allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  //   submenu: [
+  //     {
+  //       name: 'Credit Notes',
+  //       route: '/creditNotes',
+  //       key: 'tab-creditNotes',
+  //     },
+  //     {
+  //       name: 'Create C/N',
+  //       route: '/createCreditNotes',
+  //       key: 'tab-createcreditNotes',
+  //     },
+  //   ],
+  // },
   {
     name: 'Reports',
 
@@ -158,11 +158,11 @@ export default [
         route: '/collectionReport',
         key: 'tab-collectionreport',
       },
-      {
-        name: 'Sale Report',
-        route: '/saleReport',
-        key: 'tab-saleReport',
-      },
+      // {
+      //   name: 'Sale Report',
+      //   route: '/saleReport',
+      //   key: 'tab-saleReport',
+      // },
     ],
   },
 ];

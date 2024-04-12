@@ -73,7 +73,7 @@ function BillDetailDialog({ order, party, withUser, mrUser }) {
           <VerticalSpace1 />
           <Text className="label">Flow: </Text>
           <div className="flow-container">
-            {order.flow.map((fl) => {
+            {order.flow?.map((fl) => {
               return (
                 <Popover>
                   <PopoverTrigger disableButtonEnhancement>

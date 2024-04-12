@@ -224,12 +224,6 @@ function UPIDialog({ data, createdBy }) {
           const paymentsObj = orderData.data().payments || [];
           updateDoc(orderRef, {
             payments: [...paymentsObj, ...oab.payments],
-            balance:
-              oab.balance -
-              oab.payments.reduce(
-                (acc, cur) => acc + parseInt(cur.amount, 10),
-                0,
-              ),
           });
         }
       }

@@ -61,9 +61,6 @@ export default function CreateCreditNoteScreen() {
 
       const orderRef = doc(firebaseDB, 'orders', bill.id);
 
-      updateDoc(orderRef, {
-        balance: (bill.balance || 0) - amount,
-      });
       await globalUtils.incrementReceiptCounter(
         constants.newReceiptCounters.CREDITNOTE,
       );

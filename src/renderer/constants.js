@@ -27,6 +27,7 @@ export default {
       DELIVERED: 'Delivered',
       GOODS_RETURNED: 'Goods Returned',
       SUPPLY_REPORT_CANCELLED: 'Supply Report Cancelled',
+      MARG_DATA: 'Marg Data',
     },
   },
   newReceiptCounters: {

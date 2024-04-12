@@ -31,20 +31,21 @@
 
 @media print {
   @page {
-    margin: 7mm 10mm;
+    margin:5mm 5mm;
+  }
+
+  .version-name{
+    display: none;
   }
 
   body,
-  html {
+  html {  
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     height: 100% !important;
     width: 100% !important;
-    margin-top: 20px;
     page-break-after: always;
-
   }
-
   .tab-navigator .left {
     display: none;
   }
@@ -64,7 +65,6 @@
   .tab-navigator {
     overflow: visible !important;
   }
-
   .print-supply-reports-container .supply-report-row {
     background-color: white;
   }
@@ -87,8 +87,7 @@
     border: none;
     border-right: 1px solid black;
   }
-
-  * {
-    font-size: 10px !important;
+  .no-print{
+    display: none;
   }
 }

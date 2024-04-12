@@ -11,6 +11,7 @@ export default function SelectUserDropdown({
   if (!allUsers) {
     return <div>Error loading all users</div>;
   }
+  console.log(allUsers);
   return (
     <Dropdown
       disabled={disabled}
@@ -22,17 +23,22 @@ export default function SelectUserDropdown({
         setUser(data.optionValue);
       }}
     >
-      {allUsers.map((option) => (
-        <Option value={option} key={option.id}>
-          <Image
-            src={option.profilePicture}
-            style={{ width: '30px', marginRight: '10px' }}
-            shape="circular"
-          />
+      {allUsers
+        .filter((x) => !x.isDeactivated)
+        .map((option) => (
+          <Option value={option} key={option.id}>
+            <Image
+              src={
+                option.profilePicture ||
+                'https://img.freepik.com/premium-vector/man-avatar-profile-picture-vector-illustration_268834-538.jpg'
+              }
+              style={{ width: '30px', marginRight: '10px' }}
+              shape="circular"
+            />
 
-          {option.username}
-        </Option>
-      ))}
+            {option.username}
+          </Option>
+        ))}
     </Dropdown>
   );
 }

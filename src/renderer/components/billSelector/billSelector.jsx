@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/no-static-element-interactions */
 import React, { useEffect, useState } from 'react';
 import './style.css';
 
@@ -29,11 +30,22 @@ import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import constants from '../../constants';
 
-export default function BillSelector({ onBillsAdded }) {
+export default function BillSelector({
+  bills,
+  onAdd,
+  onRemove,
+  focusFirstElement,
+}) {
   const [ordersList, setOrdersList] = useState([]);
+  const [open, setOpen] = useState(false);
   const [showOrderList, setShowOrderList] = useState([]);
   const [searchPartyName, setSearchPartyName] = useState('');
-  const [addedBills, setAddedBills] = useState([]);
+
+  useEffect(() => {
+    if (!open) {
+      focusFirstElement();
+    }
+  }, [open]);
 
   const getDispatchableBills = async () => {
     const ordersRef = collection(firebaseDB, 'orders');
@@ -55,6 +67,7 @@ export default function BillSelector({ onBillsAdded }) {
           '==',
           constants.firebase.billFlowTypes.SUPPLY_REPORT_CANCELLED,
         ),
+        where('orderStatus', '==', constants.firebase.billFlowTypes.MARG_DATA),
       ),
     );
 
@@ -65,8 +78,11 @@ export default function BillSelector({ onBillsAdded }) {
       }));
       const allOrders =
         await globalUtils.fetchPartyInfoForOrders(snapshotDocData);
-      setOrdersList(allOrders);
-      setShowOrderList(allOrders);
+      allOrders.sort((a, b) =>
+        a.orderStatus === constants.firebase.billFlowTypes.MARG_DATA ? 1 : -1,
+      );
+      setOrdersList(allOrders.filter((x) => x.type !== 'R'));
+      setShowOrderList(allOrders.filter((x) => x.type !== 'R'));
     });
 
     return () => {
@@ -92,10 +108,23 @@ export default function BillSelector({ onBillsAdded }) {
     };
   }, []);
   return (
-    <div className="bill-selector">
-      <Dialog>
+    <div
+      className="bill-selector"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          setOpen(false);
+        }
+      }}
+    >
+      <Dialog open={open}>
         <DialogTrigger disableButtonEnhancement>
-          <Button size="large" style={{ width: '200px' }}>
+          <Button
+            onClick={() => {
+              setOpen(true);
+            }}
+            size="large"
+            style={{ width: '200px' }}
+          >
             Add Bill
           </Button>
         </DialogTrigger>
@@ -107,6 +136,21 @@ export default function BillSelector({ onBillsAdded }) {
               <Input
                 size="large"
                 placeholder="Party name"
+                value={searchPartyName}
+                onKeyDown={(event) => {
+                  if (event.key === 'Shift') {
+                    setOpen(false);
+                  }
+                  if (event.key === 'Enter') {
+                    if (showOrderList.length === 1) {
+                      const order1 = showOrderList[0];
+                      if (bills.findIndex((x) => x.id === order1.id) === -1) {
+                        onAdd(order1);
+                      }
+                    }
+                    setSearchPartyName('');
+                  }
+                }}
                 onChange={(t) => {
                   setSearchPartyName(t.target.value);
                 }}
@@ -119,25 +163,23 @@ export default function BillSelector({ onBillsAdded }) {
                   <OrderRow
                     key={`bill-select-id-${order.id}`}
                     isSelected={
-                      addedBills.findIndex((x) => x.id === order.id) !== -1
+                      bills.findIndex((x) => x.id === order.id) !== -1
                     }
                     onAddToggle={() => {
                       const { id } = order;
 
                       // Check if an object with the same id already exists in the list
-                      const existingIndex = addedBills.findIndex(
+                      const existingIndex = bills.findIndex(
                         (item) => item.id === id,
                       );
 
                       if (existingIndex !== -1) {
                         // If the object with the same id exists, remove it from the list
-                        setAddedBills([
-                          ...addedBills.slice(0, existingIndex),
-                          ...addedBills.slice(existingIndex + 1),
-                        ]);
+
+                        onRemove(order);
                       } else {
                         // If the object with the same id doesn't exist, add it to the list
-                        setAddedBills([...addedBills, order]);
+                        onAdd(order);
                       }
                     }}
                     order={order}
@@ -147,12 +189,16 @@ export default function BillSelector({ onBillsAdded }) {
             </DialogContent>
             <DialogActions>
               <DialogTrigger disableButtonEnhancement>
-                <Button appearance="secondary">Close</Button>
+                <Button appearance="secondary" onClick={() => setOpen(false)}>
+                  Close
+                </Button>
               </DialogTrigger>
               <DialogTrigger>
                 <Button
                   appearance="primary"
-                  onClick={() => onBillsAdded(addedBills)}
+                  onClick={() => {
+                    setOpen(false);
+                  }}
                 >
                   Add
                 </Button>
@@ -174,7 +220,11 @@ function OrderRow({ order, onAddToggle, isSelected }) {
       key={shortid.generate()}
       className={`order-row ${isSelected ? 'is-selected' : ''}`}
     >
-      <div className="bill-number">{order.challanNumber?.toUpperCase()}</div>
+      <div className="bill-number">
+        {order.challanNumber?.toUpperCase()}
+        <br />
+        {order.billNumber?.toUpperCase()}
+      </div>
       <div className="bill-name">
         <div>
           {order.party?.name} {order.fileNumber}

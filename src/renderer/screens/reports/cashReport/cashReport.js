@@ -180,6 +180,20 @@ function CashReportRow({ data, index }) {
       {data.prItems.map((x) => (
         <SupplyReportOrderRow prItem={x} />
       ))}
+      <tr>
+        <td />
+        <td />
+        <td>
+          <b>Total Amount</b>
+        </td>
+        <td>
+          <b>
+            {globalUtils.getCurrencyFormat(
+              data.prItems.reduce((acc, cur) => acc + cur.amount, 0),
+            )}
+          </b>
+        </td>
+      </tr>
     </table>
   );
 }

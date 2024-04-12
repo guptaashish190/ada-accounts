@@ -79,15 +79,17 @@ export default function ExpenseReport() {
 
         const groupedData = {};
         let total1 = 0;
-        vouchersData.forEach((vd) => {
-          if (!groupedData[vd.type]) {
-            groupedData[vd.type] = [];
-          }
-          if (groupedData[vd.type].findIndex((x) => x.id === vd.id) === -1) {
-            groupedData[vd.type].push(vd);
-            total1 += vd.amount;
-          }
-        });
+        vouchersData
+          .filter((x) => x.status !== 'Cancelled')
+          .forEach((vd) => {
+            if (!groupedData[vd.type]) {
+              groupedData[vd.type] = [];
+            }
+            if (groupedData[vd.type].findIndex((x) => x.id === vd.id) === -1) {
+              groupedData[vd.type].push(vd);
+              total1 += vd.amount;
+            }
+          });
         setTotal(total1);
         setExpenseVouchers(groupedData);
       } catch (error) {
@@ -163,9 +165,11 @@ function VoucherRow({ data, index, header }) {
         </th>
       </thead>
 
-      {data.map((x) => (
-        <VoucherDetailRow key={`expense${x.id}`} data={x} />
-      ))}
+      {data
+        .filter((x) => x.status !== 'Cancelled')
+        .map((x) => (
+          <VoucherDetailRow key={`expense${x.id}`} data={x} />
+        ))}
     </table>
   );
 }

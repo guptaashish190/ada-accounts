@@ -26,14 +26,18 @@ import {
   Timestamp,
   addDoc,
   collection,
+  deleteDoc,
   doc,
+  getDocs,
+  query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore';
 import BillSelector from '../../components/billSelector/billSelector';
 import AllUsersContext, { useAuthUser } from '../../contexts/allUsersContext';
 import constants from '../../constants';
-import { showToast } from '../../common/toaster';
+import { showToast, temp } from '../../common/toaster';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import firebaseApp, { firebaseAuth, firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
@@ -47,7 +51,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const locationState = location.state;
   const prefillSupplyReport =
     locationState?.prefillSupplyReport || prefillSupplyReportP;
-
   const [bills, setBills] = useState([]);
   const [modifiedBills, setModifiedBills] = useState([]);
   const [selectedSupplyman, setSelectedSupplyman] = useState();
@@ -101,13 +104,17 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     getNewSupplyReportNumber();
   }, []);
 
+  const onRemove = (b) => {
+    const tempBills = bills.filter((bill1) => b.id !== bill1.id);
+    const tempBills2 = modifiedBills.filter((bill1) => b.id !== bill1.id);
+    setModifiedBills(tempBills2);
+    setBills(tempBills);
+  };
   const addBills = (b) => {
     const toAddBills = [];
-    b.forEach((element) => {
-      if (bills.findIndex((x) => x.id === element.id) === -1) {
-        toAddBills.push(element);
-      }
-    });
+    if (bills.findIndex((x) => x.id === b.id) === -1) {
+      toAddBills.push(b);
+    }
 
     setBills([...bills, ...toAddBills]);
     setModifiedBills([...modifiedBills, ...toAddBills]);
@@ -146,9 +153,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     try {
       setLoading(true);
       const newSrNumber2 = await getNewSupplyReportNumber();
-      await bills.forEach(async (bill1) => {
-        await updateOrder(bill1);
-      });
+
       let reportDocRef;
       if (save) {
         reportDocRef = doc(firebaseDB, 'supplyReports', prefillSupplyReport.id);
@@ -186,15 +191,55 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       }
       const docRef = setDoc(reportDocRef, supplyReport);
 
-      for (const modifiedBill1 of modifiedBills) {
+      for await (const modifiedBill1 of modifiedBills) {
         const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
-
-        updateDoc(orderRef, {
-          bags: modifiedBill1.bags,
+        const toUpdateData = {
+          orderStatus: constants.firebase.supplyReportStatus.TOACCOUNTS,
           billNumber: modifiedBill1.billNumber,
+          bags: modifiedBill1.bags || [],
           orderAmount: parseInt(modifiedBill1.orderAmount, 10),
-        });
+          flow: [
+            ...(modifiedBill1.flow || []),
+            {
+              employeeId: firebaseAuth.currentUser.uid,
+              timestamp: Timestamp.now().toMillis(),
+              type: constants.firebase.supplyReportStatus.TOACCOUNTS,
+            },
+          ],
+        };
+        if (!modifiedBill1.margVoucherNumber) {
+          const q = query(
+            collection(firebaseDB, 'orders'),
+            where('billNumber', '==', modifiedBill1.billNumber),
+          );
+
+          const margData = (await getDocs(q)).docs;
+
+          const margDataFiltered = margData.filter(
+            (x) => x.id !== modifiedBill1.id,
+          );
+          const margDataFiltered2 = margDataFiltered.filter(
+            (x) => x.data().margVoucherNumber,
+          );
+          console.log(margData, margDataFiltered, margDataFiltered2);
+
+          if (margDataFiltered2.length > 0) {
+            await updateDoc(orderRef, {
+              ...toUpdateData,
+              margVoucherNumber: margDataFiltered2[0].data().margVoucherNumber,
+              margUpdated: true,
+            });
+            margDataFiltered.forEach((x) => {
+              deleteDoc(x.ref);
+            });
+          } else {
+            await updateDoc(orderRef, toUpdateData);
+          }
+        } else {
+          await updateDoc(orderRef, toUpdateData);
+        }
       }
+
       await globalUtils.incrementReceiptCounter(
         constants.newReceiptCounters.SUPPLYREPORTS,
       );
@@ -218,30 +263,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     }
   };
 
-  const updateOrder = async (bill1) => {
-    try {
-      // Create a reference to the specific order document
-      const orderRef = doc(firebaseDB, 'orders', bill1.id);
-
-      // Update the "orderStatus" field in the order document to "dispatched"
-      updateDoc(orderRef, {
-        orderStatus: constants.firebase.supplyReportStatus.TOACCOUNTS,
-
-        flow: [
-          ...bill1.flow,
-          {
-            employeeId: firebaseAuth.currentUser.uid,
-            timestamp: Timestamp.now().toMillis(),
-            type: constants.firebase.supplyReportStatus.TOACCOUNTS,
-          },
-        ],
-      });
-
-      console.log(`Order status updated to "dispatched"`);
-    } catch (error) {
-      console.error(`Error updating order  status:`, error);
-    }
-  };
   const onSave = () => {};
 
   const resetScreenState = () => {
@@ -264,7 +285,21 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           </h3>
           <div>{srNumber}</div>
           <VerticalSpace1 />
-          {editable ? <BillSelector onBillsAdded={(b) => addBills(b)} /> : null}
+          {editable ? (
+            <BillSelector
+              focusFirstElement={() => {
+                const inputId = document.getElementById(
+                  `createsupreport-bill-${0}`,
+                );
+                if (inputId) {
+                  inputId.focus();
+                }
+              }}
+              bills={bills}
+              onAdd={addBills}
+              onRemove={onRemove}
+            />
+          ) : null}
           <VerticalSpace2 />
           {bills.length === 0 ? (
             <div className="no-bills-added">No bills added</div>
@@ -279,14 +314,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
                   key={`createsupplyreport-${b.id}`}
                   bill={b}
                   remove={() => {
-                    const tempBills = bills.filter(
-                      (bill1) => b.id !== bill1.id,
-                    );
-                    const tempBills2 = modifiedBills.filter(
-                      (bill1) => b.id !== bill1.id,
-                    );
-                    setModifiedBills(tempBills2);
-                    setBills(tempBills);
+                    onRemove(b);
                   }}
                   updatedBill={(newBill) => {
                     const tempBill = [...modifiedBills];
@@ -404,10 +432,28 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
       document.getElementById(nextId2)?.focus();
     }
   };
+  if (!bill.bags || bill.bags?.length === 0) {
+    bill.bags = [
+      {
+        bagType: 'Case',
+        quantity: 0,
+      },
+      {
+        bagType: 'Packet',
+        quantity: 0,
+      },
+      {
+        bagType: 'Polybag',
+        quantity: 0,
+      },
+    ];
+  }
 
   return (
     <>
-      <Text className="party-name">{bill.party?.name}</Text>
+      <Text className="party-name">
+        {bill.party?.name} {bill.margUpdated ? '(Marg synced)' : ''}
+      </Text>
       <Input
         onKeyDown={(e) => handleKeyUp(e)}
         id={inputId}
@@ -438,7 +484,7 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
       <SpinButton
         disabled={!editable}
         className="spinner"
-        defaultValue={bill.bags[0].quantity}
+        defaultValue={bill.bags ? bill.bags[0].quantity : 0}
         min={0}
         max={20}
         id={shortid.generate()}
@@ -454,7 +500,7 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
       <SpinButton
         disabled={!editable}
         className="spinner"
-        defaultValue={bill.bags[1].quantity}
+        defaultValue={bill.bags ? bill.bags[1].quantity : 0}
         onChange={(_, data) => {
           const tempBill = { ...bill };
           tempBill.bags[1].quantity = parseInt(
@@ -470,7 +516,7 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
       <SpinButton
         disabled={!editable}
         className="spinner"
-        defaultValue={bill.bags[2].quantity}
+        defaultValue={bill.bags ? bill.bags[2].quantity : 0}
         min={0}
         max={20}
         id={shortid.generate()}

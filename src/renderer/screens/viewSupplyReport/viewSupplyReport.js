@@ -44,6 +44,7 @@ import {
 } from '@fluentui/react-components';
 import { Edit12Filled, Dismiss16Filled } from '@fluentui/react-icons';
 import math, { asecDependencies, parse } from 'mathjs';
+import { confirmAlert } from 'react-confirm-alert';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import globalUtils from '../../services/globalUtils';
@@ -157,10 +158,6 @@ export default function ViewSupplyReportScreen() {
   }, []);
 
   const onCancel = () => {
-    const confirm = window.confirm('Cancel supply report?');
-
-    if (!confirm) return;
-
     try {
       setLoading(true);
 
@@ -209,6 +206,8 @@ export default function ViewSupplyReportScreen() {
       numCases: globalUtils.getTotalCases(allBills),
       numPolybags: globalUtils.getTotalPolyBags(allBills),
       numPackets: globalUtils.getTotalPackets(allBills),
+      dispatchNotes: supplyReport.note,
+      accountDispatchNotes: supplyReport.dispatchAccountNotes,
     };
     window.electron.ipcRenderer.sendMessage(
       'print',
@@ -226,6 +225,8 @@ export default function ViewSupplyReportScreen() {
       bills: allBills,
       otherAdjustedBills,
       returnedGoods,
+      dispatchNotes: supplyReport.note,
+      accountDispatchNotes: supplyReport.dispatchAccountNotes,
     };
 
     window.electron.ipcRenderer.sendMessage(
@@ -310,6 +311,12 @@ export default function ViewSupplyReportScreen() {
           </div>
 
           <div className="vsrc-detail-items">
+            <div className="label">Accounts Dispatch Notes: </div>
+            <div className="value">
+              {supplyReport.dispatchAccountNotes || '--'}
+            </div>
+          </div>
+          <div className="vsrc-detail-items">
             <div className="label">Dispatch Notes: </div>
             <div className="value">{supplyReport.note || '--'}</div>
           </div>
@@ -330,7 +337,26 @@ export default function ViewSupplyReportScreen() {
         <VerticalSpace1 />
         {supplyReport.status ===
         constants.firebase.supplyReportStatus.TOACCOUNTS ? (
-          <Button onClick={() => onCancel()}>Cancel</Button>
+          <Button
+            onClick={() => {
+              confirmAlert({
+                title: 'Confirm to submit',
+                message: 'Are you sure to do this.',
+                buttons: [
+                  {
+                    label: 'Yes',
+                    onClick: () => onCancel(),
+                  },
+                  {
+                    label: 'No',
+                    onClick: () => {},
+                  },
+                ],
+              });
+            }}
+          >
+            Cancel
+          </Button>
         ) : null}
         &nbsp;
         {supplyReport.status !==
@@ -552,7 +578,7 @@ function BillRow({
         <b>{data.billNumber?.toUpperCase()}</b>
       </TableCustomCell>
       <TableCustomCell>
-        <div>{data.party.name}</div>
+        <div>{data.party?.name}</div>
       </TableCustomCell>
       <TableCustomCell>
         <b>{globalUtils.getCurrencyFormat(data.orderAmount)}</b>

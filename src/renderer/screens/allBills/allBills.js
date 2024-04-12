@@ -260,7 +260,7 @@ function BillRow({ data, index }) {
           <td>
             <b>{data.billNumber?.toUpperCase() || '--'}</b>
           </td>
-          <td>{new Date(data.creationTime).toLocaleDateString()}</td>
+          <td>{new Date(data.billCreationTime).toLocaleDateString()}</td>
           <td>{withUser || '--'}</td>
           <td>{mrUser || '--'}</td>
           <td>{globalUtils.getCurrencyFormat(data.orderAmount)}</td>

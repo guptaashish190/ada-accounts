@@ -63,19 +63,7 @@ export default function VoucherScreen() {
     setVouchers(vouchersData);
   };
 
-  const printVoucher = (voucher) => {
-    const printData = {
-      voucher,
-      username: allUsers.find((x) => x.uid === voucher.employeeId)?.username,
-      time: globalUtils.getTimeFormat(voucher.timestamp),
-      createdBy: allUsers.find((x) => x.uid === voucher.requesterId)?.username,
-    };
-    console.log(printData);
-    window.electron.ipcRenderer.sendMessage(
-      'print',
-      voucherFormatGenerator(printData),
-    );
-  };
+  const printVoucher = (voucher) => {};
 
   useEffect(() => {
     fetchVouchers();
@@ -121,52 +109,33 @@ export default function VoucherScreen() {
               <th>Date</th>
               <th>Narration</th>
               <th>Amount</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {vouchers.map((rc, i) => {
               return (
-                <tr key={`vouchers-list-${rc.id}`} className="pr-receipt-row">
+                <tr
+                  style={rc.status === 'Cancelled' ? { opacity: 0.4 } : {}}
+                  onClick={() => {
+                    if (rc.status === 'Cancelled') return;
+                    navigate('/viewVoucherScreen', {
+                      state: { voucherData: rc },
+                    });
+                  }}
+                  key={`vouchers-list-${rc.id}`}
+                  className="pr-receipt-row"
+                >
                   <td>{rc.receiptNumber}</td>
                   <td>
                     {allUsers.find((x) => x.uid === rc.employeeId)?.username ||
                       '--'}
                   </td>
-                  <td>{rc.title}</td>
-                  <td>{globalUtils.getTimeFormat(rc.timestamp)}</td>
+                  <td>
+                    {rc.type} {rc.status === 'Cancelled' ? '(CANCELLED)' : ''}
+                  </td>
+                  <td>{globalUtils.getTimeFormat(rc.timestamp, true)}</td>
                   <td>{rc.narration}</td>
                   <td>{globalUtils.getCurrencyFormat(rc.amount)}</td>
-                  <td>
-                    <center>
-                      <Button onClick={() => printVoucher(rc)}>Print</Button>
-                      <br />
-                      <br />
-                      <Dialog>
-                        <DialogTrigger>
-                          <Button>View</Button>
-                        </DialogTrigger>
-                        <DialogSurface>
-                          <DialogBody>
-                            <DialogTitle>{rc.receiptNumber}</DialogTitle>
-                            <DialogContent>
-                              <center>
-                                {rc.images?.map((x) => {
-                                  return (
-                                    <Image
-                                      width={200}
-                                      src={x}
-                                      style={{ marginRight: '10px' }}
-                                    />
-                                  );
-                                })}
-                              </center>
-                            </DialogContent>
-                          </DialogBody>
-                        </DialogSurface>
-                      </Dialog>
-                    </center>
-                  </td>
                 </tr>
               );
             })}

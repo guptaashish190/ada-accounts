@@ -61,6 +61,6 @@ table td {
   bottom: 0;
 }
 
-@page {
-  margin: 0;
+.react-confirm-alert-overlay{
+  z-index :10000000;
 }

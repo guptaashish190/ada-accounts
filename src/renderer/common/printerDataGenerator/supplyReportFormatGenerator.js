@@ -51,6 +51,31 @@ export default (data, isBundle) => {
       },
     });
   }
+  commands.push({
+    type: 'text',
+    style: {
+      margin: '5px',
+      borderBottom: '1px solid #000',
+    },
+    value: '',
+  });
+  commands.push({
+    type: 'text',
+    value: `Dispatch Notes: ${data.dispatchNotes}`,
+    style: {
+      fontSize: '12px',
+      fontFamily: 'Arial',
+    },
+  });
+
+  commands.push({
+    type: 'text',
+    value: `Account Notes: ${data.accountDispatchNotes}`,
+    style: {
+      fontSize: '12px',
+      fontFamily: 'Arial',
+    },
+  });
   if (data.bills?.length > 0) {
     commands.push({
       type: 'text',

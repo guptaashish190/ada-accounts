@@ -13,11 +13,13 @@ import {
   Input,
   Label,
   Text,
+  Textarea,
   Tooltip,
   useId,
   useToastController,
 } from '@fluentui/react-components';
 
+import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
 import {
   DeleteRegular,
   Checkmark12Filled,
@@ -36,6 +38,7 @@ import {
 } from 'firebase/firestore';
 import shortid from 'shortid';
 import { evaluate } from 'mathjs';
+import { confirmAlert } from 'react-confirm-alert';
 import globalUtils from '../../services/globalUtils';
 import { showToast } from '../../common/toaster';
 import './style.css';
@@ -55,6 +58,7 @@ export default function VerifySupplyReport() {
   const [bills, setBills] = useState([]);
   const locationState = location.state;
   const supplyReport = locationState?.supplyReport;
+  const [accountsNotes, setAccountsNotes] = useState('');
   const [attachedBills, setAttachedBills] = useState([]);
   const [supplementaryBills, setSupplementaryBills] = useState([]);
   const [supplymanUser, setSupplymanUser] = useState();
@@ -100,6 +104,7 @@ export default function VerifySupplyReport() {
       updateDoc(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
         dispatchTimestamp: Timestamp.now().toMillis(),
+        dispatchAccountNotes: accountsNotes,
         attachedBills: attachedBills
           .filter((x) => x.balance !== 0)
           .map((b) => b.id),
@@ -157,7 +162,6 @@ export default function VerifySupplyReport() {
       // Update the "orderStatus" field in the order document to "dispatched"
       updateDoc(orderRef, {
         accountsNotes: modifiedBill1.notes || '',
-        balance: parseInt(modifiedBill1.balance, 10),
         with: supplyReport.supplymanId,
       });
 
@@ -222,9 +226,31 @@ export default function VerifySupplyReport() {
           })}
         </div>
         <VerticalSpace2 />
+        <Textarea
+          style={{ width: '50vw' }}
+          size="large"
+          value={accountsNotes}
+          onChange={(e) => setAccountsNotes(e.target.value)}
+          placeholder="Account notes"
+        />
+        <br />
+        <br />
         <Button
           onClick={() => {
-            onDispatch();
+            confirmAlert({
+              title: 'Confirm to submit',
+              message: 'Are you sure to do this.',
+              buttons: [
+                {
+                  label: 'Yes',
+                  onClick: () => onDispatch(),
+                },
+                {
+                  label: 'No',
+                  onClick: () => {},
+                },
+              ],
+            });
           }}
           appearance="primary"
         >
@@ -308,10 +334,13 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
   };
 
   const getOutstanding = (orders1) => {
-    return orders1.reduce(
-      (acc, cur) =>
-        acc + (evaluate(cur.balance?.toString() || '0') || cur.orderAmount),
-      0,
+    return (
+      (bill.party?.opening || 0) +
+      orders1.reduce(
+        (acc, cur) =>
+          acc + (evaluate(cur.balance?.toString() || '0') || cur.orderAmount),
+        0,
+      )
     );
   };
 
@@ -324,11 +353,16 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
       <div className="party-info-header">
         <div className="index">{index + 1}.</div>
         <div className="party-name">{bill.party?.name}</div>
-        <div className="bill-number">{bill.billNumber.toUpperCase()}</div>
+        <div className="bill-number">{bill.billNumber?.toUpperCase()}</div>
         <div className="file-number">{bill.party?.fileNumber}</div>
-        <div className="amount">₹{bill.orderAmount}</div>
-        <div className="amount">O/S ₹{getOutstanding(oldBills)}</div>
+        <div className="amount">
+          {globalUtils.getCurrencyFormat(bill.orderAmount)}
+        </div>
+        <b>O/S {globalUtils.getCurrencyFormat(getOutstanding(oldBills))}</b> (
+        Opening - {globalUtils.getCurrencyFormat(bill.party?.opening || 0)})
+        {/* </div */}
       </div>
+
       <div className="party-old-bills">
         <div className="party-old-bills-header">BILL NO.</div>
         <div className="party-old-bills-header">BILL DATE</div>
@@ -413,21 +447,13 @@ function OldBillRow({
         {new Date(oldbill.creationTime).toLocaleDateString()}
       </div>
       <div className="old-bill with">{withUser}</div>
-      <div className="old-bill amount">₹{oldbill.orderAmount}</div>
+      <div className="old-bill amount">
+        {globalUtils.getCurrencyFormat(oldbill.orderAmount)}
+      </div>
 
-      <Tooltip content={`₹${oldbill.balance}`}>
-        <Input
-          disabled={disabled}
-          style={{ width: '100px' }}
-          size="small"
-          value={newBalance}
-          contentBefore="₹"
-          appearance="underline"
-          placeholder={`${oldbill.balance}`}
-          className="old-bill amount"
-          onChange={(_, d) => setNewBalance(d.value)}
-        />
-      </Tooltip>
+      <div className="old-bill amount">
+        {globalUtils.getCurrencyFormat(oldbill.balance)}
+      </div>
 
       <div className="old-bill">
         {globalUtils.getDaysPassed(oldbill.creationTime)}

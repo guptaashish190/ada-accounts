@@ -46,6 +46,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { File } from 'buffer';
+import { confirmAlert } from 'react-confirm-alert';
 import firebaseApp, {
   firebaseAuth,
   firebaseDB,
@@ -112,7 +113,16 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
       narration.length === 0 ||
       selectedFiles.length === 0
     ) {
-      window.alert('Enter all the details.');
+      confirmAlert({
+        title: 'Details missing',
+        message: 'Please fill all the details.',
+        buttons: [
+          {
+            label: 'Ok',
+            onClick: () => {},
+          },
+        ],
+      });
       return;
     }
 
@@ -169,15 +179,17 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
               className="dropdown filter-input"
               placeholder="User"
             >
-              {allUsers.map((user1) => (
-                <Option
-                  text={user1.username}
-                  value={user1.uid}
-                  key={`allbills-filter-user-${user1.uid}`}
-                >
-                  {user1.username}
-                </Option>
-              ))}
+              {allUsers
+                .filter((x) => !x.isDeactivated)
+                .map((user1) => (
+                  <Option
+                    text={user1.username}
+                    value={user1.uid}
+                    key={`allbills-filter-user-${user1.uid}`}
+                  >
+                    {user1.username}
+                  </Option>
+                ))}
             </Dropdown>
             <br />
             <br />
@@ -248,11 +260,18 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
     </Dialog>
   );
 }
+
 const TYPES = [
   'Petrol',
   'Parking',
   'Refreshment',
   'Office Expense',
+  'Printing & Stationary',
+  'Postage & Couriers',
+  'Loading & Unloading',
+  'Staff Welfare',
+  'Conveyance',
+  'Business Promotion',
   'Travelling Expense',
   'Repair and Maintenance',
   'Frieght Inward',

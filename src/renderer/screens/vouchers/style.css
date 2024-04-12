@@ -5,3 +5,61 @@
 .pr-list-container .pr-receipt-row .pr-id {
   font-weight: bold;
 }
+
+.pr-list-container .pr-receipt-row{
+  cursor: pointer;
+}
+
+.view-voucher-container{
+  font-size: 1em;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  align-items: center;
+  page-break-after: always;
+}
+
+.view-voucher-container .voucher-border{
+  border: 1px solid black;
+  height: 79vh;
+  width: 100%;
+  padding: 8mm;
+}
+
+.view-voucher-container .voucher-detail-row{
+  display: flex;
+  flex-direction: row;
+  font-size: 1em;
+}
+.view-voucher-container .voucher-key{
+  width: 200px;
+  font-weight: bold;
+}
+
+.view-voucher-container .signatures{
+  display: flex;
+  margin-top: 5mm;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.view-voucher-container .created-by{
+  position: absolute;
+  font-size: 0.7em;
+  bottom: 0;
+}
+
+.view-voucher-container .signatures div{
+  text-align: center;
+  font-size: 0.7em;
+  border: 1px solid black;
+  width: 150px;
+  height: 70px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 5px;
+}
+
+.view-voucher-container .date-row{
+  justify-content: flex-end;
+}
