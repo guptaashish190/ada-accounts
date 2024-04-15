@@ -156,7 +156,8 @@ export default function CreatePaymentReceiptDialog({
         time: globalUtils.getTimeFormat(state?.timestamp),
         createdBy: allUsers.find((x) => x.uid === state?.createdByUserId)
           ?.username,
-        user: paymentFrom.username,
+        user: allUsers.find((x) => x.uid === state?.paymentFromUserId)
+          ?.username,
         items: prItems,
         total: getTotal(),
         receiptNumber: state?.cashReceiptNumber,
