@@ -321,6 +321,7 @@ function ChequeEntryDialog({ onClose }) {
   const [notes, setNotes] = useState('');
 
   const handleAddCheque = async () => {
+    if (loading) return;
     if (!chequeNumber.length || !chequeDate || !party || !amount.length) {
       // eslint-disable-next-line no-alert
       alert('Enter all fields');
@@ -402,7 +403,7 @@ function ChequeEntryDialog({ onClose }) {
             />
             <VerticalSpace1 />
 
-            <Label>Cheque Date</Label>
+            <Label>Cheque Date(DD.MM.YYYY)</Label>
             <DatePicker
               allowTextInput
               formatDate={onFormatDate}
@@ -427,7 +428,7 @@ function ChequeEntryDialog({ onClose }) {
             />
             <VerticalSpace1 />
 
-            <Label>Notes (Adjusted Bills)</Label>
+            <Label>Notes</Label>
             <Input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

@@ -118,7 +118,7 @@ export default function UpiScreen() {
 
   return (
     <center>
-      <h3>Cheque/UPI</h3>
+      <h3>UPI</h3>
       {loading ? (
         <Spinner />
       ) : (
@@ -146,6 +146,7 @@ export default function UpiScreen() {
               Get
             </Button>
           </div>
+          <VerticalSpace1 />
           <table>
             <thead>
               <tr>
@@ -161,12 +162,6 @@ export default function UpiScreen() {
               {unReceivedUpiItems?.map((uri) => {
                 return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
               })}
-              <tr>
-                <td />
-                <td />
-                <td />
-                <td />
-              </tr>
               {receivedUpiItems?.map((uri) => {
                 return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
               })}
@@ -208,26 +203,13 @@ function UpiItemRow({ data }) {
 function UPIDialog({ data, createdBy }) {
   const [adjustedBills, setAdjustedBills] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
-  const [openAdjust, setOpenAdjust] = useState(false);
+
   const [loading, setLoading] = useState(false);
-  const [checkedWantToAdjust, setWantToAdjustChecked] = React.useState(false);
 
   const onDone = async () => {
     if (loading) return;
     setLoading(true);
     try {
-      if (checkedWantToAdjust) {
-        for await (const oab of adjustedBills) {
-          const orderRef = doc(firebaseDB, 'orders', oab.id);
-
-          const orderData = await getDoc(orderRef);
-          const paymentsObj = orderData.data().payments || [];
-          updateDoc(orderRef, {
-            payments: [...paymentsObj, ...oab.payments],
-          });
-        }
-      }
-
       const partyRef = doc(firebaseDB, 'parties', data.partyId);
       const partySnapshot = await getDoc(partyRef);
       let newPayments = partySnapshot.data().payments || [];
@@ -259,125 +241,74 @@ function UPIDialog({ data, createdBy }) {
   };
 
   return (
-    <>
-      <AdjustAmountDialog
-        adjustedBills={adjustedBills}
-        setAdjustedBills={setAdjustedBills}
-        party={openAdjust && data.party}
-        amountToAdjust={data.amount}
-        type="upi"
-        closeable
-        onDone={() => {
-          setOpenAdjust(false);
-        }}
-      />
-      <Dialog open={openDialog}>
-        <DialogTrigger disableButtonEnhancement>
-          <Button onClick={() => setOpenDialog(true)}>
-            {data.isReceived ? 'View' : 'Receive'}
-          </Button>
-        </DialogTrigger>
-        <DialogSurface>
-          <DialogBody>
-            <DialogTitle>Receive Payment</DialogTitle>
-            <DialogContent>
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <Image
-                  width={300}
-                  style={{ objectFit: 'contain' }}
-                  src={data?.imageUrl}
-                />
-                <div style={{ marginLeft: '20px' }}>
-                  <Text size={400}>
-                    Party: <b>{data.party?.name}</b>
-                  </Text>
-                  <VerticalSpace1 />
-                  <Text size={400}>
-                    Amount: <b>{globalUtils.getCurrencyFormat(data.amount)}</b>
-                  </Text>
-                  <VerticalSpace1 />
-                  <Text size={400}>
-                    Status: <b>{data.isReceived ? 'Received' : 'Pending'}</b>
-                  </Text>
-                  <VerticalSpace1 />
-                  <Text size={400}>
-                    Created By: <b>{createdBy}</b>
-                  </Text>
-                  <VerticalSpace1 />
-                  <Text size={400}>
-                    Comments: <b>{data.comment}</b>
-                  </Text>
-                  <VerticalSpace1 />
-                  {!data.isReceived ? (
-                    <Checkbox
-                      checked={checkedWantToAdjust}
-                      onChange={(ev, ev2) => {
-                        if (!ev2.checked) {
-                          setAdjustedBills([]);
-                        }
-                        setWantToAdjustChecked(ev2.checked);
-                      }}
-                      label="Want to adjust?"
-                    />
-                  ) : null}
-                  <VerticalSpace1 />
-                  {checkedWantToAdjust ? (
-                    <>
-                      <Text size={400}>
-                        {data.isReceived
-                          ? data.bills?.join(',')
-                          : `Adjusted: ${adjustedBills.map(
-                              (ab) => `${ab.billNumber},`,
-                            )}`}
-                      </Text>
-                      <VerticalSpace2 />
-                      {!data.isReceived ? (
-                        <Button
-                          onClick={() => {
-                            setAdjustedBills([]);
-                            setOpenAdjust(true);
-                          }}
-                        >
-                          Adjust Bills
-                        </Button>
-                      ) : null}
-                    </>
-                  ) : null}
-
-                  <VerticalSpace2 />
-                </div>
+    <Dialog open={openDialog}>
+      <DialogTrigger disableButtonEnhancement>
+        <Button onClick={() => setOpenDialog(true)}>
+          {data.isReceived ? 'View' : 'Receive'}
+        </Button>
+      </DialogTrigger>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>Receive Payment</DialogTitle>
+          <DialogContent>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Image
+                width={300}
+                style={{ objectFit: 'contain' }}
+                src={data?.imageUrl}
+              />
+              <div style={{ marginLeft: '20px' }}>
+                <Text size={400}>
+                  Party: <b>{data.party?.name}</b>
+                </Text>
+                <VerticalSpace1 />
+                <Text size={400}>
+                  Amount: <b>{globalUtils.getCurrencyFormat(data.amount)}</b>
+                </Text>
+                <VerticalSpace1 />
+                <Text size={400}>
+                  Status: <b>{data.isReceived ? 'Received' : 'Pending'}</b>
+                </Text>
+                <VerticalSpace1 />
+                <Text size={400}>
+                  Created By: <b>{createdBy}</b>
+                </Text>
+                <VerticalSpace1 />
+                <Text size={400}>
+                  Comments: <b>{data.comment}</b>
+                </Text>
+                <VerticalSpace1 />
               </div>
-            </DialogContent>
-            <DialogActions>
-              <DialogTrigger disableButtonEnhancement>
-                <Button
-                  onClick={() => setOpenDialog(false)}
-                  appearance="secondary"
-                >
-                  Close
-                </Button>
-              </DialogTrigger>
-              {!data.isReceived ? (
-                <Button
-                  disabled={!adjustedBills.length && checkedWantToAdjust}
-                  onClick={() => {
-                    onDone();
-                  }}
-                  appearance="primary"
-                >
-                  {loading ? <Spinner /> : 'Receive'}
-                </Button>
-              ) : null}
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-    </>
+            </div>
+          </DialogContent>
+          <DialogActions>
+            <DialogTrigger disableButtonEnhancement>
+              <Button
+                onClick={() => setOpenDialog(false)}
+                appearance="secondary"
+              >
+                Close
+              </Button>
+            </DialogTrigger>
+            {!data.isReceived ? (
+              <Button
+                onClick={() => {
+                  onDone();
+                }}
+                appearance="primary"
+              >
+                {loading ? <Spinner /> : 'Receive'}
+              </Button>
+            ) : null}
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }

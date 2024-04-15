@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import './tabNavigator.css';
 import { Button, Image, Tab, TabList, Text } from '@fluentui/react-components';
-import { SignOut20Filled } from '@fluentui/react-icons';
+import {
+  SignOut20Filled,
+  ArrowLeft12Filled as ArrowIcon,
+} from '@fluentui/react-icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../assets/images/logo.png';
 
@@ -28,6 +31,10 @@ export default function TabNavigator({ children }) {
     return [];
   };
 
+  useEffect(() => {
+    console.log(location.pathname);
+  }, [location]);
+
   const filteredTabs =
     config.enableAllTabs || user.isManager ? tabs : filterJobs(tabs);
   const filteredSubmenu =
@@ -40,6 +47,14 @@ export default function TabNavigator({ children }) {
       <div className="left">
         <TabList className="menu-container">
           <div className="tab-options">
+            <Button
+              size="small"
+              onClick={() => {
+                navigate(-1);
+              }}
+            >
+              <ArrowIcon />
+            </Button>
             {filteredTabs.map((tab, i) => {
               return (
                 <Tab

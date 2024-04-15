@@ -145,15 +145,17 @@ export default function AllBillsScreen() {
             <Option text={null} value={null} key="accounts-none-dropdown">
               None
             </Option>
-            {allUsers.map((user) => (
-              <Option
-                text={user.username}
-                value={user.uid}
-                key={`allbills-filter-user-${user.uid}`}
-              >
-                {user.username}
-              </Option>
-            ))}
+            {allUsers
+              .filter((x) => !x.isDeactivated)
+              .map((user) => (
+                <Option
+                  text={user.username}
+                  value={user.uid}
+                  key={`allbills-filter-user-${user.uid}`}
+                >
+                  {user.username}
+                </Option>
+              ))}
           </Dropdown>
 
           <Input
@@ -168,15 +170,17 @@ export default function AllBillsScreen() {
             className="dropdown filter-input"
             placeholder="MR"
           >
-            {allUsers.map((user) => (
-              <Option
-                text={user.username}
-                value={user.uid}
-                key={`allbills-filter-mr-${user.uid}`}
-              >
-                {user.username}
-              </Option>
-            ))}
+            {allUsers
+              .filter((x) => !x.isDeactivated)
+              .map((user) => (
+                <Option
+                  text={user.username}
+                  value={user.uid}
+                  key={`allbills-filter-mr-${user.uid}`}
+                >
+                  {user.username}
+                </Option>
+              ))}
           </Dropdown>
         </div>
         <VerticalSpace1 />

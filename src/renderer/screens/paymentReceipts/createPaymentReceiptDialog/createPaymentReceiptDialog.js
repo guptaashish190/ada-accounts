@@ -46,6 +46,7 @@ import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
 import { useAuthUser } from '../../../contexts/allUsersContext';
 import cashReceiptFormatGenerator from '../../../common/printerDataGenerator/cashReceiptFormatGenerator';
+import SelectUserDropdown from '../../../common/selectUser';
 
 export default function CreatePaymentReceiptDialog({
   open,
@@ -61,7 +62,7 @@ export default function CreatePaymentReceiptDialog({
   const [editable, setEditable] = useState(inputsEnabled || !state?.view);
   const { dispatchToast } = useToastController(toasterId);
   const [currentReceiptNumber, setCurrentReceiptNumber] = useState();
-  const [paymentFrom, setPaymentFrom] = useState(state?.supplymanId);
+  const [paymentFrom, setPaymentFrom] = useState();
   const { allUsers } = useAuthUser();
 
   const getTotal = () => {
@@ -105,7 +106,7 @@ export default function CreatePaymentReceiptDialog({
           prItems: updatedPrItems,
           timestamp: Timestamp.now().toMillis(),
           createdByUserId: firebaseAuth.currentUser.uid,
-          paymentFromUserId: paymentFrom,
+          paymentFromUserId: paymentFrom.uid,
         });
 
         // Update the roll number in the transaction
@@ -155,8 +156,7 @@ export default function CreatePaymentReceiptDialog({
         time: globalUtils.getTimeFormat(state?.timestamp),
         createdBy: allUsers.find((x) => x.uid === state?.createdByUserId)
           ?.username,
-        user: allUsers.find((x) => x.uid === state?.paymentFromUserId)
-          ?.username,
+        user: paymentFrom.username,
         items: prItems,
         total: getTotal(),
         receiptNumber: state?.cashReceiptNumber,
@@ -166,7 +166,7 @@ export default function CreatePaymentReceiptDialog({
         time: globalUtils.getTimeFormat(new Date()),
         createdBy: allUsers.find((x) => x.uid === firebaseAuth.currentUser.uid)
           ?.username,
-        user: allUsers.find((x) => x.uid === paymentFrom)?.username,
+        user: paymentFrom?.username,
         items: prItems,
         receiptNumber: currentReceiptNumber,
         total: getTotal(),
@@ -181,13 +181,16 @@ export default function CreatePaymentReceiptDialog({
   useEffect(() => {
     getPartyDetails();
     getCurrentReceiptNumber();
+    if (state?.supplymanId?.length > 0) {
+      const supoplyman = allUsers.find((x) => state?.supplymanId === x.uid);
+      setPaymentFrom(supoplyman);
+    }
   }, []);
 
   if (loading) {
     return <Spinner />;
   }
 
-  console.log(prItems);
   return (
     <>
       <Toaster toasterId={toasterId} />
@@ -250,21 +253,7 @@ export default function CreatePaymentReceiptDialog({
           ) : null}
           {editable && !state?.view ? (
             <>
-              <Dropdown
-                onOptionSelect={(_, e) => setPaymentFrom(e.optionValue)}
-                className="dropdown filter-input"
-                placeholder="Username"
-                defaultValue={
-                  allUsers.find((x) => x.uid === paymentFrom)?.username
-                }
-                defaultSelectedOptions={[paymentFrom]}
-              >
-                {allUsers.map((user) => (
-                  <Option text={user.username} value={user.uid} key={user.uid}>
-                    {user.username}
-                  </Option>
-                ))}
-              </Dropdown>
+              <SelectUserDropdown user={paymentFrom} setUser={setPaymentFrom} />
               <VerticalSpace1 />
               <PartySelector
                 clearOnSelect

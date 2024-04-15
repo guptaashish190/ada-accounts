@@ -1,7 +1,7 @@
 import { Combobox, Option, Text } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
-import { useDebounce } from '../services/globalUtils';
+import globalUtils, { useDebounce } from '../services/globalUtils';
 import { firebaseDB } from '../firebaseInit';
 
 export default function PartySelector({
@@ -67,15 +67,20 @@ export default function PartySelector({
             text={option1.name}
             key={`search-bill-${option1.id}`}
           >
-            <Text style={{ width: '100%' }}>{option1.name}</Text>
+            <Text style={{ width: '100%' }}>
+              {option1.name}{' '}
+              {option1.area?.length > 0 ? `(${option1.area})` : ''}
+            </Text>
             {descriptive ? (
-              <>
-                <div style={descriptiveTextStyle}>{option1.area}</div>
-                <div style={descriptiveTextStyle} className="descriptive-text">
-                  {option1.fileNumber}
-                </div>
-              </>
+              <div style={descriptiveTextStyle} className="descriptive-text">
+                {option1.fileNumber}
+              </div>
             ) : null}
+            <Text>
+              {option1.partyBalance !== 0
+                ? globalUtils.getCurrencyFormat(option1.partyBalance)
+                : ''}
+            </Text>
           </Option>
         ))
       ) : (

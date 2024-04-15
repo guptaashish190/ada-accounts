@@ -228,7 +228,8 @@ function OrderRow({ order, onAddToggle, isSelected }) {
       <div className="bill-name">
         <div>
           {order.party?.name} {order.fileNumber}
-          {globalUtils.getTimeFormat(order.creationTime)}
+          <br />
+          {globalUtils.getTimeFormat(order.creationTime, true)}
         </div>
         <span className="bill-number" style={{ fontSize: '0.8em' }}>
           {' '}

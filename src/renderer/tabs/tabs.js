@@ -35,53 +35,6 @@ export default [
     ],
   },
   {
-    name: 'Search Bills',
-    route: '/searchBills',
-    key: 'tab-searchBills',
-  },
-  {
-    name: 'Scheduled',
-    route: '/scheduled',
-    key: 'tab-scheduled',
-  },
-  {
-    name: 'Cheque/UPI',
-    route: '/upi',
-    key: 'tab-upi',
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
-  },
-
-  {
-    name: 'Receipts',
-    route: '/paymentReceipts',
-    key: 'tab-paymentreceipts',
-    submenu: [
-      {
-        name: 'Payments',
-        route: '/paymentReceipts',
-        key: 'tab-payments',
-      },
-      {
-        name: 'Vouchers',
-        route: '/vouchers',
-        key: 'tab-vouchers',
-      },
-    ],
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
-  },
-  {
-    name: 'Cheques',
-    route: '/chequesList',
-    key: 'tab-chequesList',
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
-  },
-  {
-    name: 'Receive User',
-    route: '/receivePendingUser',
-    key: 'tab-receivependinuser',
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
-  },
-  {
     name: 'Bundles',
     key: 'tab-bundles',
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
@@ -97,6 +50,53 @@ export default [
         key: 'tab-assignbills',
       },
     ],
+  },
+  {
+    name: 'Receive User',
+    route: '/receivePendingUser',
+    key: 'tab-receivependinuser',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  },
+  {
+    name: 'UPI',
+    route: '/upi',
+    key: 'tab-upi',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  },
+
+  {
+    name: 'Receipts',
+    route: '/paymentReceipts',
+    key: 'tab-paymentreceipts',
+    submenu: [
+      {
+        name: 'Cash Receipts',
+        route: '/paymentReceipts',
+        key: 'tab-payments',
+      },
+      {
+        name: 'Expense',
+        route: '/vouchers',
+        key: 'tab-vouchers',
+      },
+    ],
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  },
+  {
+    name: 'Cheques',
+    route: '/chequesList',
+    key: 'tab-chequesList',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+  },
+  {
+    name: 'Search Bills',
+    route: '/searchBills',
+    key: 'tab-searchBills',
+  },
+  {
+    name: 'Scheduled',
+    route: '/scheduled',
+    key: 'tab-scheduled',
   },
   {
     name: 'Settings',
@@ -120,24 +120,6 @@ export default [
       },
     ],
   },
-  // {
-  //   name: 'Credit Notes',
-
-  //   key: 'tab-creditNotes',
-  //   allowJob: [constants.firebaseIds.JOBS.CASHIER],
-  //   submenu: [
-  //     {
-  //       name: 'Credit Notes',
-  //       route: '/creditNotes',
-  //       key: 'tab-creditNotes',
-  //     },
-  //     {
-  //       name: 'Create C/N',
-  //       route: '/createCreditNotes',
-  //       key: 'tab-createcreditNotes',
-  //     },
-  //   ],
-  // },
   {
     name: 'Reports',
 
@@ -158,11 +140,6 @@ export default [
         route: '/collectionReport',
         key: 'tab-collectionreport',
       },
-      // {
-      //   name: 'Sale Report',
-      //   route: '/saleReport',
-      //   key: 'tab-saleReport',
-      // },
     ],
   },
 ];

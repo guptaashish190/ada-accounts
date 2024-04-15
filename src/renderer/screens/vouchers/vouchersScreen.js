@@ -72,7 +72,7 @@ export default function VoucherScreen() {
   return (
     <center>
       <div className="pr-list-container">
-        <h3>Vouchers</h3>
+        <h3>Expense</h3>
 
         <VerticalSpace1 />
         <CreateVoucherDialog />

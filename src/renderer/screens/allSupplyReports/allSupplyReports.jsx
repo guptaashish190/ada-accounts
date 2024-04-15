@@ -166,15 +166,20 @@ export default function AllSupplyReportsScreen() {
             <Option text={null} value={null} key="accounts-none-dropdown">
               None
             </Option>
-            {allUsers.map((user) => (
-              <Option text={user.username} value={user.uid} key={user.uid}>
-                {user.username}
-              </Option>
-            ))}
+            {allUsers
+              .filter((x) => !x.isDeactivated)
+              .map((user) => (
+                <Option text={user.username} value={user.uid} key={user.uid}>
+                  {user.username}
+                </Option>
+              ))}
           </Dropdown>
           <DatePicker
             className=" filter-input"
-            onSelectDate={setFromDate}
+            onSelectDate={(t) => {
+              setFromDate(t);
+              setToDate(t);
+            }}
             placeholder="From"
             value={fromDate}
           />

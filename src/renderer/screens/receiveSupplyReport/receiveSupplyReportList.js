@@ -10,6 +10,7 @@ import { VerticalSpace1 } from '../../common/verticalSpace';
 
 export default function ReceiveSupplyReportScreen() {
   const [supplyReports, setSupplyReports] = useState([]);
+
   const [filteredSupplyReports, setFilteredSupplyReports] = useState([]);
   const [querySR, setQuerySR] = useState('');
 
@@ -23,26 +24,32 @@ export default function ReceiveSupplyReportScreen() {
       const q = query(
         supplyReportsCollection,
         where('status', '==', 'Delivered'),
-        limit(30),
       );
-
+      const q2 = query(
+        supplyReportsCollection,
+        where('status', '==', 'Dispatched'),
+      );
       const querySnapshot = await getDocs(q);
+      const querySnapshot2 = await getDocs(q2);
 
-      const dispatchedSupplyReports = querySnapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .sort((a, b) => {
-          if ((a.status === 'Dispatched') === (b.status === 'Dispatched')) {
-            return b.dispatchTimestamp - a.dispatchTimestamp;
-          }
-          return a.status === 'Dispatched' ? -1 : 1;
-        });
+      const dispatchedSupplyReports = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
+      const dispatchedSupplyReports2 = querySnapshot2.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
       setLoading(false);
-      setSupplyReports(dispatchedSupplyReports);
-      setFilteredSupplyReports(dispatchedSupplyReports);
+      setSupplyReports([
+        ...dispatchedSupplyReports,
+        ...dispatchedSupplyReports2,
+      ]);
+      setFilteredSupplyReports([
+        ...dispatchedSupplyReports,
+        ...dispatchedSupplyReports2,
+      ]);
     } catch (error) {
       console.error('Error fetching undispatched supply reports:', error);
       setLoading(false);
@@ -115,8 +122,13 @@ export function SupplyReportRow({ data }) {
   useEffect(() => {
     getSupplyman();
   }, []);
+
+  const isDelivered = data.status === 'Delivered';
   return (
-    <div className="supply-report-row">
+    <div
+      className="supply-report-row"
+      style={{ opacity: !isDelivered ? 0.4 : 1 }}
+    >
       <Text className="sr-id">{data.receiptNumber}</Text>
       <Text className="sr-timestamp">
         {new Date(data.timestamp).toLocaleDateString()}
@@ -128,6 +140,7 @@ export function SupplyReportRow({ data }) {
       </Text>
       <Text>{data.status}</Text>
       <Button
+        disabled={!isDelivered}
         appearance="subtle"
         className="verify-button"
         onClick={() => {
@@ -136,7 +149,9 @@ export function SupplyReportRow({ data }) {
           });
         }}
       >
-        <span style={{ color: '#F25C54' }}>Receive</span>
+        <span style={{ color: '#F25C54' }}>
+          {!isDelivered ? '--' : 'Receive'}
+        </span>
       </Button>
     </div>
   );

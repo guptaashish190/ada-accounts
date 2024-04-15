@@ -221,10 +221,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           const margDataFiltered2 = margDataFiltered.filter(
             (x) => x.data().margVoucherNumber,
           );
-          console.log(margData, margDataFiltered, margDataFiltered2);
 
           if (margDataFiltered2.length > 0) {
-            await updateDoc(orderRef, {
+            updateDoc(orderRef, {
               ...toUpdateData,
               margVoucherNumber: margDataFiltered2[0].data().margVoucherNumber,
               margUpdated: true,
@@ -233,10 +232,10 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
               deleteDoc(x.ref);
             });
           } else {
-            await updateDoc(orderRef, toUpdateData);
+            updateDoc(orderRef, toUpdateData);
           }
         } else {
-          await updateDoc(orderRef, toUpdateData);
+          updateDoc(orderRef, toUpdateData);
         }
       }
 
@@ -459,7 +458,7 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
         id={inputId}
         style={{ marginRight: '20px', width: '100px' }}
         contentBefore="T-"
-        defaultValue={bill.billNumber.replace('T-', '') || ''}
+        defaultValue={bill.billNumber?.replace('T-', '') || ''}
         onChange={(x) => {
           const tempBill = { ...bill };
           tempBill.billNumber = `T-${x.target.value}`;

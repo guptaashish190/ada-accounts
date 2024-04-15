@@ -233,7 +233,10 @@ function SupplyReportRow({ data, index, editRemarks, setRemarks }) {
     <table>
       <thead className="supply-report-row">
         <th>
-          <Text className="sr-id">{data.receiptNumber}</Text>
+          <Text className="sr-id">
+            {data.receiptNumber} (
+            {data.status === 'Completed' ? 'Received' : 'Unreceived'})
+          </Text>
         </th>
         <th>
           <Text className="sr-timestamp">
@@ -306,7 +309,9 @@ function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
       </td> */}
 
       <td style={{ width: '10vw' }}>
-        {globalUtils.getCurrencyFormat(getPaymentSum) || '--'}
+        {getPaymentSum === 0
+          ? '--'
+          : globalUtils.getCurrencyFormat(getPaymentSum)}
       </td>
       <td style={{ width: '20vw' }}>
         {editRemarks ? (

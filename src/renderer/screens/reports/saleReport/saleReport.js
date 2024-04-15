@@ -253,7 +253,11 @@ function TodaysBillRow({ billId, editRemarks, setRemarks, filterNoPayments }) {
       </td> */}
 
       <td style={{ width: '10%' }}>
-        <b> {globalUtils.getCurrencyFormat(getPaymentSum) || '--'}</b>
+        <b>
+          {(getPaymentSum === 0
+            ? '--'
+            : globalUtils.getCurrencyFormat(getPaymentSum)) || '--'}
+        </b>
       </td>
       <td style={{ width: '20%' }}>
         {editRemarks ? (

@@ -73,6 +73,10 @@ ipcMain.on('fetch-printer-options', async (event, arg) => {
     event.sender.send('printer-options', { options: opt });
   }
 });
+ipcMain.on('goBack', async (event, arg) => {
+  mainWindow?.webContents.goBack();
+  console.log('Go back trigger');
+});
 
 ipcMain.on('open-file-dialog', (event) => {
   if (!mainWindow) return;

@@ -89,11 +89,13 @@ export default function ReceivePendingUser() {
         className="dropdown filter-input"
         placeholder="Select User"
       >
-        {allUsers.map((user) => (
-          <Option text={user.username} value={user.uid} key={user.uid}>
-            {user.username}
-          </Option>
-        ))}
+        {allUsers
+          .filter((x) => !x.isDeactivated)
+          .map((user) => (
+            <Option text={user.username} value={user.uid} key={user.uid}>
+              {user.username}
+            </Option>
+          ))}
       </Dropdown>
       {loading ? <Spinner /> : null}
       <VerticalSpace2 />
