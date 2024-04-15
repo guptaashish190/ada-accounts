@@ -268,16 +268,70 @@ function SupplyReportRow({ data, index, editRemarks, setRemarks }) {
 function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
   const [order, setOrder] = useState();
   const [loading, setLoading] = useState(false);
+  const [cashReceipts, setCashReceipts] = useState([]);
+  const [chequeReceipts, setChequeReceipts] = useState([]);
+  const [upiReceipts, setUpiReceipts] = useState([]);
+
   const fetchOrder = async () => {
     setLoading(true);
     try {
       const order1 = await globalUtils.fetchOrdersByIds([billId]);
       const newOrder = await globalUtils.fetchPartyInfoForOrders(order1);
       setOrder(newOrder[0]);
+      await fetchPayments(newOrder[0]);
     } catch (e) {
       console.log(e);
     }
     setLoading(false);
+  };
+
+  const fetchPayments = async (orderObj) => {
+    const cashRef = collection(firebaseDB, 'cashReceipts');
+    const upiRef = collection(firebaseDB, 'upi');
+    const chequeRef = collection(firebaseDB, 'cheques');
+
+    const dateFrom = new Date(orderObj.billCreationTime);
+    dateFrom.setDate(dateFrom.getDate() - 1);
+    dateFrom.setHours(0);
+    dateFrom.setMinutes(0);
+    dateFrom.setSeconds(0);
+
+    const dateTo = new Date(orderObj.billCreationTime);
+    dateTo.setDate(dateTo.getDate() + 7);
+    dateTo.setHours(23);
+    dateTo.setMinutes(59);
+    dateTo.setSeconds(59);
+
+    const cashQuery = query(
+      cashRef,
+      where('timestamp', '>=', dateFrom.getTime()),
+      where('timestamp', '<=', dateTo.getTime()),
+    );
+    const chequeQuery = query(
+      chequeRef,
+      where('partyId', '==', orderObj.partyId),
+      where('timestamp', '>=', dateFrom.getTime()),
+      where('timestamp', '<=', dateTo.getTime()),
+    );
+
+    const upiQuery = query(
+      upiRef,
+      where('partyId', '==', orderObj.partyId),
+      where('timestamp', '>=', dateFrom.getTime()),
+      where('timestamp', '<=', dateTo.getTime()),
+    );
+
+    let cashDocs = await getDocs(cashQuery);
+    let upiDocs = await getDocs(upiQuery);
+    let chequeDocs = await getDocs(chequeQuery);
+
+    cashDocs = cashDocs.map((x) => ({ id: x.id, ...x.data() }));
+    chequeDocs = chequeDocs.map((x) => ({ id: x.id, ...x.data() }));
+    upiDocs = upiDocs.map((x) => ({ id: x.id, ...x.data() }));
+
+    setCashReceipts(cashDocs);
+    setChequeReceipts(chequeDocs);
+    setUpiReceipts(upiDocs);
   };
 
   useEffect(() => {
@@ -309,9 +363,9 @@ function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
       </td> */}
 
       <td style={{ width: '10vw' }}>
-        {getPaymentSum === 0
-          ? '--'
-          : globalUtils.getCurrencyFormat(getPaymentSum)}
+        {cashReceipts.map((cr) => (
+          <div />
+        ))}
       </td>
       <td style={{ width: '20vw' }}>
         {editRemarks ? (

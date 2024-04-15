@@ -73,6 +73,7 @@ export default function CreatePaymentReceiptDialog({
   };
 
   const onSubmit = async () => {
+    if (loading) return;
     if (prItems.find((pri) => !pri.amount)) {
       showToast(dispatchToast, 'Enter amount for all the parties', 'error');
       return;
@@ -107,6 +108,7 @@ export default function CreatePaymentReceiptDialog({
           timestamp: Timestamp.now().toMillis(),
           createdByUserId: firebaseAuth.currentUser.uid,
           paymentFromUserId: paymentFrom.uid,
+          parties: updatedPrItems.map((x) => x.partyId),
         });
 
         // Update the roll number in the transaction
