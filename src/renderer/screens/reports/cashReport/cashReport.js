@@ -72,8 +72,7 @@ export default function CashReport() {
     <center>
       <div className="print-supply-reports-container">
         <h3>
-          Cash Collection Report -
-          {globalUtils.getTimeFormat(selectedDate, true)}
+          Collection Report -{globalUtils.getTimeFormat(selectedDate, true)}
         </h3>
 
         <div className="all-bills-search-input-container">
