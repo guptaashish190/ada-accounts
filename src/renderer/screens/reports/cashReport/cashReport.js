@@ -28,73 +28,41 @@ import { useAuthUser } from '../../../contexts/allUsersContext';
 import { firebaseDB } from '../../../firebaseInit';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
+import { VerticalSpace1 } from '../../../common/verticalSpace';
 
 export default function CashReport() {
   const [cashVouchers, setCashVouchers] = useState([]);
   const [total, setTotal] = useState(0);
-
   const [selectedDate, setSelectedDate] = useState(new Date());
-
+  const [upis, setUpis] = useState([]);
+  const [cheques, setCheques] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  const printingRef = useRef();
-  // const handlePrint = useReactToPrint({
-  //   copyStyles: true,
-
-  //   content: () => printingRef.current,
-  // });
 
   const handlePrint = () => {
     window.electron.ipcRenderer.sendMessage('printCurrentPage');
   };
-  const onSearch = (clear) => {
-    const supplyReportRef = collection(firebaseDB, 'cashReceipts');
+  const onSearch = async (clear) => {
+    setLoading(true);
+    try {
+      const cashData = await getFirebaseMappedData(
+        'cashReceipts',
+        selectedDate,
+        setCashVouchers,
+      );
+      await getFirebaseMappedData('upi', selectedDate, setUpis);
+      await getFirebaseMappedData('cheques', selectedDate, setCheques);
 
-    // Build the query dynamically based on non-empty filter fields
-    let dynamicQuery = supplyReportRef;
-
-    const dateFrom = new Date(selectedDate);
-    dateFrom.setHours(0);
-    dateFrom.setMinutes(0);
-    dateFrom.setSeconds(1);
-    const dateTo = new Date(selectedDate);
-    dateTo.setHours(23);
-    dateTo.setMinutes(59);
-    dateTo.setSeconds(59);
-
-    dynamicQuery = query(
-      dynamicQuery,
-      where('timestamp', '>=', dateFrom.getTime()),
-      where('timestamp', '<=', dateTo.getTime()),
-    );
-
-    // Fetch parties based on the dynamic query
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const querySnapshot = await getDocs(dynamicQuery);
-        let supplyReportData = querySnapshot.docs.map((doc) => ({
-          ...doc.data(),
-          id: doc.id,
-        }));
-        supplyReportData = supplyReportData.sort(
-          (rd1, rd2) => rd1.timestamp - rd2.timestamp,
-        );
-        let total1 = 0;
-        supplyReportData.forEach((x) => {
-          x.prItems.forEach((y) => {
-            total1 += y.amount;
-          });
+      let total1 = 0;
+      cashData.forEach((x) => {
+        x.prItems.forEach((y) => {
+          total1 += y.amount;
         });
-        setTotal(total1);
-        setCashVouchers(supplyReportData);
-      } catch (error) {
-        console.error('Error fetching supply reports:', error);
-      }
-      setLoading(false);
-    };
-
-    fetchData();
+      });
+      setTotal(total1);
+    } catch (e) {
+      console.log(e);
+    }
+    setLoading(false);
   };
   useEffect(() => {
     onSearch(true);
@@ -104,7 +72,7 @@ export default function CashReport() {
     <center>
       <div className="print-supply-reports-container">
         <h3>
-          Cash Collection Report -{' '}
+          Cash Collection Report -
           {globalUtils.getTimeFormat(selectedDate, true)}
         </h3>
 
@@ -129,7 +97,7 @@ export default function CashReport() {
         {loading ? (
           <Spinner />
         ) : (
-          <div ref={printingRef}>
+          <div>
             {cashVouchers.map((sr, i) => {
               return (
                 <CashReportRow
@@ -144,11 +112,130 @@ export default function CashReport() {
         {!loading && cashVouchers.length === 0 ? (
           <div>No Supply Reports found</div>
         ) : null}
-      </div>
-      <h3>Total Cash Collection - {globalUtils.getCurrencyFormat(total)}</h3>
+        <h3>Total Cash Collection - {globalUtils.getCurrencyFormat(total)}</h3>
+        <table>
+          <thead className="supply-report-row">
+            <th>
+              <Text className="sr-id">UPIs</Text>
+            </th>
+            <th>
+              <Text>Area</Text>
+            </th>
+            <th>
+              <Text>Amount</Text>
+            </th>
+            <th>
+              <Text>Status</Text>
+            </th>
+          </thead>
 
+          {upis.map((upi, i) => (
+            <UpiRow data={upi} index={i} />
+          ))}
+        </table>
+        <h3>
+          Total UPIs -{' '}
+          {globalUtils.getCurrencyFormat(
+            upis.reduce((prev, cur) => prev + cur.amount, 0),
+          )}
+        </h3>
+
+        <table>
+          <thead className="supply-report-row">
+            <th>
+              <Text className="sr-id">Cheques</Text>
+            </th>
+            <th>
+              <Text>Area</Text>
+            </th>
+            <th>
+              <Text>Amount</Text>
+            </th>
+            <th>
+              <Text>Cheque Date</Text>
+            </th>
+          </thead>
+
+          {cheques.map((che, i) => (
+            <ChequesRow data={che} index={i} />
+          ))}
+        </table>
+        <h3>
+          Total Cheques -
+          {globalUtils.getCurrencyFormat(
+            cheques.reduce((prev, cur) => prev + parseInt(cur.amount, 10), 0),
+          )}
+        </h3>
+      </div>
+      <VerticalSpace1 />
       <div>*** End of Report ***</div>
     </center>
+  );
+}
+
+function UpiRow({ data, index }) {
+  const [party, setParty] = useState();
+  const [loading, setLoading] = useState(false);
+  const { allUsers } = useAuthUser();
+  const fetchParty = async () => {
+    setLoading(true);
+    try {
+      const party1 = await globalUtils.fetchPartyInfo(data.partyId);
+
+      setParty(party1);
+    } catch (e) {
+      console.log(e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchParty();
+  }, []);
+
+  if (loading) return <Spinner />;
+  if (!party) return <div>Error loading party</div>;
+
+  return (
+    <tr>
+      <td>{party.name}</td>
+      <td>{party.area}</td>
+      <td>{globalUtils.getCurrencyFormat(data.amount)}</td>
+      <td>{data.isReceived ? 'Received' : 'Not Received'} </td>
+    </tr>
+  );
+}
+
+function ChequesRow({ data, index }) {
+  const [party, setParty] = useState();
+  const [loading, setLoading] = useState(false);
+  const { allUsers } = useAuthUser();
+  const fetchParty = async () => {
+    setLoading(true);
+    try {
+      const party1 = await globalUtils.fetchPartyInfo(data.partyId);
+
+      setParty(party1);
+    } catch (e) {
+      console.log(e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchParty();
+  }, []);
+
+  if (loading) return <Spinner />;
+  if (!party) return <div>Error loading party</div>;
+
+  return (
+    <tr>
+      <td>{party.name}</td>
+      <td>{party.area}</td>
+      <td>{globalUtils.getCurrencyFormat(data.amount)}</td>
+      <td>{globalUtils.getTimeFormat(data.chequeDate, true)} </td>
+    </tr>
   );
 }
 
@@ -162,7 +249,9 @@ function CashReportRow({ data, index }) {
         <th>
           <Text className="sr-id">{data.cashReceiptNumber}</Text>
         </th>
-        <th />
+        <th>
+          <Text>Area</Text>
+        </th>
         <th>
           <Text className="sr-id">
             {allUsers.find((x) => x.uid === data.paymentFromUserId)?.username}
@@ -170,7 +259,6 @@ function CashReportRow({ data, index }) {
         </th>
 
         <th>
-          {' '}
           <Text className="sr-supplyman">
             {globalUtils.getDayTime(data.timestamp)}
           </Text>
@@ -232,3 +320,33 @@ function SupplyReportOrderRow({ prItem }) {
     </tbody>
   );
 }
+
+const getFirebaseMappedData = async (refName, selectedDate, setList) => {
+  let refMain = collection(firebaseDB, refName);
+
+  const dateFrom = new Date(selectedDate);
+  dateFrom.setHours(0);
+  dateFrom.setMinutes(0);
+  dateFrom.setSeconds(1);
+  const dateTo = new Date(selectedDate);
+  dateTo.setHours(23);
+  dateTo.setMinutes(59);
+  dateTo.setSeconds(59);
+
+  refMain = query(
+    refMain,
+    where('timestamp', '>=', dateFrom.getTime()),
+    where('timestamp', '<=', dateTo.getTime()),
+  );
+
+  const querySnapshot = await getDocs(refMain);
+
+  let mainData = querySnapshot.docs.map((doc) => ({
+    ...doc.data(),
+    id: doc.id,
+  }));
+  mainData = mainData.sort((rd1, rd2) => rd1.timestamp - rd2.timestamp);
+
+  setList(mainData);
+  return mainData;
+};

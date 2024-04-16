@@ -304,15 +304,14 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
       );
 
       const querySnapshot = await getDocs(q);
-      console.log(querySnapshot.size);
+
       const ordersData = [];
-      for await (const doc1 of querySnapshot.docs) {
+      for await (const doc1 of [...querySnapshot.docs]) {
         // Get data for each order
         const orderData = doc1.data();
         // Fetch party information using partyID from the order
         const partyDocRef = doc(firebaseDB, 'parties', orderData.partyId);
         const partyDocSnapshot = await getDoc(partyDocRef);
-
         if (partyDocSnapshot.exists()) {
           const partyData = partyDocSnapshot.data();
 

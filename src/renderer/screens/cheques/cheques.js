@@ -396,7 +396,6 @@ function ChequeEntryDialog({ onClose }) {
             {loading ? <Spinner /> : null}
             <Label>Cheque Number</Label>
             <Input
-              type="number"
               value={chequeNumber}
               onChange={(e) => setChequeNumber(e.target.value)}
               placeholder="Cheque Number"
