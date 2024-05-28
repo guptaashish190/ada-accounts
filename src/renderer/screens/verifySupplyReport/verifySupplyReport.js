@@ -1,3 +1,4 @@
+/* eslint-disable no-unreachable */
 /* eslint-disable no-restricted-syntax */
 import React, { useContext, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,10 +11,13 @@ import {
   DialogSurface,
   DialogTitle,
   DialogTrigger,
+  Dropdown,
   Input,
   Label,
+  Option,
   Text,
   Textarea,
+  Toaster,
   Tooltip,
   useId,
   useToastController,
@@ -31,6 +35,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  limitToLast,
   orderBy,
   query,
   updateDoc,
@@ -59,12 +64,14 @@ export default function VerifySupplyReport() {
   const locationState = location.state;
   const supplyReport = locationState?.supplyReport;
   const [accountsNotes, setAccountsNotes] = useState('');
+  const [allPartiesPaymentTerms, setAllPartiesPaymentTerms] = useState({});
   const [attachedBills, setAttachedBills] = useState([]);
   const [supplementaryBills, setSupplementaryBills] = useState([]);
   const [supplymanUser, setSupplymanUser] = useState();
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
   const navigate = useNavigate();
+
   const [isSupplementBillAddDialogOpen, setIsSupplementBillAddDialogOpen] =
     useState(false);
 
@@ -78,6 +85,17 @@ export default function VerifySupplyReport() {
       fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
       fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
       setBills(fetchedOrders);
+
+      // set payment terms
+
+      const fetchedPaymentTerms = {};
+
+      fetchedOrders.forEach((o) => {
+        if (o.party.paymentTerms)
+          fetchedPaymentTerms[o.partyId] = o.party.paymentTerms;
+      });
+
+      setAllPartiesPaymentTerms(fetchedPaymentTerms);
 
       const supplymanUser1 = await globalUtils.fetchUserById(
         supplyReport.supplymanId,
@@ -115,6 +133,14 @@ export default function VerifySupplyReport() {
 
       await bills.forEach(async (bill1) => {
         await updateOrder(bill1);
+      });
+
+      // update payment terms for all parties
+      await Object.keys(allPartiesPaymentTerms).forEach((paymentTermParty) => {
+        const partyRef = doc(firebaseDB, 'parties', paymentTermParty);
+        updateDoc(partyRef, {
+          paymentTerms: allPartiesPaymentTerms[paymentTermParty],
+        });
       });
 
       await [...attachedBills, ...supplementaryBills].forEach(async (bill1) => {
@@ -172,124 +198,149 @@ export default function VerifySupplyReport() {
   };
 
   return (
-    <div className="verify-supply-report">
-      <center>
-        {loading ? <Loader /> : null}
-        <h3>Verify Supply Report</h3>
-        ID: {supplyReport?.receiptNumber || '--'}{' '}
-        <span style={{ color: 'grey' }}>
-          (Supplyman: {supplymanUser?.username})
-        </span>
-        <VerticalSpace2 />
-        {bills.map((b, i) => {
-          return (
-            <PartySection
-              attachedBills={[...attachedBills, ...supplementaryBills]}
-              setAttachedBills={setAttachedBills}
-              key={`party-section-${b.id}`}
-              index={i}
-              bill={b}
-            />
-          );
-        })}
-        <div>
-          <Label size="large" style={{ color: '#00A9A5' }}>
-            <b>Supplementary Bills</b>
-          </Label>
-          <VerticalSpace1 />
-          <Button onClick={() => setIsSupplementBillAddDialogOpen(true)}>
-            Add Supplementary Bill
-          </Button>{' '}
-          <VerticalSpace1 />
-          {supplementaryBills.map((b, i) => {
+    <>
+      <Toaster toasterId={toasterId} />
+      <div className="verify-supply-report">
+        <center>
+          {loading ? <Loader /> : null}
+          <h3>Verify Supply Report</h3>
+          ID: {supplyReport?.receiptNumber || '--'}{' '}
+          <span style={{ color: 'grey' }}>
+            (Supplyman: {supplymanUser?.username})
+          </span>
+          <VerticalSpace2 />
+          {bills.map((b, i) => {
             return (
-              <SupplementaryBillRow
-                key={`supp-${b.id}`}
-                oldbill={b}
-                saveBill={(newB) => {
-                  let updatedSuppBills = [...supplementaryBills];
-                  updatedSuppBills = updatedSuppBills.map((x) => {
-                    if (x.id === newB.id) {
-                      return newB;
-                    }
-                    return x;
-                  });
-                  setSupplementaryBills(updatedSuppBills);
-                }}
-                removeAttachedBill={() => {
-                  setSupplementaryBills((sb) =>
-                    sb.filter((x) => x.id !== b.id),
-                  );
-                }}
+              <PartySection
+                attachedBills={[...attachedBills, ...supplementaryBills]}
+                setAttachedBills={setAttachedBills}
+                key={`party-section-${b.id}`}
+                paymentTerms={allPartiesPaymentTerms[b.partyId]}
+                setPaymentTerms={(pay) =>
+                  setAllPartiesPaymentTerms((p) => ({ ...p, [b.partyId]: pay }))
+                }
+                index={i}
+                bill={b}
               />
             );
           })}
-        </div>
-        <VerticalSpace2 />
-        <Textarea
-          style={{ width: '50vw' }}
-          size="large"
-          value={accountsNotes}
-          onChange={(e) => setAccountsNotes(e.target.value)}
-          placeholder="Account notes"
-        />
-        <br />
-        <br />
-        <Button
-          onClick={() => {
-            confirmAlert({
-              title: 'Confirm to submit',
-              message: 'Are you sure to do this.',
-              buttons: [
-                {
-                  label: 'Yes',
-                  onClick: () => onDispatch(),
-                },
-                {
-                  label: 'No',
-                  onClick: () => {},
-                },
-              ],
-            });
-          }}
-          appearance="primary"
-        >
-          Dispatch
-        </Button>
-      </center>
-      <Dialog open={isSupplementBillAddDialogOpen}>
-        <DialogSurface>
-          <DialogBody>
-            <DialogTitle>Add Supplementary Bills</DialogTitle>
-            <DialogContent>
-              <SupplementaryBillDialog
-                currentBills={[
-                  ...attachedBills,
-                  ...bills,
-                  ...supplementaryBills,
-                ]}
-                addSupplementaryBill={(b) => {
-                  console.log('attached');
-                  setSupplementaryBills((ab) => [...ab, b]);
-                }}
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={() => setIsSupplementBillAddDialogOpen(false)}
-                appearance="secondary"
-              >
-                Close
-              </Button>
-            </DialogActions>
-          </DialogBody>
-        </DialogSurface>
-      </Dialog>
-    </div>
+          <div>
+            <Label size="large" style={{ color: '#00A9A5' }}>
+              <b>Supplementary Bills</b>
+            </Label>
+            <VerticalSpace1 />
+            <Button onClick={() => setIsSupplementBillAddDialogOpen(true)}>
+              Add Supplementary Bill
+            </Button>
+            <VerticalSpace1 />
+            {supplementaryBills.map((b, i) => {
+              return (
+                <SupplementaryBillRow
+                  key={`supp-${b.id}`}
+                  oldbill={b}
+                  saveBill={(newB) => {
+                    let updatedSuppBills = [...supplementaryBills];
+                    updatedSuppBills = updatedSuppBills.map((x) => {
+                      if (x.id === newB.id) {
+                        return newB;
+                      }
+                      return x;
+                    });
+                    setSupplementaryBills(updatedSuppBills);
+                  }}
+                  removeAttachedBill={() => {
+                    setSupplementaryBills((sb) =>
+                      sb.filter((x) => x.id !== b.id),
+                    );
+                  }}
+                />
+              );
+            })}
+          </div>
+          <VerticalSpace2 />
+          <Textarea
+            style={{ width: '50vw' }}
+            size="large"
+            value={accountsNotes}
+            onChange={(e) => setAccountsNotes(e.target.value)}
+            placeholder="Account notes"
+          />
+          <br />
+          <br />
+          <Button
+            onClick={() => {
+              if (bills.length !== Object.keys(allPartiesPaymentTerms).length) {
+                showToast(
+                  dispatchToast,
+                  'Please select Payment Terms of all the parties',
+                  'error',
+                );
+              } else {
+                confirmAlert({
+                  title: 'Confirm to submit',
+                  message: 'Are you sure to do this.',
+                  buttons: [
+                    {
+                      label: 'Yes',
+                      onClick: () => {
+                        onDispatch();
+                      },
+                    },
+                    {
+                      label: 'No',
+                      onClick: () => {},
+                    },
+                  ],
+                });
+              }
+            }}
+            appearance="primary"
+          >
+            Dispatch
+          </Button>
+        </center>
+        <Dialog open={isSupplementBillAddDialogOpen}>
+          <DialogSurface>
+            <DialogBody>
+              <DialogTitle>Add Supplementary Bills</DialogTitle>
+              <DialogContent>
+                <SupplementaryBillDialog
+                  currentBills={[
+                    ...attachedBills,
+                    ...bills,
+                    ...supplementaryBills,
+                  ]}
+                  addSupplementaryBill={(b) => {
+                    console.log('attached');
+                    setSupplementaryBills((ab) => [...ab, b]);
+                  }}
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button
+                  onClick={() => setIsSupplementBillAddDialogOpen(false)}
+                  appearance="secondary"
+                >
+                  Close
+                </Button>
+              </DialogActions>
+            </DialogBody>
+          </DialogSurface>
+        </Dialog>
+      </div>
+    </>
   );
 }
 
-function PartySection({ bill, index, setAttachedBills, attachedBills }) {
+function PartySection({
+  bill,
+  index,
+  setAttachedBills,
+  attachedBills,
+  setPaymentTerms,
+  paymentTerms,
+}) {
+  console.log(paymentTerms);
   const [oldBills, setOldBills] = useState([]);
   const [loading, setLoading] = useState(false);
   // Fetch orders based on the query
@@ -352,6 +403,18 @@ function PartySection({ bill, index, setAttachedBills, attachedBills }) {
       <div className="party-info-header">
         <div className="index">{index + 1}.</div>
         <div className="party-name">{bill.party?.name}</div>
+        <Dropdown
+          onOptionSelect={(_, e) => setPaymentTerms(e.optionValue)}
+          className="dropdown filter-input"
+          placeholder="Payment Terms"
+          defaultValue={paymentTerms}
+        >
+          {constants.paymentTermsListItems.map((x) => (
+            <Option text={x} value={x} key={`accounts-with-dropdown ${x}`}>
+              {x}
+            </Option>
+          ))}
+        </Dropdown>
         <div className="bill-number">{bill.billNumber?.toUpperCase()}</div>
         <div className="file-number">{bill.party?.fileNumber}</div>
         <div className="amount">
@@ -434,7 +497,7 @@ function OldBillRow({
     }
   };
 
-  const disabled = isAttached || oldbill.with !== 'Accounts';
+  const disabled = (isAttached || oldbill.with !== 'Accounts') && oldbill.with;
 
   useEffect(() => {
     fetchWithUser();
@@ -443,7 +506,7 @@ function OldBillRow({
     <>
       <div className="old-bill bill-number">{oldbill.billNumber}</div>
       <div className="old-bill bill-number">
-        {new Date(oldbill.creationTime).toLocaleDateString()}
+        {new Date(oldbill.billCreationTime).toLocaleDateString()}
       </div>
       <div className="old-bill with">{withUser}</div>
       <div className="old-bill amount">
@@ -455,7 +518,7 @@ function OldBillRow({
       </div>
 
       <div className="old-bill">
-        {globalUtils.getDaysPassed(oldbill.creationTime)}
+        {globalUtils.getDaysPassed(oldbill.billCreationTime)}
       </div>
       <div className="old-bill scheduled">
         {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true) || '--'}

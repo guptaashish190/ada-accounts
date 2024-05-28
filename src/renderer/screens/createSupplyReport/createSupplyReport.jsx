@@ -136,9 +136,10 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 
     let billNumbersAdded = true;
     modifiedBills.forEach((bi) => {
+      console.log(bi);
       if (
         !bi.billNumber ||
-        bi.billNumber.length === 0 ||
+        bi.billNumber.length !== 8 ||
         bi.billNumber === 'T-'
       ) {
         billNumbersAdded = false;
@@ -146,10 +147,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     });
 
     if (!billNumbersAdded) {
-      showToast(dispatchToast, 'Please enter bill numbers', 'error');
+      showToast(dispatchToast, 'Please enter correct bill numbers', 'error');
       return;
     }
-
     try {
       setLoading(true);
       const newSrNumber2 = await getNewSupplyReportNumber();

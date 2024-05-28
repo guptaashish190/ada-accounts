@@ -181,37 +181,41 @@ export default function DaySupplyReportPrint() {
             <h2>
               {unSuppliedOrders.length === 0 ? 'No ' : ''}Unsupplied Bills
             </h2>
-            <table>
-              <thead className="supply-report-row">
-                <th>
-                  <Text>Party Name</Text>
-                </th>
-                <th>
-                  <Text>Bill Number</Text>
-                </th>
-                <th>
-                  <Text>Amount</Text>
-                </th>
-                {/* <th>
-                  <Text>Goods</Text>
-                </th> */}
-                <th>
-                  <Text>Payment</Text>
-                </th>
-                <th>
-                  <Text>Remarks</Text>
-                </th>
-              </thead>
-              {unSuppliedOrders?.map((unso) => {
-                return (
-                  <SupplyReportOrderRow
-                    editRemarks={allowEditRemark}
-                    billId={unso.id}
-                    setRemarks={setNewRemarks}
-                  />
-                );
-              })}
-            </table>
+            {unSuppliedOrders.length !== 0 ? (
+              <table>
+                <thead className="supply-report-row">
+                  <th>
+                    <Text>Party Name</Text>
+                  </th>
+                  <th>
+                    <Text>Bill Number</Text>
+                  </th>
+                  <th>
+                    <Text>Amount</Text>
+                  </th>
+                  <th>
+                    <Text>Payment Terms</Text>
+                  </th>
+                  <th>
+                    <Text>Payment</Text>
+                  </th>
+                  <th>
+                    <Text>Remarks</Text>
+                  </th>
+                </thead>
+                {unSuppliedOrders?.map((unso) => {
+                  return (
+                    <SupplyReportOrderRow
+                      editRemarks={allowEditRemark}
+                      billId={unso.id}
+                      setRemarks={setNewRemarks}
+                    />
+                  );
+                })}
+              </table>
+            ) : (
+              ''
+            )}
           </div>
         )}
         {!loading && supplyReports.length === 0 ? (
@@ -250,8 +254,15 @@ function SupplyReportRow({ data, index, editRemarks, setRemarks }) {
             {globalUtils.getDayTime(data.dispatchTimestamp)}
           </Text>
         </th>
-        <th>Payment</th>
-        <th>Remarks</th>
+        <th>
+          <Text className="sr-supplyman">Payment Terms</Text>
+        </th>
+        <th>
+          <Text>Payment</Text>
+        </th>
+        <th>
+          <Text>Remarks</Text>
+        </th>
       </thead>
 
       {data.orders.map((x) => (
@@ -367,7 +378,12 @@ function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
           : ''}
       </td> */}
 
+      <td style={{ width: '10vw' }}>{order.party?.paymentTerms || '--'}</td>
+
       <td style={{ width: '10vw' }}>
+        {[...cashReceipts, ...upiReceipts, ...chequeReceipts].length === 0
+          ? '--'
+          : ''}
         {cashReceipts.map((cr) => (
           <div key={`Cash${cr.id}`}>
             <b>

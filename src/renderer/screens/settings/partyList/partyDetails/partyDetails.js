@@ -179,7 +179,7 @@ export default function PartyDetailsScreen() {
         </div>
         <VerticalSpace1 />
         <h3>Outstanding</h3>
-        <h2>Opening - {globalUtils.getCurrencyFormat(party.opening)}</h2>
+        <h2>Opening - {globalUtils.getCurrencyFormat(party?.opening)}</h2>
         <table className="all-bills-header">
           <thead>
             <tr>

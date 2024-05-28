@@ -31,10 +31,6 @@ export default function TabNavigator({ children }) {
     return [];
   };
 
-  useEffect(() => {
-    console.log(location.pathname);
-  }, [location]);
-
   const filteredTabs =
     config.enableAllTabs || user.isManager ? tabs : filterJobs(tabs);
   const filteredSubmenu =
@@ -80,7 +76,7 @@ export default function TabNavigator({ children }) {
               }}
             >
               <SignOut20Filled />
-              {user?.username}
+              {user?.username?.split(' ')[0]}
             </Button>
             <Image width={40} src={Logo} />
           </div>

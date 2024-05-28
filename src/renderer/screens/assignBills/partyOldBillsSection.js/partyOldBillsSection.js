@@ -109,6 +109,7 @@ export default function PartySection({
           {party.fileNumber} - {party.area}
         </h4>{' '}
         <h4>
+          Total:
           {globalUtils.getCurrencyFormat(
             getOutstanding(attachedBills.filter((x) => x.partyId === party.id)),
           )}
@@ -185,7 +186,7 @@ function OldBillRow({
     }
   };
 
-  const disabled = isAttached || oldbill.with !== 'Accounts';
+  const disabled = (isAttached || oldbill.with !== 'Accounts') && oldbill.with;
 
   useEffect(() => {
     fetchWithUser();
@@ -199,19 +200,9 @@ function OldBillRow({
       <div className="old-bill with">{withUser}</div>
       <div className="old-bill amount">₹{oldbill.orderAmount}</div>
 
-      <Tooltip content={`₹${oldbill.balance}`}>
-        <Input
-          disabled={disabled}
-          style={{ width: '100px' }}
-          size="small"
-          value={newBalance}
-          contentBefore="₹"
-          appearance="underline"
-          placeholder={`${oldbill.balance}`}
-          className="old-bill amount"
-          onChange={(_, d) => setNewBalance(d.value)}
-        />
-      </Tooltip>
+      <div className="old-bill amount">
+        {globalUtils.getCurrencyFormat(oldbill.balance)}
+      </div>
       <div className="old-bill scheduled">
         {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true, true) ||
           '--'}

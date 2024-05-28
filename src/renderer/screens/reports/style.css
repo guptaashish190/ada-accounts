@@ -89,4 +89,7 @@
   .no-print{
     display: none;
   }
+  *{
+    font-size: 11px !important;
+  }
 }

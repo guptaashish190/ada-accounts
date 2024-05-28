@@ -19,11 +19,13 @@ import './style.css';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useSettingsContext } from '../../../../contexts/settingsContext';
 import { firebaseDB } from '../../../../firebaseInit';
+import constants from '../../../../constants';
 
 export default function EditPartyDetails({ party, refreshParty }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(party?.name || '');
   const [area, setArea] = useState(party?.area || '');
+  const [paymentTerms, setPaymentTerms] = useState(party?.paymentTerms || '');
   const [fileNumber, setFileNumber] = useState(party?.fileNumber || '');
   const [phone, setPhoneNumber] = useState(party?.fileNumber || '');
 
@@ -41,6 +43,7 @@ export default function EditPartyDetails({ party, refreshParty }) {
       await updateDoc(partyRef, {
         name,
         area,
+        paymentTerms,
         fileNumber,
       });
       refreshParty();
@@ -96,6 +99,25 @@ export default function EditPartyDetails({ party, refreshParty }) {
                 {settings?.fileNumbers?.data.map((option) => (
                   <Option text={option} value={option} key={option}>
                     {option}
+                  </Option>
+                ))}
+              </Dropdown>
+            </div>
+            <div className="edit-party-input-container">
+              <Label>Payment terms</Label>
+              <Dropdown
+                onOptionSelect={(_, e) => setPaymentTerms(e.optionValue)}
+                className="dropdown filter-input"
+                placeholder="Payment Terms"
+                defaultValue={paymentTerms}
+              >
+                {constants.paymentTermsListItems.map((x) => (
+                  <Option
+                    text={x}
+                    value={x}
+                    key={`accounts-with-dropdown ${x}`}
+                  >
+                    {x}
                   </Option>
                 ))}
               </Dropdown>
