@@ -297,7 +297,10 @@ export default function ReceiveSRScreen() {
           {allBills.map((bill) => {
             return (
               <div className="party-section-receive-sr">
-                <div className="title-sr">{bill.party?.name}</div>
+                <div className="title-sr">
+                  {bill.party?.name} (Payment: {bill.party?.paymentTerms || '-'}
+                  )
+                </div>
 
                 <div className="party-bills-container">
                   <BillRow
