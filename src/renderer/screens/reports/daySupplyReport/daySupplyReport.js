@@ -376,19 +376,20 @@ function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
                 cr.prItems.find((x) => x.partyId === order.partyId)?.amount,
               )}
             </b>
-            ({globalUtils.getTimeFormat(cr.timestamp, true)})
+            ({globalUtils.getTimeFormat(cr.timestamp, true)?.slice(0, 5)})
           </div>
         ))}
         {upiReceipts.map((cr) => (
           <div key={`upi${cr.id}`}>
             <b>UPI {globalUtils.getCurrencyFormat(cr.amount)}</b>(
-            {globalUtils.getTimeFormat(cr.timestamp, true)})
+            {globalUtils.getTimeFormat(cr.timestamp, true)?.slice(0, 5)})
           </div>
         ))}
         {chequeReceipts.map((cr) => (
           <div key={`cheque${cr.id}`}>
             <b>Cheque: {globalUtils.getCurrencyFormat(cr.amount)}</b>(
-            {globalUtils.getTimeFormat(cr.timestamp, true)})
+            {globalUtils.getTimeFormat(cr.timestamp, true)?.slice(0, 5)})(PDC:{' '}
+            {globalUtils.getTimeFormat(cr.chequeDate, true)})
           </div>
         ))}
       </td>

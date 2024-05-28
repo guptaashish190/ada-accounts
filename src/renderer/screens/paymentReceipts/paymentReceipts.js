@@ -34,7 +34,6 @@ export default function PaymentReceipts() {
       where('timestamp', '>=', dateFrom.getTime()),
       where('timestamp', '<=', dateTo.getTime()),
     );
-
     const querySnapshot = await getDocs(crQuery);
     const receiptData = [];
     querySnapshot.forEach((doc) => {
