@@ -85,7 +85,6 @@ export default function VerifySupplyReport() {
       fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
       fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
       setBills(fetchedOrders);
-
       // set payment terms
 
       const fetchedPaymentTerms = {};
@@ -94,6 +93,8 @@ export default function VerifySupplyReport() {
         if (o.party.paymentTerms)
           fetchedPaymentTerms[o.partyId] = o.party.paymentTerms;
       });
+
+      console.log(fetchedPaymentTerms);
 
       setAllPartiesPaymentTerms(fetchedPaymentTerms);
 
@@ -269,7 +270,16 @@ export default function VerifySupplyReport() {
           <br />
           <Button
             onClick={() => {
-              if (bills.length !== Object.keys(allPartiesPaymentTerms).length) {
+              const uniqueParties = [];
+              bills.forEach((x) =>
+                uniqueParties.includes(x.partyId)
+                  ? null
+                  : uniqueParties.push(x.partyId),
+              );
+              if (
+                uniqueParties.length !==
+                Object.keys(allPartiesPaymentTerms).length
+              ) {
                 showToast(
                   dispatchToast,
                   'Please select Payment Terms of all the parties',
@@ -343,6 +353,7 @@ function PartySection({
   console.log(paymentTerms);
   const [oldBills, setOldBills] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showOldBills, setShowOldBills] = useState(false);
   // Fetch orders based on the query
   const fetchData = async () => {
     setLoading(true);
@@ -394,10 +405,6 @@ function PartySection({
     );
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   return (
     <div className="party-section-container">
       <div className="party-info-header">
@@ -425,7 +432,22 @@ function PartySection({
         {/* </div */}
       </div>
 
-      <div className="party-old-bills">
+      <Button
+        onClick={() => {
+          if (oldBills.length === 0) {
+            fetchData();
+          }
+          setShowOldBills((x) => !x);
+        }}
+        appearance="transparent"
+      >
+        {showOldBills ? 'Hide' : 'Show'} Old Bills
+      </Button>
+
+      <div
+        className="party-old-bills"
+        style={{ display: showOldBills ? null : 'none' }}
+      >
         <div className="party-old-bills-header">BILL NO.</div>
         <div className="party-old-bills-header">BILL DATE</div>
         <div className="party-old-bills-header">WITH</div>

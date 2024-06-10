@@ -1,5 +1,9 @@
 .verify-supply-report .party-section-container {
   margin-bottom: 50px;
+  border: 1px solid lightgray;
+  box-shadow: 3px 3px 5px rgba(146, 146, 146, 0.302);;
+  padding: 10px;
+  border-radius: 10px;
 }
 
 .verify-supply-report .party-section-container .party-info-header {
