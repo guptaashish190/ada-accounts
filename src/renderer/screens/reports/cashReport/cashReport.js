@@ -344,6 +344,7 @@ const getFirebaseMappedData = async (refName, selectedDate, setList) => {
     ...doc.data(),
     id: doc.id,
   }));
+  mainData = mainData.filter((x) => x.status !== 'CANCELLED');
   mainData = mainData.sort((rd1, rd2) => rd1.timestamp - rd2.timestamp);
 
   setList(mainData);

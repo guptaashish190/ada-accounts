@@ -124,6 +124,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const { dispatchToast } = useToastController(toasterId);
 
   const onSubmit = async (save) => {
+    if (loading) return;
     if (bills.length === 0) {
       showToast(dispatchToast, 'Please add bills', 'error');
       return;
@@ -191,7 +192,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       }
       const docRef = setDoc(reportDocRef, supplyReport);
 
-      for await (const modifiedBill1 of modifiedBills) {
+      for (const modifiedBill1 of modifiedBills) {
         const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
         const toUpdateData = {
           orderStatus: constants.firebase.supplyReportStatus.TOACCOUNTS,
@@ -207,36 +208,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
             },
           ],
         };
-        if (!modifiedBill1.margVoucherNumber) {
-          const q = query(
-            collection(firebaseDB, 'orders'),
-            where('billNumber', '==', modifiedBill1.billNumber),
-          );
-
-          const margData = (await getDocs(q)).docs;
-
-          const margDataFiltered = margData.filter(
-            (x) => x.id !== modifiedBill1.id,
-          );
-          const margDataFiltered2 = margDataFiltered.filter(
-            (x) => x.data().margVoucherNumber,
-          );
-
-          if (margDataFiltered2.length > 0) {
-            updateDoc(orderRef, {
-              ...toUpdateData,
-              margVoucherNumber: margDataFiltered2[0].data().margVoucherNumber,
-              margUpdated: true,
-            });
-            margDataFiltered.forEach((x) => {
-              deleteDoc(x.ref);
-            });
-          } else {
-            updateDoc(orderRef, toUpdateData);
-          }
-        } else {
-          updateDoc(orderRef, toUpdateData);
-        }
+        updateDoc(orderRef, toUpdateData);
       }
 
       await globalUtils.incrementReceiptCounter(
@@ -271,9 +243,10 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     setSelectedSupplyman(null);
   };
 
-  return (
+  return loading ? (
+    <Loader translucent />
+  ) : (
     <>
-      {loading ? <Loader translucent /> : null}
       <Toaster toasterId={toasterId} />
       <div className="create-supply-report-screen-container">
         <center>

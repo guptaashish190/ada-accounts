@@ -35,14 +35,14 @@ export default function PaymentReceipts() {
       where('timestamp', '<=', dateTo.getTime()),
     );
     const querySnapshot = await getDocs(crQuery);
-    const receiptData = [];
+    let receiptData = [];
     querySnapshot.forEach((doc) => {
       receiptData.push({
         id: doc.id,
         ...doc.data(),
       });
     });
-
+    receiptData = receiptData.filter((x) => x.status !== 'CANCELLED');
     receiptData.sort((x, y) => y.timestamp - x.timestamp);
     setReceipts(receiptData);
   };
