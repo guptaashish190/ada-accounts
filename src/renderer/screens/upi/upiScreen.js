@@ -172,7 +172,16 @@ export default function UpiScreen() {
                 return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
               })}
               {unReceivedChequeItems?.map((uri) => {
-                return <UpiItemRow key={`cheque-list-${uri.id}`} data={uri} />;
+                return (
+                  <UpiItemRow
+                    refreshData={() => {
+                      fetcUnreceived();
+                      fetchUpi();
+                    }}
+                    key={`cheque-list-${uri.id}`}
+                    data={uri}
+                  />
+                );
               })}
               {receivedUpiItems?.map((uri) => {
                 return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
@@ -185,8 +194,9 @@ export default function UpiScreen() {
   );
 }
 
-function UpiItemRow({ data }) {
+function UpiItemRow({ data, refreshData }) {
   const { allUsers } = useAuthUser();
+  const [loading, setLoading] = useState(false);
   return (
     <tr>
       <td>{globalUtils.getTimeFormat(data.timestamp, true)}</td>
@@ -206,6 +216,21 @@ function UpiItemRow({ data }) {
       <td>
         {data?.type === 'cheque' ? (
           <ChequeEntryDialog
+            onClose={() => {
+              if (loading) return;
+              setLoading(true);
+              try {
+                const upiRef = doc(firebaseDB, 'upi', data.id);
+                updateDoc(upiRef, {
+                  receivedBy: firebaseAuth.currentUser.uid,
+                  isReceived: true,
+                });
+              } catch (e) {
+                console.log(e);
+              }
+              setLoading(false);
+              if (refreshData) refreshData();
+            }}
             chequeData={{
               image: data.imageUrl,
               party: data.party,
