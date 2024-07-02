@@ -34,10 +34,13 @@ import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import AdjustAmountDialog from '../receiveSupplyReport/adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../constants';
+import { ChequeEntryDialog } from '../cheques/cheques';
 
 export default function UpiScreen() {
   const [receivedUpiItems, setReceivedUpiItems] = useState([]);
   const [unReceivedUpiItems, setUnReceivedUpiItems] = useState([]);
+  const [unReceivedChequeItems, setUnReceivedChequeItems] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
 
@@ -109,7 +112,12 @@ export default function UpiScreen() {
 
       const dataWithParty =
         await globalUtils.fetchPartyInfoForOrders(documents);
-      setUnReceivedUpiItems(dataWithParty || []);
+      setUnReceivedUpiItems(
+        dataWithParty.filter((x) => x.type === 'upi' || x.type === undefined),
+      );
+      setUnReceivedChequeItems(
+        dataWithParty.filter((x) => x.type === 'cheque'),
+      );
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -151,6 +159,7 @@ export default function UpiScreen() {
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Type</th>
                 <th>Party</th>
                 <th>Amount</th>
                 <th>Status</th>
@@ -161,6 +170,9 @@ export default function UpiScreen() {
             <tbody>
               {unReceivedUpiItems?.map((uri) => {
                 return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
+              })}
+              {unReceivedChequeItems?.map((uri) => {
+                return <UpiItemRow key={`cheque-list-${uri.id}`} data={uri} />;
               })}
               {receivedUpiItems?.map((uri) => {
                 return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
@@ -178,6 +190,7 @@ function UpiItemRow({ data }) {
   return (
     <tr>
       <td>{globalUtils.getTimeFormat(data.timestamp, true)}</td>
+      <td>{data.type?.toUpperCase()}</td>
       <td>{data.party?.name}</td>
       <td>{globalUtils.getCurrencyFormat(data.amount)}</td>
       <td
@@ -191,10 +204,22 @@ function UpiItemRow({ data }) {
       </td>
       <td>{allUsers.find((x) => x.uid === data?.createdBy)?.username}</td>
       <td>
-        <UPIDialog
-          createdBy={allUsers.find((x) => x.uid === data?.createdBy)?.username}
-          data={data}
-        />
+        {data?.type === 'cheque' ? (
+          <ChequeEntryDialog
+            chequeData={{
+              image: data.imageUrl,
+              party: data.party,
+              amount: data.amount,
+            }}
+          />
+        ) : (
+          <UPIDialog
+            createdBy={
+              allUsers.find((x) => x.uid === data?.createdBy)?.username
+            }
+            data={data}
+          />
+        )}
       </td>
     </tr>
   );

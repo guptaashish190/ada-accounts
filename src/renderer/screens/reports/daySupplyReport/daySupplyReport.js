@@ -236,31 +236,31 @@ function SupplyReportRow({ data, index, editRemarks, setRemarks }) {
   return (
     <table>
       <thead className="supply-report-row">
-        <th>
+        <th style={{ width: '25vw' }}>
           <Text className="sr-id">
             {data.receiptNumber} (
             {data.status === 'Completed' ? 'Received' : 'Unreceived'})
           </Text>
         </th>
-        <th>
+        <th style={{ width: '10vw' }}>
           <Text className="sr-timestamp">
             {allUsers.find((x) => x.uid === data.supplymanId)?.username}
           </Text>
         </th>
 
-        <th>
+        <th style={{ width: '10vw' }}>
           {' '}
           <Text className="sr-supplyman">
             {globalUtils.getDayTime(data.dispatchTimestamp)}
           </Text>
         </th>
-        <th>
+        <th style={{ width: '10vw' }}>
           <Text className="sr-supplyman">Payment Terms</Text>
         </th>
-        <th>
+        <th style={{ width: '20vw' }}>
           <Text>Payment</Text>
         </th>
-        <th>
+        <th style={{ width: '13vw' }}>
           <Text>Remarks</Text>
         </th>
       </thead>
@@ -364,11 +364,11 @@ function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
 
   return (
     <tbody className="supply-report-print-bill-detail">
-      <td style={{ width: '30vw' }}>{order.party?.name}</td>
-      <td style={{ width: '10vw' }}>{order.billNumber}</td>
-      <td style={{ width: '10vw' }}>
-        {globalUtils.getCurrencyFormat(order.orderAmount)}
+      <td style={{ textAlign: 'left' }}>
+        {order.party?.name} ({order.orderStatus})
       </td>
+      <td>{order.billNumber}</td>
+      <td>{globalUtils.getCurrencyFormat(order.orderAmount)}</td>
       {/* <td style={{ width: '20vw' }}>
         {order.bags
           ? order.bags
@@ -378,9 +378,9 @@ function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
           : ''}
       </td> */}
 
-      <td style={{ width: '10vw' }}>{order.party?.paymentTerms || '--'}</td>
+      <td>{order.party?.paymentTerms || '--'}</td>
 
-      <td style={{ width: '10vw' }}>
+      <td>
         {[...cashReceipts, ...upiReceipts, ...chequeReceipts].length === 0
           ? '--'
           : ''}
@@ -409,7 +409,7 @@ function SupplyReportOrderRow({ billId, editRemarks, setRemarks }) {
           </div>
         ))}
       </td>
-      <td style={{ width: '20vw' }}>
+      <td>
         {editRemarks ? (
           <Input
             size="small"

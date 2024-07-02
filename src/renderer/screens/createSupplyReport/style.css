@@ -7,7 +7,7 @@
 
 .create-supply-report-screen-container .bill-row-container {
   display: grid;
-  grid-template-columns: 5fr 2fr 2fr 1fr 2fr 2fr 2fr 2fr 1fr;
+  grid-template-columns: 5fr 2fr 2fr 2fr 2fr 2fr 2fr 1fr;
   row-gap: 10px;
 }
 

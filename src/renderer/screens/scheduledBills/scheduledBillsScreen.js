@@ -1,14 +1,23 @@
+/* eslint-disable jsx-a11y/control-has-associated-label */
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
   query,
+  updateDoc,
   where,
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { Button, Spinner } from '@fluentui/react-components';
+import {
+  Button,
+  Input,
+  ProgressBar,
+  Spinner,
+} from '@fluentui/react-components';
 import { firebaseDB } from '../../firebaseInit';
 import { VerticalSpace2 } from '../../common/verticalSpace';
 import globalUtils from '../../services/globalUtils';
@@ -19,6 +28,7 @@ export default function ScheduledBillsScreen() {
   const [toDate, setToDate] = useState(new Date());
   const [toDateOpen, setToDateOpen] = useState(false);
   const [fromDateOpen, setfromDateOpen] = useState(true);
+  const [zeroBalanceBills, setZeroBalanceBills] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchScheduledBills = async () => {
@@ -45,13 +55,18 @@ export default function ScheduledBillsScreen() {
       const querySnapshot = await getDocs(q);
 
       const orderList = [];
-      querySnapshot.forEach((doc) => {
-        orderList.push(doc.data());
+      querySnapshot.forEach((doc1) => {
+        const od = doc1.data();
+        console.log(od.balance);
+        if (od.balance > 2) {
+          orderList.push(od);
+        } else {
+          zeroBalanceBills.push(od);
+        }
       });
-      console.log(orderList);
       setOrders(orderList);
     } catch (error) {
-      console.error('Error fetchisng partiee: ', error);
+      console.error('Error fetching partiee: ', error);
     }
     setLoading(false);
   };
@@ -103,10 +118,30 @@ export default function ScheduledBillsScreen() {
               <th>Balance</th>
               <th>Scheduled For</th>
               <th>Accounts Notes</th>
+              <th>Schedule</th>
+              <th>Action</th>
             </thead>
             <tbody>
               {orders.map((x) => {
                 return <OrderScheduledRow key={`scheuled${x.id}`} order={x} />;
+              })}
+            </tbody>
+          </table>
+          <br />
+          <h2>Bills Payment Received</h2>
+          <table>
+            <thead style={{ background: '#22bb33' }}>
+              <th>Bill Number</th>
+              <th>Party</th>
+              <th>Amount</th>
+              <th>Scheduled For</th>
+              <th>Accounts Notes</th>
+            </thead>
+            <tbody>
+              {zeroBalanceBills.map((x) => {
+                return (
+                  <ZeroBalanceBillRow key={`zeroscheuled${x.id}`} order={x} />
+                );
               })}
             </tbody>
           </table>
@@ -117,8 +152,81 @@ export default function ScheduledBillsScreen() {
 }
 
 function OrderScheduledRow({ order }) {
+  const [orderUpdated, setOrderUpdated] = useState(order);
   const [party, setParty] = useState();
+  const [scheduleDate, setScheduleDate] = useState();
+  const [accNotes, setAccNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const getParty = async () => {
+    const party1 = await globalUtils.fetchPartyInfo(orderUpdated.partyId);
+    setParty(party1);
+  };
 
+  const onSave = async () => {
+    setLoading(true);
+    const orderDoc = doc(firebaseDB, 'orders', orderUpdated.id);
+    await updateDoc(orderDoc, {
+      schedulePaymentDate: scheduleDate.getTime(),
+      accountsNotes: accNotes.length ? accNotes : undefined,
+    });
+
+    const newOrder = await getDoc(orderDoc);
+    setOrderUpdated(newOrder.data());
+    setAccNotes('');
+    setScheduleDate();
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    getParty();
+  }, []);
+  return (
+    <tr key={`scheuled${orderUpdated.id}`}>
+      <td>{orderUpdated.billNumber}</td>
+      <td>{party?.name ?? '...'}</td>
+      <td>{globalUtils.getCurrencyFormat(orderUpdated.orderAmount)}</td>
+      <td>{globalUtils.getCurrencyFormat(orderUpdated.balance)}</td>
+      <td>
+        {globalUtils.getTimeFormat(orderUpdated.schedulePaymentDate, true)}
+      </td>
+
+      <td>
+        <Input
+          value={accNotes}
+          onChange={(e) => setAccNotes(e.target.value)}
+          placeholder={orderUpdated.accountsNotes}
+        />
+      </td>
+      <td>
+        <DatePicker
+          minDate={new Date()}
+          size="small"
+          onSelectDate={setScheduleDate}
+          placeholder="Schedule"
+          value={scheduleDate}
+        />
+      </td>
+      <td>
+        {loading ? (
+          <Spinner />
+        ) : (
+          <Button
+            onClick={() => onSave()}
+            disabled={
+              accNotes === orderUpdated.accountsNotes &&
+              scheduleDate?.getTime() === orderUpdated.schedulePaymentDate
+            }
+          >
+            Save
+          </Button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function ZeroBalanceBillRow({ order }) {
+  const [party, setParty] = useState();
   const getParty = async () => {
     const party1 = await globalUtils.fetchPartyInfo(order.partyId);
     setParty(party1);
@@ -127,13 +235,14 @@ function OrderScheduledRow({ order }) {
   useEffect(() => {
     getParty();
   }, []);
+
   return (
     <tr key={`scheuled${order.id}`}>
       <td>{order.billNumber}</td>
       <td>{party?.name ?? '...'}</td>
       <td>{globalUtils.getCurrencyFormat(order.orderAmount)}</td>
-      <td>{globalUtils.getCurrencyFormat(order.balance)}</td>
       <td>{globalUtils.getTimeFormat(order.schedulePaymentDate, true)}</td>
+
       <td>{order.accountsNotes}</td>
     </tr>
   );

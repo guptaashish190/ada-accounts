@@ -14,6 +14,7 @@ import {
   useToastController,
   Textarea,
   Spinner,
+  Tooltip,
 } from '@fluentui/react-components';
 import {
   DeleteRegular,
@@ -130,11 +131,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       return;
     }
 
-    if (!selectedSupplyman) {
-      showToast(dispatchToast, 'Please select a supplyman', 'error');
-      return;
-    }
-
     let billNumbersAdded = true;
     modifiedBills.forEach((bi) => {
       console.log(bi);
@@ -149,6 +145,10 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 
     if (!billNumbersAdded) {
       showToast(dispatchToast, 'Please enter correct bill numbers', 'error');
+      return;
+    }
+    if (!selectedSupplyman) {
+      showToast(dispatchToast, 'Please select a supplyman', 'error');
       return;
     }
     try {
@@ -198,7 +198,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           orderStatus: constants.firebase.supplyReportStatus.TOACCOUNTS,
           billNumber: modifiedBill1.billNumber,
           bags: modifiedBill1.bags || [],
-          orderAmount: parseInt(modifiedBill1.orderAmount, 10),
+          orderAmount: modifiedBill1.orderAmount
+            ? parseInt(modifiedBill1.orderAmount, 10)
+            : undefined,
           flow: [
             ...(modifiedBill1.flow || []),
             {
@@ -280,6 +282,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
               <BillRowLabelHeader />
               {modifiedBills.map((b, i) => (
                 <BillRow
+                  originalBill={bills[i]}
                   billsRefList={billListRefs}
                   editable={editable}
                   index={i * 2}
@@ -386,7 +389,7 @@ function TotalBagsComponent({ cases, polybags, packet }) {
   );
 }
 
-function BillRow({ bill, updatedBill, remove, editable, index }) {
+function BillRow({ originalBill, bill, updatedBill, remove, editable, index }) {
   const { settings } = useSettingsContext();
   const inputId = `createsupreport-bill-${index}`;
   const inputId2 = `createsupreport-bill-${index + 1}`;
@@ -432,6 +435,7 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
         style={{ marginRight: '20px', width: '100px' }}
         contentBefore="T-"
         defaultValue={bill.billNumber?.replace('T-', '') || ''}
+        type="number"
         onChange={(x) => {
           const tempBill = { ...bill };
           tempBill.billNumber = `T-${x.target.value}`;
@@ -443,15 +447,14 @@ function BillRow({ bill, updatedBill, remove, editable, index }) {
         id={`${inputId2}`}
         style={{ marginRight: '20px', width: '100px' }}
         contentBefore="₹"
-        defaultValue={bill.orderAmount}
-        placeholder="0"
+        type="number"
+        placeholder={originalBill.orderAmount}
         onChange={(x) => {
           const tempBill = { ...bill };
           tempBill.orderAmount = x.target.value;
           updatedBill(tempBill);
         }}
       />
-      <Text>{bill.party.fileNumber}</Text>
       <Text>{bill.party.area}</Text>
       <SpinButton
         disabled={!editable}
@@ -523,8 +526,6 @@ function BillRowLabelHeader() {
       <Text className="party-name label-header">Party</Text>
       <Text className="bill-number label-header">Bill Number</Text>
       <Text className="bill-number label-header">Final Amount</Text>
-      <Text className="field label-header">File</Text>
-
       <Text className="field label-header">Area</Text>
       <Text className="spinner label-header">Cases</Text>
       <Text className="spinner label-header">Packets</Text>

@@ -19,6 +19,8 @@ import {
   th,
   TableRow,
   Tooltip,
+  Image,
+  Text,
 } from '@fluentui/react-components';
 import {
   Timestamp,
@@ -311,13 +313,13 @@ function TableCustomCell({ children }) {
   return <td>{children || '--'}</td>;
 }
 
-function ChequeEntryDialog({ onClose }) {
+export function ChequeEntryDialog({ onClose, chequeData }) {
   const [showChequeEntryDialog, setShowChequeEntryDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [chequeNumber, setChequeNumber] = useState('');
   const [chequeDate, setChequeDate] = useState();
-  const [party, setParty] = useState();
-  const [amount, setAmount] = useState('');
+  const [party, setParty] = useState(chequeData?.party);
+  const [amount, setAmount] = useState();
   const [notes, setNotes] = useState('');
 
   const handleAddCheque = async () => {
@@ -394,6 +396,13 @@ function ChequeEntryDialog({ onClose }) {
         <DialogBody>
           <DialogContent className="cheque-entry-dailog">
             {loading ? <Spinner /> : null}
+            {chequeData?.image ? (
+              <Image
+                fit="contain"
+                src={chequeData.image}
+                style={{ height: '25vh', marginBottom: '20px' }}
+              />
+            ) : null}
             <Label>Cheque Number</Label>
             <Input
               value={chequeNumber}
@@ -413,8 +422,13 @@ function ChequeEntryDialog({ onClose }) {
             />
             <VerticalSpace1 />
 
-            <Label>Select Party</Label>
-            <PartySelector onPartySelected={(p) => setParty(p)} />
+            {chequeData?.party ? '' : <Label>Select Party</Label>}
+            {chequeData?.party ? (
+              <div style={{ fontSize: '1.2em' }}>{chequeData.party.name}</div>
+            ) : (
+              <PartySelector onPartySelected={(p) => setParty(p)} />
+            )}
+
             <VerticalSpace1 />
 
             <Label>Amount</Label>
