@@ -212,6 +212,12 @@ export default function DaySupplyReportPrint() {
                     <Text>Last Payment Received</Text>
                   </th>
                   <th>
+                    <Text>Last Billing</Text>
+                  </th>
+                  <th>
+                    <Text>Outstanding</Text>
+                  </th>
+                  <th>
                     <Text>Remarks</Text>
                   </th>
                 </thead>
@@ -267,7 +273,6 @@ function SupplyReportRow({
         </th>
 
         <th style={{ width: '10vw' }}>
-          {' '}
           <Text className="sr-supplyman">
             {globalUtils.getDayTime(data.dispatchTimestamp)}
           </Text>
@@ -283,6 +288,9 @@ function SupplyReportRow({
         </th>
         <th style={{ width: '20vw' }}>
           <Text>Last Billing</Text>
+        </th>
+        <th>
+          <Text>Outstanding</Text>
         </th>
         <th style={{ width: '13vw' }}>
           <Text>Remarks</Text>
@@ -590,6 +598,7 @@ function SupplyReportOrderRow({
           </>
         ) : null}
       </td>
+      <td>{globalUtils.getCurrencyFormat(order.party.partyBalance)}</td>
       <td>
         {editRemarks ? (
           <Input
