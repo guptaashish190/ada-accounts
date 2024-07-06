@@ -204,6 +204,18 @@ export default {
     // Use String.prototype.padStart to add leading zeros
     return `${counter.prefix}-${String(counter1).padStart(6, '0')}`;
   },
+  dateDifferenceInDays: (date1, date2, diff) => {
+    // Convert the dates to milliseconds
+    const time1 = new Date(date1).getTime();
+    const time2 = new Date(date2).getTime();
+
+    // Calculate the difference in milliseconds
+    const differenceInMilliseconds = Math.abs(time1 - time2);
+
+    // Convert milliseconds to days
+    const differenceInDays = differenceInMilliseconds / (1000 * 60 * 60 * 24);
+    return differenceInDays;
+  },
   incrementReceiptCounter: async (counter) => {
     const cashReceiptsRef = doc(firebaseDB, '/counters', counter.name);
 

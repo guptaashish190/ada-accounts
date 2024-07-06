@@ -11,7 +11,6 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   limit,
   query,
   updateDoc,
@@ -156,9 +155,9 @@ export default function ReceiveSRScreen() {
   const onComplete = async () => {
     setLoading(true);
 
-    const supplyReportRef = doc(firebaseDB, dbName, supplyReport.id);
-    const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
     try {
+      const supplyReportRef = doc(firebaseDB, dbName, supplyReport.id);
+      const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
       // update supply report for all the bill rec details
       updateDoc(supplyReportRef, {
         ...(allBillsReceived
@@ -293,7 +292,10 @@ export default function ReceiveSRScreen() {
             {supplyReport.receiptNumber}
           </h3>
           <VerticalSpace1 />
+          <Text>Accounts Notes : {supplyReport.dispatchAccountNotes}</Text>
 
+          <br />
+          <br />
           {allBills.map((bill) => {
             return (
               <div className="party-section-receive-sr">
@@ -366,7 +368,6 @@ export default function ReceiveSRScreen() {
               </div>
             );
           })}
-
           {Object.values(groupedSupplementaryBills).map((bills) => {
             return (
               <div>

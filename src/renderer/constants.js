@@ -3,6 +3,7 @@ export default {
   printConstants: {
     PRINT_CASHRECEIPT: 'PRINT_CASH_RECEIPT',
   },
+  paymentOkBuffer: 2,
   paymentTermsListItems: ['Monthly', 'Weekly', 'Cash', 'Bill to Bill'],
   firebase: {
     supplyReportStatus: {

@@ -58,7 +58,7 @@ export default [
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
   },
   {
-    name: 'UPI',
+    name: 'Payments',
     route: '/upi',
     key: 'tab-upi',
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
