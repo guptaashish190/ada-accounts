@@ -85,11 +85,11 @@ export default function ChequesScreen() {
       <div className="cheques-screen">
         <h2>Cheques</h2>
         <VerticalSpace1 />
-        <ChequeEntryDialog
+        {/* <ChequeEntryDialog
           onClose={() => {
             fetchCheques();
           }}
-        />
+        /> */}
         <VerticalSpace1 />
         <FilterSection
           setFilteredCheques={setFilteredCheques}

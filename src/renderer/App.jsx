@@ -52,6 +52,7 @@ import DaySupplyReportPrint from './screens/reports/daySupplyReport/daySupplyRep
 import ExpenseReport from './screens/reports/expenseReport/expenseReport';
 import CashReport from './screens/reports/cashReport/cashReport';
 import ViewVoucherScreen from './screens/vouchers/viewVoucherScreen';
+import PendingBillsToday from './screens/pendingBillsToday/pendingBillsToday';
 
 const myNewTheme = {
   10: '#010304',
@@ -180,6 +181,10 @@ export default function App({ routeProps, startRoute, printData }) {
                         <Route
                           path="/scheduled"
                           element={<ScheduledBillsScreen />}
+                        />
+                        <Route
+                          path="/pendingBillsToday"
+                          element={<PendingBillsToday />}
                         />
                         <Route
                           path="/daySupplyReportPrint"

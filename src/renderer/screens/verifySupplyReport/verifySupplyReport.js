@@ -394,17 +394,6 @@ function PartySection({
     }
   };
 
-  const getOutstanding = (orders1) => {
-    return (
-      (bill.party?.opening || 0) +
-      orders1.reduce(
-        (acc, cur) =>
-          acc + (evaluate(cur.balance?.toString() || '0') || cur.orderAmount),
-        0,
-      )
-    );
-  };
-
   return (
     <div className="party-section-container">
       <div className="party-info-header">
@@ -427,9 +416,6 @@ function PartySection({
         <div className="amount">
           {globalUtils.getCurrencyFormat(bill.orderAmount)}
         </div>
-        <b>O/S {globalUtils.getCurrencyFormat(getOutstanding(oldBills))}</b> (
-        Opening - {globalUtils.getCurrencyFormat(bill.party?.opening || 0)})
-        {/* </div */}
       </div>
 
       <Button

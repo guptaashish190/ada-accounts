@@ -94,6 +94,11 @@ export default [
     key: 'tab-searchBills',
   },
   {
+    name: 'Pending Bills',
+    route: '/pendingBillsToday',
+    key: 'tab-pending-bills',
+  },
+  {
     name: 'Scheduled',
     route: '/scheduled',
     key: 'tab-scheduled',
