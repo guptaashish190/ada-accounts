@@ -141,7 +141,6 @@
 .bill-number {
   display: flex;
   align-items: center;
-  gap: 6px;
   margin-bottom: 6px;
 }
 
@@ -171,7 +170,6 @@
 }
 
 .bill-amount, .balance {
-  background: #f3f4f6;
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 500;
@@ -179,7 +177,6 @@
 }
 
 .balance {
-  background: #fef2f2;
   color: #dc2626;
 }
 

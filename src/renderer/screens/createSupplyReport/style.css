@@ -73,7 +73,7 @@
 
 .bill-row-header {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 60px;
+  grid-template-columns: 1fr 2fr 1fr;
   gap: 12px;
   padding: 8px 12px;
   background-color: #f8f9fa;
@@ -88,6 +88,7 @@
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   align-items: center;
+  gap: 12px;
   padding: 12px;
   border-radius: 6px;
   transition: all 0.2s ease;
@@ -175,6 +176,7 @@
 
 .delete-button {
   justify-self: center;
+  align-self: center;
 }
 
 .summary-section {
