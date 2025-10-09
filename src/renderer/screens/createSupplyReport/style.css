@@ -73,7 +73,7 @@
 
 .bill-row-header {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 60px;
   gap: 12px;
   padding: 8px 12px;
   background-color: #f8f9fa;
@@ -84,9 +84,9 @@
   text-align: center;
 }
 
-.bill-row {
+.createsupplyreport-bill-row {
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 2fr 1fr 1fr 60px;
   align-items: center;
   gap: 12px;
   padding: 12px;
@@ -95,7 +95,7 @@
   min-height: 60px;
 }
 
-.bill-row:hover {
+.createsupplyreport-bill-row:hover {
   border-color: #dee2e6;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
@@ -174,7 +174,7 @@
   text-transform: uppercase;
 }
 
-.delete-button {
+.createsupplyreport-bill-row .delete-button {
   justify-self: center;
   align-self: center;
 }

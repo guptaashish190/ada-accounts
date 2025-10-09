@@ -142,7 +142,7 @@ export default function BillRow({
           ? { pointerEvents: 'none', filter: 'grayscale(1)', opacity: 0.4 }
           : {}
       }
-      className={`bill-row ${isReceived1 ? 'received' : ''} ${
+      className={`receivesr-bill-row ${isReceived1 ? 'received' : ''} ${
         isOld ? 'old-bill' : 'new-bill'
       }`}
     >

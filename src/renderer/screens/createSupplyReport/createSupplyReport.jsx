@@ -497,7 +497,7 @@ function BillRow({ originalBill, bill, updatedBill, remove, editable, index }) {
   }
 
   return (
-    <div className="bill-row">
+    <div className="createsupplyreport-bill-row">
       <div className="party-info">
         <div className="party-header">
           <Text size={400} weight="semibold" className="party-name">

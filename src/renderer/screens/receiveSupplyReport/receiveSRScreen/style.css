@@ -108,19 +108,27 @@
 }
 
 /* Bill Row Styles */
-.bill-row {
+.receivesr-bill-row {
   border-radius: 6px;
   padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
   transition: all 0.2s ease;
   position: relative;
 }
 
-.bill-row.received {
+.receivesr-bill-row:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.receivesr-bill-row.received {
   background: #f0fdf4;
   border-left: 3px solid #22c55e;
 }
 
-.bill-row.old-bill {
+.receivesr-bill-row.old-bill {
   border-left: 3px solid #f59e0b;
   background: #fffbeb;
 }
@@ -141,6 +149,7 @@
 .bill-number {
   display: flex;
   align-items: center;
+  gap: 6px;
   margin-bottom: 6px;
 }
 
@@ -170,6 +179,7 @@
 }
 
 .bill-amount, .balance {
+  background: #f3f4f6;
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 500;
@@ -177,6 +187,7 @@
 }
 
 .balance {
+  background: #fef2f2;
   color: #dc2626;
 }
 
@@ -258,6 +269,7 @@
   box-shadow: none !important;
 }
 
+
 .payment-inputs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -268,6 +280,7 @@
 .payment-group {
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .payment-label {
@@ -505,7 +518,7 @@
     padding: 2px 4px;
   }
   
-  .bill-row {
+  .receivesr-bill-row {
     padding: 8px;
   }
   
