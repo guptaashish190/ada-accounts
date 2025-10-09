@@ -540,9 +540,6 @@ function PartySection({
           <Text size={400} weight="semibold" style={{ color: '#323130' }}>
             {bill.party?.name}
           </Text>
-          <Text size={300} weight="bold" style={{ color: '#107c10' }}>
-            {globalUtils.getCurrencyFormat(bill.orderAmount)}
-          </Text>
         </div>
         <div className="status-badge-compact">
           <Text size={200} weight="medium">
@@ -559,11 +556,17 @@ function PartySection({
             {bill.billNumber?.toUpperCase() || '--'}
           </span>
         </div>
+        <div className="detail-row">
+          <span className="detail-label">Amount:</span>
+          <span className="detail-value">
+            {globalUtils.getCurrencyFormat(bill.orderAmount)}
+          </span>
+        </div>
       </div>
 
-      {/* All Dropdowns in One Row */}
-      <div className="dropdowns-row">
-        <div className="dropdown-item">
+      {/* Compact Dropdowns Row */}
+      <div className="dropdowns-row-compact">
+        <div className="dropdown-item-compact">
           <Label size="small" weight="semibold">
             Payment Terms
             {mrAssignment?.isRequired && (
@@ -575,7 +578,7 @@ function PartySection({
             placeholder="Select Terms"
             defaultValue={paymentTerms}
             size="small"
-            style={{ minWidth: '140px' }}
+            style={{ width: '140px' }}
           >
             {constants.paymentTermsListItems.map((x) => (
               <Option text={x} value={x} key={`payment-terms-${x}`}>
@@ -585,7 +588,7 @@ function PartySection({
           </Dropdown>
         </div>
 
-        <div className="dropdown-item">
+        <div className="dropdown-item-compact">
           <Label size="small" weight="semibold">
             MR Name
             {mrAssignment?.isRequired && (
@@ -600,7 +603,7 @@ function PartySection({
             value={mrAssignment?.mrName || ''}
             disabled={!mrAssignment?.isRequired && mrAssignment?.mrName}
             size="small"
-            style={{ minWidth: '120px' }}
+            style={{ width: '120px' }}
           >
             {uniqueMrNames.map((mrName) => (
               <Option text={mrName} value={mrName} key={`mr-${mrName}`}>
@@ -610,7 +613,7 @@ function PartySection({
           </Dropdown>
         </div>
 
-        <div className="dropdown-item">
+        <div className="dropdown-item-compact">
           <Label size="small" weight="semibold">
             Route Day
             {mrAssignment?.isRequired && (
@@ -625,7 +628,7 @@ function PartySection({
             value={mrAssignment?.day || ''}
             disabled={!mrAssignment?.isRequired && mrAssignment?.day}
             size="small"
-            style={{ minWidth: '100px' }}
+            style={{ width: '100px' }}
           >
             {uniqueDays.map((day) => (
               <Option text={day} value={day} key={`day-${day}`}>
