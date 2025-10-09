@@ -68,6 +68,8 @@ export default function VerifySupplyReport() {
   const [attachedBills, setAttachedBills] = useState([]);
   const [supplementaryBills, setSupplementaryBills] = useState([]);
   const [supplymanUser, setSupplymanUser] = useState();
+  const [mrRoutes, setMrRoutes] = useState([]);
+  const [orderMrAssignments, setOrderMrAssignments] = useState({});
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
   const navigate = useNavigate();
@@ -75,27 +77,87 @@ export default function VerifySupplyReport() {
   const [isSupplementBillAddDialogOpen, setIsSupplementBillAddDialogOpen] =
     useState(false);
 
+  // Fetch MR routes from Firestore
+  const fetchMrRoutes = async () => {
+    try {
+      const mrRoutesCollection = collection(firebaseDB, 'mr_routes');
+      const querySnapshot = await getDocs(mrRoutesCollection);
+
+      const routesData = [];
+      querySnapshot.forEach((routeDoc) => {
+        routesData.push({
+          id: routeDoc.id,
+          ...routeDoc.data(),
+        });
+      });
+
+      setMrRoutes(routesData);
+      return routesData;
+    } catch (error) {
+      console.error('Error fetching MR routes:', error);
+      showToast(dispatchToast, 'Error fetching MR routes', 'error');
+      return [];
+    }
+  };
+
+  // Find MR and day for a given partyId
+  const findMrAndDayForParty = (partyId, routes) => {
+    for (const route of routes) {
+      if (route.route && Array.isArray(route.route)) {
+        for (const dayRoute of route.route) {
+          if (dayRoute.parties && Array.isArray(dayRoute.parties)) {
+            if (dayRoute.parties.includes(partyId)) {
+              return {
+                mrName: route.name,
+                day: dayRoute.day,
+                found: true,
+              };
+            }
+          }
+        }
+      }
+    }
+    return { found: false };
+  };
+
+  // Initialize MR assignments for all orders
+  const initializeMrAssignments = (orders, routes) => {
+    const assignments = {};
+    orders.forEach((order) => {
+      const mrInfo = findMrAndDayForParty(order.partyId, routes);
+      assignments[order.id] = {
+        mrName: mrInfo.found ? mrInfo.mrName : '',
+        day: mrInfo.found ? mrInfo.day : '',
+        isRequired: !mrInfo.found,
+      };
+    });
+    setOrderMrAssignments(assignments);
+  };
+
   const prefillState = async () => {
     setLoading(true);
     try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds(
-        supplyReport.orders,
-      );
+      // Fetch orders and MR routes in parallel
+      const [fetchedOrders, routesData] = await Promise.all([
+        globalUtils.fetchOrdersByIds(supplyReport.orders),
+        fetchMrRoutes(),
+      ]);
 
-      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
-      setBills(fetchedOrders);
+      let orders = (await fetchedOrders).filter((fo) => !fo.error);
+      orders = await globalUtils.fetchPartyInfoForOrders(orders);
+      setBills(orders);
+
+      // Initialize MR assignments
+      initializeMrAssignments(orders, routesData);
+
       // set payment terms
-
       const fetchedPaymentTerms = {};
-
-      fetchedOrders.forEach((o) => {
+      orders.forEach((o) => {
         if (o.party.paymentTerms)
           fetchedPaymentTerms[o.partyId] = o.party.paymentTerms;
       });
 
       console.log(fetchedPaymentTerms);
-
       setAllPartiesPaymentTerms(fetchedPaymentTerms);
 
       const supplymanUser1 = await globalUtils.fetchUserById(
@@ -115,6 +177,47 @@ export default function VerifySupplyReport() {
   useEffect(() => {
     prefillState();
   }, []);
+
+  // Update MR assignment for a specific order
+  const updateMrAssignment = (orderId, field, value) => {
+    setOrderMrAssignments((prev) => ({
+      ...prev,
+      [orderId]: {
+        ...prev[orderId],
+        [field]: value,
+      },
+    }));
+  };
+
+  // Validate MR assignments and payment terms before dispatch
+  const validateMrAssignments = () => {
+    const requiredOrders = Object.entries(orderMrAssignments).filter(
+      ([orderId, assignment]) => assignment.isRequired,
+    );
+
+    for (const [orderId, assignment] of requiredOrders) {
+      if (!assignment.mrName || !assignment.day) {
+        return {
+          isValid: false,
+          message:
+            'Please select MR Name and Route Day for all required orders',
+        };
+      }
+    }
+
+    // Also validate payment terms for required orders
+    for (const [orderId, assignment] of requiredOrders) {
+      const bill = bills.find((b) => b.id === orderId);
+      if (bill && !allPartiesPaymentTerms[bill.partyId]) {
+        return {
+          isValid: false,
+          message: 'Please select Payment Terms for all required orders',
+        };
+      }
+    }
+
+    return { isValid: true };
+  };
 
   const onDispatch = async () => {
     try {
@@ -222,6 +325,9 @@ export default function VerifySupplyReport() {
                 }
                 index={i}
                 bill={b}
+                mrRoutes={mrRoutes}
+                mrAssignment={orderMrAssignments[b.id]}
+                updateMrAssignment={updateMrAssignment}
               />
             );
           })}
@@ -276,6 +382,8 @@ export default function VerifySupplyReport() {
                   ? null
                   : uniqueParties.push(x.partyId),
               );
+
+              // Validate payment terms
               if (
                 uniqueParties.length !==
                 Object.keys(allPartiesPaymentTerms).length
@@ -285,24 +393,32 @@ export default function VerifySupplyReport() {
                   'Please select Payment Terms of all the parties',
                   'error',
                 );
-              } else {
-                confirmAlert({
-                  title: 'Confirm to submit',
-                  message: 'Are you sure to do this.',
-                  buttons: [
-                    {
-                      label: 'Yes',
-                      onClick: () => {
-                        onDispatch();
-                      },
-                    },
-                    {
-                      label: 'No',
-                      onClick: () => {},
-                    },
-                  ],
-                });
+                return;
               }
+
+              // Validate MR assignments
+              const mrValidation = validateMrAssignments();
+              if (!mrValidation.isValid) {
+                showToast(dispatchToast, mrValidation.message, 'error');
+                return;
+              }
+
+              confirmAlert({
+                title: 'Confirm to submit',
+                message: 'Are you sure to do this.',
+                buttons: [
+                  {
+                    label: 'Yes',
+                    onClick: () => {
+                      onDispatch();
+                    },
+                  },
+                  {
+                    label: 'No',
+                    onClick: () => {},
+                  },
+                ],
+              });
             }}
             appearance="primary"
           >
@@ -349,6 +465,9 @@ function PartySection({
   attachedBills,
   setPaymentTerms,
   paymentTerms,
+  mrRoutes,
+  mrAssignment,
+  updateMrAssignment,
 }) {
   console.log(paymentTerms);
   const [oldBills, setOldBills] = useState([]);
@@ -394,29 +513,137 @@ function PartySection({
     }
   };
 
+  // Get unique MR names from routes
+  const uniqueMrNames = [...new Set(mrRoutes.map((route) => route.name))];
+
+  // Debug: Log the routes data to see the structure
+  console.log('MR Routes data:', mrRoutes);
+  console.log('Unique MR Names:', uniqueMrNames);
+
+  // Get unique days from all routes
+  const uniqueDays = [
+    ...new Set(
+      mrRoutes.flatMap((route) =>
+        route.route ? route.route.map((dayRoute) => dayRoute.day) : [],
+      ),
+    ),
+  ];
+
   return (
-    <div className="party-section-container">
-      <div className="party-info-header">
-        <div className="index">{index + 1}.</div>
-        <div className="party-name">{bill.party?.name}</div>
-        <Dropdown
-          onOptionSelect={(_, e) => setPaymentTerms(e.optionValue)}
-          className="dropdown filter-input"
-          placeholder="Payment Terms"
-          defaultValue={paymentTerms}
-        >
-          {constants.paymentTermsListItems.map((x) => (
-            <Option text={x} value={x} key={`accounts-with-dropdown ${x}`}>
-              {x}
-            </Option>
-          ))}
-        </Dropdown>
-        <div className="bill-number">{bill.billNumber?.toUpperCase()}</div>
-        <div className="file-number">{bill.party?.fileNumber}</div>
-        <div className="amount">
-          {globalUtils.getCurrencyFormat(bill.orderAmount)}
+    <div className="order-card-compact">
+      {/* Compact Header */}
+      <div className="compact-header">
+        <div className="order-info">
+          <Text size={300} weight="bold" style={{ color: '#0078d4' }}>
+            #{index + 1}
+          </Text>
+          <Text size={400} weight="semibold" style={{ color: '#323130' }}>
+            {bill.party?.name}
+          </Text>
+          <Text size={300} weight="bold" style={{ color: '#107c10' }}>
+            {globalUtils.getCurrencyFormat(bill.orderAmount)}
+          </Text>
+        </div>
+        <div className="status-badge-compact">
+          <Text size={200} weight="medium">
+            {mrAssignment?.isRequired ? '⚠️ Required' : '✅ Auto'}
+          </Text>
         </div>
       </div>
+
+      {/* Compact Details Row */}
+      <div className="compact-details">
+        <div className="detail-row">
+          <span className="detail-label">Bill:</span>
+          <span className="detail-value">
+            {bill.billNumber?.toUpperCase() || '--'}
+          </span>
+        </div>
+      </div>
+
+      {/* All Dropdowns in One Row */}
+      <div className="dropdowns-row">
+        <div className="dropdown-item">
+          <Label size="small" weight="semibold">
+            Payment Terms
+            {mrAssignment?.isRequired && (
+              <span className="required-asterisk"> *</span>
+            )}
+          </Label>
+          <Dropdown
+            onOptionSelect={(_, e) => setPaymentTerms(e.optionValue)}
+            placeholder="Select Terms"
+            defaultValue={paymentTerms}
+            size="small"
+            style={{ minWidth: '140px' }}
+          >
+            {constants.paymentTermsListItems.map((x) => (
+              <Option text={x} value={x} key={`payment-terms-${x}`}>
+                {x}
+              </Option>
+            ))}
+          </Dropdown>
+        </div>
+
+        <div className="dropdown-item">
+          <Label size="small" weight="semibold">
+            MR Name
+            {mrAssignment?.isRequired && (
+              <span className="required-asterisk"> *</span>
+            )}
+          </Label>
+          <Dropdown
+            onOptionSelect={(_, e) =>
+              updateMrAssignment(bill.id, 'mrName', e.optionValue)
+            }
+            placeholder="Select MR"
+            value={mrAssignment?.mrName || ''}
+            disabled={!mrAssignment?.isRequired && mrAssignment?.mrName}
+            size="small"
+            style={{ minWidth: '120px' }}
+          >
+            {uniqueMrNames.map((mrName) => (
+              <Option text={mrName} value={mrName} key={`mr-${mrName}`}>
+                {mrName}
+              </Option>
+            ))}
+          </Dropdown>
+        </div>
+
+        <div className="dropdown-item">
+          <Label size="small" weight="semibold">
+            Route Day
+            {mrAssignment?.isRequired && (
+              <span className="required-asterisk"> *</span>
+            )}
+          </Label>
+          <Dropdown
+            onOptionSelect={(_, e) =>
+              updateMrAssignment(bill.id, 'day', e.optionValue)
+            }
+            placeholder="Select Day"
+            value={mrAssignment?.day || ''}
+            disabled={!mrAssignment?.isRequired && mrAssignment?.day}
+            size="small"
+            style={{ minWidth: '100px' }}
+          >
+            {uniqueDays.map((day) => (
+              <Option text={day} value={day} key={`day-${day}`}>
+                {day}
+              </Option>
+            ))}
+          </Dropdown>
+        </div>
+      </div>
+
+      {mrAssignment?.isRequired && (
+        <div className="status-message-compact warning">
+          <Text size={200} style={{ color: '#d83b01' }}>
+            ⚠️ Manual assignment required - select Payment Terms, MR Name, and
+            Route Day
+          </Text>
+        </div>
+      )}
 
       <Button
         onClick={() => {

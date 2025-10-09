@@ -156,7 +156,7 @@ function BillsList({ partyId }) {
         ordersCollection,
         where('partyId', '==', partyId),
         where('balance', '>', 0),
-        orderBy('billCreationTime', 'desc'),
+        orderBy('billCreationTime', 'asc'),
         limit(10),
       ); // Assuming 'balance' field indicates pending amount
 
