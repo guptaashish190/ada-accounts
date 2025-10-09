@@ -69,65 +69,93 @@ export default function PendingBillsToday() {
   }, []);
 
   return (
-    <center>
-      <h3>Pending Bills For Collection</h3>
-      <div>
-        <DatePicker
-          //   open={fromDateOpen}
-          className=" filter-input"
-          onSelectDate={(x) => {
-            setFromDate(x);
-            setToDateOpen(true);
-            setfromDateOpen(false);
-          }}
-          placeholder="From"
-          value={fromDate}
-        />
-        {/* &nbsp;
-        <DatePicker
-          //   open={toDateOpen}
-          className=" filter-input"
-          onSelectDate={(x) => {
-            setToDate(x);
-            setToDateOpen(false);
-          }}
-          placeholder="To"
-          value={toDate}
-        />
-        &nbsp; */}
-        <Button onClick={() => fetchTodaysBills()}>Get</Button>
+    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        padding: '24px',
+        borderRadius: '12px',
+        marginBottom: '24px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+      }}>
+        <h2 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '600' }}>
+          Pending Bills For Collection
+        </h2>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <DatePicker
+            className="filter-input"
+            onSelectDate={(x) => {
+              setFromDate(x);
+              setToDateOpen(true);
+              setfromDateOpen(false);
+            }}
+            placeholder="Select Date"
+            value={fromDate}
+            style={{ minWidth: '200px' }}
+          />
+          <Button 
+            onClick={() => fetchTodaysBills()}
+            appearance="secondary"
+            style={{ 
+              background: 'rgba(255,255,255,0.2)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              color: 'white'
+            }}
+          >
+            Get Bills
+          </Button>
+        </div>
       </div>
-
-      <VerticalSpace2 />
 
       {loading ? (
         <Spinner />
       ) : (
-        <div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {Object.keys(mrPartiesList).map((mr) => (
-            <div key={`mr${mr}`}>
-              <h2>
-                {mr} - {mrPartiesList[mr]?.length ?? 0} Parties
-              </h2>
-              <table style={{ width: '80%', margin: 'auto' }}>
-                <thead>
-                  <tr>
-                    <th width={`${100 / numColumns}%`}>Bill No</th>
-                    <th width={`${100 / numColumns}%`}>Bill Date</th>
-                    <th width={`${100 / numColumns}%`}>Bill Amount</th>
-                    <th width={`${100 / numColumns}%`}>Balance</th>
-                    <th width={`${100 / numColumns}%`}>Days</th>
-                  </tr>
-                </thead>
-              </table>
-              {mrPartiesList[mr].map((party) => (
-                <BillsList partyId={party} />
-              ))}
+            <div key={`mr${mr}`} style={{
+              background: 'white',
+              borderRadius: '12px',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+              overflow: 'hidden',
+              border: '1px solid #e5e7eb'
+            }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+                padding: '16px 20px',
+                borderBottom: '1px solid #e5e7eb'
+              }}>
+                <h3 style={{ 
+                  margin: '0', 
+                  fontSize: '18px', 
+                  fontWeight: '600',
+                  color: '#374151',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <span style={{
+                    background: '#667eea',
+                    color: 'white',
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}>
+                    {mrPartiesList[mr]?.length ?? 0}
+                  </span>
+                  {mr}
+                </h3>
+              </div>
+              <div style={{ padding: '0' }}>
+                {mrPartiesList[mr].map((party) => (
+                  <BillsList partyId={party} />
+                ))}
+              </div>
             </div>
           ))}
         </div>
       )}
-    </center>
+    </div>
   );
 }
 
@@ -135,6 +163,8 @@ function BillsList({ partyId }) {
   const [bills, setBills] = useState([]);
   const [partyDetails, setPartyDetails] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [lastPayment, setLastPayment] = useState(null);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const fetchPartyDetails = async () => {
     try {
@@ -157,7 +187,6 @@ function BillsList({ partyId }) {
         where('partyId', '==', partyId),
         where('balance', '>', 0),
         orderBy('billCreationTime', 'asc'),
-        limit(10),
       ); // Assuming 'balance' field indicates pending amount
 
       const querySnapshot = await getDocs(q);
@@ -174,6 +203,77 @@ function BillsList({ partyId }) {
     }
   };
 
+  const fetchLastPayment = async () => {
+    try {
+      const cashRef = collection(firebaseDB, 'cashReceipts');
+      const upiRef = collection(firebaseDB, 'upi');
+      const chequeRef = collection(firebaseDB, 'cheques');
+
+      // Get the oldest pending bill to find payments before that
+      const oldestBill = bills.length > 0 ? bills[0] : null;
+      if (!oldestBill) {
+        setLastPayment(null);
+        return;
+      }
+
+      const dateFrom = new Date(oldestBill.billCreationTime);
+      dateFrom.setHours(0);
+      dateFrom.setMinutes(0);
+      dateFrom.setSeconds(0);
+
+      // Query for last payment before the oldest pending bill
+      const cashQueryLast = query(
+        cashRef,
+        where('parties', 'array-contains', partyId),
+        where('timestamp', '<', dateFrom.getTime()),
+        orderBy('timestamp', 'desc'),
+        limit(1),
+      );
+      const chequeQueryLast = query(
+        chequeRef,
+        where('partyId', '==', partyId),
+        where('timestamp', '<', dateFrom.getTime()),
+        orderBy('timestamp', 'desc'),
+        limit(1),
+      );
+      const upiQueryLast = query(
+        upiRef,
+        where('partyId', '==', partyId),
+        where('timestamp', '<', dateFrom.getTime()),
+        orderBy('timestamp', 'desc'),
+        limit(1),
+      );
+
+      const cashQueryLastDocs = await getDocs(cashQueryLast);
+      const upiQueryLastDocs = await getDocs(upiQueryLast);
+      const chequeQueryLastDocs = await getDocs(chequeQueryLast);
+
+      const cashLastValue =
+        cashQueryLastDocs.docs.length > 0
+          ? cashQueryLastDocs.docs[0].data()
+          : undefined;
+      const upiLastValue =
+        upiQueryLastDocs.docs.length > 0
+          ? upiQueryLastDocs.docs[0].data()
+          : undefined;
+      const chequeLastValue =
+        chequeQueryLastDocs.docs.length > 0
+          ? chequeQueryLastDocs.docs[0].data()
+          : undefined;
+
+      const lastPayment1 = [
+        { ...cashLastValue, type: 'cash' },
+        { ...upiLastValue, type: 'upi' },
+        { ...chequeLastValue, type: 'cheque' },
+      ].sort((x1, x2) => (x2?.timestamp || 0) - (x1?.timestamp || 0))[0];
+
+      setLastPayment(lastPayment1.timestamp ? lastPayment1 : undefined);
+    } catch (e) {
+      console.log('Error fetching last payment:', e);
+      setLastPayment(null);
+    }
+  };
+
   const init = async () => {
     setLoading(true);
     await fetchPartyDetails();
@@ -184,6 +284,12 @@ function BillsList({ partyId }) {
   useEffect(() => {
     init();
   }, []);
+
+  useEffect(() => {
+    if (bills.length > 0) {
+      fetchLastPayment();
+    }
+  }, [bills]);
   if (loading) {
     return <Spinner />;
   }
@@ -197,37 +303,149 @@ function BillsList({ partyId }) {
   };
 
   return (
-    <div>
-      {/* Show bill number, bill date, bill amount,  number of days since bill issued (calculate using the bill date) in table format of all the bills */}
-      <table style={{ width: '80%', margin: 'auto' }}>
-        <tbody>
-          <tr style={{ backgroundColor: '#f0f0f0' }}>
-            <td colSpan={5}>
-              <b>
-                {partyDetails?.name ?? partyId} - {bills.length} Pending Bills
-              </b>
-            </td>
-          </tr>
-          {bills.map((bill) => (
-            <tr key={bill.id}>
-              <td width={`${100 / numColumns}%`}>{bill.billNumber}</td>
-              <td width={`${100 / numColumns}%`}>
-                {globalUtils.getTimeFormat(bill.billCreationTime, true, false)}
-              </td>
-              <td style={{ textAlign: 'right', width: `${100 / numColumns}%` }}>
-                {globalUtils.getCurrencyFormat(bill.orderAmount)}
-              </td>
-              <td style={{ textAlign: 'right', width: `${100 / numColumns}%` }}>
-                {globalUtils.getCurrencyFormat(bill.balance)}
-              </td>
-              <td style={{ textAlign: 'right', width: `${100 / numColumns}%` }}>
-                {calculateDaysBetween(bill.billCreationTime, new Date())} days
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <br />
+    <div style={{
+      borderBottom: '1px solid #f3f4f6',
+      transition: 'all 0.2s ease'
+    }}>
+      <div 
+        style={{ 
+          padding: '16px 20px',
+          cursor: 'pointer',
+          transition: 'background-color 0.2s ease',
+          backgroundColor: isCollapsed ? '#fafafa' : '#ffffff'
+        }}
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8fafc'}
+        onMouseLeave={(e) => e.target.style.backgroundColor = isCollapsed ? '#fafafa' : '#ffffff'}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <h4 style={{ 
+                margin: '0', 
+                fontSize: '16px', 
+                fontWeight: '600',
+                color: '#1f2937'
+              }}>
+                {partyDetails?.name ?? partyId}
+              </h4>
+              <span style={{
+                background: bills.length > 0 ? '#ef4444' : '#10b981',
+                color: 'white',
+                borderRadius: '12px',
+                padding: '2px 8px',
+                fontSize: '11px',
+                fontWeight: '500'
+              }}>
+                {bills.length} Bills
+              </span>
+            </div>
+            {lastPayment && (
+              <div style={{ 
+                fontSize: '13px', 
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '4px'
+              }}>
+                <span style={{ fontWeight: '500' }}>Last Payment:</span>
+                {lastPayment.type === 'cash' ? (
+                  <span style={{ color: '#059669', fontWeight: '500' }}>
+                    Cash: {globalUtils.getCurrencyFormat(
+                      lastPayment.prItems?.find((x) => x.partyId === partyId)?.amount,
+                    )} ({globalUtils.getTimeFormat(lastPayment.timestamp, true)?.slice(0, 5)})
+                  </span>
+                ) : lastPayment.type === 'upi' ? (
+                  <span style={{ color: '#059669', fontWeight: '500' }}>
+                    UPI: {globalUtils.getCurrencyFormat(lastPayment.amount)} ({globalUtils.getTimeFormat(lastPayment.timestamp, true)?.slice(0, 5)})
+                  </span>
+                ) : lastPayment.type === 'cheque' ? (
+                  <span style={{ color: '#059669', fontWeight: '500' }}>
+                    Cheque: {globalUtils.getCurrencyFormat(lastPayment.amount)} ({globalUtils.getTimeFormat(lastPayment.timestamp, true)?.slice(0, 5)})
+                  </span>
+                ) : null}
+              </div>
+            )}
+            {bills.length > 0 && (
+              <div style={{ 
+                fontSize: '13px', 
+                color: '#6b7280',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontWeight: '500' }}>Total Outstanding:</span>
+                <span style={{ color: '#dc2626', fontWeight: '600' }}>
+                  {globalUtils.getCurrencyFormat(
+                    bills.reduce((total, bill) => total + (bill.balance || 0), 0)
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+          <div style={{ 
+            fontSize: '16px', 
+            color: '#6b7280',
+            transition: 'transform 0.2s ease',
+            transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
+          }}>
+            ▼
+          </div>
+        </div>
+      </div>
+      
+      {!isCollapsed && (
+        <div style={{ padding: '0 20px 16px 20px' }}>
+          <div style={{
+            background: '#f8fafc',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            border: '1px solid #e2e8f0'
+          }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, 1fr)',
+              background: '#f1f5f9',
+              padding: '12px 16px',
+              fontSize: '12px',
+              fontWeight: '600',
+              color: '#475569',
+              borderBottom: '1px solid #e2e8f0'
+            }}>
+              <div>Bill No</div>
+              <div>Date</div>
+              <div style={{ textAlign: 'right' }}>Amount</div>
+              <div style={{ textAlign: 'right' }}>Balance</div>
+              <div style={{ textAlign: 'right' }}>Days</div>
+            </div>
+            {bills.map((bill, index) => (
+              <div key={bill.id} style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5, 1fr)',
+                padding: '12px 16px',
+                fontSize: '13px',
+                borderBottom: index < bills.length - 1 ? '1px solid #e2e8f0' : 'none',
+                backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc'
+              }}>
+                <div style={{ fontWeight: '500', color: '#1f2937' }}>{bill.billNumber}</div>
+                <div style={{ color: '#6b7280' }}>
+                  {globalUtils.getTimeFormat(bill.billCreationTime, true, false)}
+                </div>
+                <div style={{ textAlign: 'right', fontWeight: '500', color: '#1f2937' }}>
+                  {globalUtils.getCurrencyFormat(bill.orderAmount)}
+                </div>
+                <div style={{ textAlign: 'right', fontWeight: '600', color: '#dc2626' }}>
+                  {globalUtils.getCurrencyFormat(bill.balance)}
+                </div>
+                <div style={{ textAlign: 'right', color: '#6b7280' }}>
+                  {calculateDaysBetween(bill.billCreationTime, new Date())} days
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

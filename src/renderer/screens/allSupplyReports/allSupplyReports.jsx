@@ -128,110 +128,168 @@ export default function AllSupplyReportsScreen() {
   }, []);
 
   return (
-    <center>
-      <div className="all-supply-reports-container">
-        <h3>All Supply Reports</h3>
+    <div className="all-supply-reports-container">
+      <div className="page-header">
+        <Text size={600} weight="bold" style={{ color: '#323130' }}>
+          All Supply Reports
+        </Text>
+      </div>
 
-        <div className="all-bills-search-input-container">
-          <Dropdown
-            onOptionSelect={(_, e) => setStatus(e.optionValue)}
-            className="dropdown  filter-input"
-            placeholder="Status"
-          >
-            <Option text={null} value={null} key="accounts-none-dropdown">
-              None
-            </Option>
-            {Object.keys(statusColors).map((status1) => (
-              <Option
-                text={status1}
-                value={status1}
-                key={`sr-filter-status-${status1}`}
-              >
-                {status1}
+      {/* Compact Filter Section */}
+      <div className="filters-section">
+        <div className="filters-row">
+          <div className="filter-item">
+            <Text size={200} weight="semibold" style={{ marginBottom: '4px' }}>
+              Status
+            </Text>
+            <Dropdown
+              onOptionSelect={(_, e) => setStatus(e.optionValue)}
+              placeholder="All Status"
+              size="small"
+              style={{ width: '120px' }}
+            >
+              <Option text="All" value={null} key="status-all">
+                All
               </Option>
-            ))}
-          </Dropdown>
-
-          <Input
-            onChange={(_, e) => setSrNumber(e.value)}
-            contentBefore="SR-"
-            type="number"
-            className=" filter-input"
-          />
-          <Dropdown
-            onOptionSelect={(_, e) => setSupplyman(e.optionValue)}
-            className="dropdown  filter-input"
-            placeholder="Supplyman"
-          >
-            <Option text={null} value={null} key="accounts-none-dropdown">
-              None
-            </Option>
-            {allUsers
-              .filter((x) => !x.isDeactivated)
-              .map((user) => (
-                <Option text={user.username} value={user.uid} key={user.uid}>
-                  {user.username}
+              {Object.keys(statusColors).map((status1) => (
+                <Option
+                  text={status1}
+                  value={status1}
+                  key={`sr-filter-status-${status1}`}
+                >
+                  {status1}
                 </Option>
               ))}
-          </Dropdown>
-          <DatePicker
-            className=" filter-input"
-            onSelectDate={(t) => {
-              setFromDate(t);
-              setToDate(t);
-            }}
-            placeholder="From"
-            value={fromDate}
-          />
-          <DatePicker
-            className=" filter-input"
-            onSelectDate={setToDate}
-            placeholder="To"
-            value={toDate}
-          />
-          <div />
-          <Button
-            onClick={() => {
-              onSearch();
-            }}
-          >
-            Search
-          </Button>
-          <Button
-            onClick={() => {
-              setFromDate();
-              setToDate();
-              setSrNumber('');
-              setStatus(null);
-              setSupplyman('');
-              onSearch(true);
-            }}
-          >
-            Clear
-          </Button>
-        </div>
-        {loading ? (
-          <Spinner />
-        ) : (
-          supplyReports.map((sr, i) => {
-            return (
-              <SupplyReportRow
-                key={`supply-report-all-list-${sr.id}`}
-                index={i}
-                data={sr}
+            </Dropdown>
+          </div>
+
+          <div className="filter-item">
+            <Text size={200} weight="semibold" style={{ marginBottom: '4px' }}>
+              SR Number
+            </Text>
+            <Input
+              onChange={(_, e) => setSrNumber(e.value)}
+              contentBefore="SR-"
+              type="number"
+              placeholder="Enter number"
+              size="small"
+              style={{ width: '120px' }}
+            />
+          </div>
+
+          <div className="filter-item">
+            <Text size={200} weight="semibold" style={{ marginBottom: '4px' }}>
+              Supplyman
+            </Text>
+            <Dropdown
+              onOptionSelect={(_, e) => setSupplyman(e.optionValue)}
+              placeholder="All"
+              size="small"
+              style={{ width: '140px' }}
+            >
+              <Option text="All" value={null} key="supplyman-all">
+                All
+              </Option>
+              {allUsers
+                .filter((x) => !x.isDeactivated)
+                .map((user) => (
+                  <Option text={user.username} value={user.uid} key={user.uid}>
+                    {user.username}
+                  </Option>
+                ))}
+            </Dropdown>
+          </div>
+
+          <div className="filter-item">
+            <Text size={200} weight="semibold" style={{ marginBottom: '4px' }}>
+              Date Range
+            </Text>
+            <div className="date-range">
+              <DatePicker
+                onSelectDate={(t) => {
+                  setFromDate(t);
+                  setToDate(t);
+                }}
+                placeholder="From"
+                value={fromDate}
+                size="small"
+                style={{ width: '100px' }}
               />
-            );
-          })
-        )}
-        {!loading && supplyReports.length === 0 ? (
-          <div>No Supply Reports found</div>
-        ) : null}
+              <DatePicker
+                onSelectDate={setToDate}
+                placeholder="To"
+                value={toDate}
+                size="small"
+                style={{ width: '100px' }}
+              />
+            </div>
+          </div>
+
+          <div className="filter-actions">
+            <Button
+              onClick={() => onSearch()}
+              appearance="primary"
+              size="small"
+            >
+              Search
+            </Button>
+            <Button
+              onClick={() => {
+                setFromDate();
+                setToDate();
+                setSrNumber('');
+                setStatus(null);
+                setSupplyman('');
+                onSearch(true);
+              }}
+              appearance="secondary"
+              size="small"
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
       </div>
-    </center>
+
+      {/* Results Section */}
+      <div className="results-section">
+        {loading ? (
+          <div className="loading-container">
+            <Spinner size="medium" />
+            <Text size={300} style={{ marginTop: '12px', color: '#605e5c' }}>
+              Loading supply reports...
+            </Text>
+          </div>
+        ) : (
+          <div className="supply-reports-list">
+            {supplyReports.map((sr, i) => {
+              return (
+                <SupplyReportCard
+                  key={`supply-report-all-list-${sr.id}`}
+                  index={i}
+                  data={sr}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {!loading && supplyReports.length === 0 && (
+          <div className="no-results">
+            <Text size={400} style={{ color: '#605e5c' }}>
+              No supply reports found
+            </Text>
+            <Text size={200} style={{ color: '#8a8886', marginTop: '4px' }}>
+              Try adjusting your search filters
+            </Text>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
-function SupplyReportRow({ data, index }) {
+function SupplyReportCard({ data, index }) {
   const navigate = useNavigate();
   const [supplyman, setSupplyman] = useState();
 
@@ -243,39 +301,86 @@ function SupplyReportRow({ data, index }) {
   useEffect(() => {
     getSupplyman();
   }, []);
+
+  const totalBills =
+    data.orders.length +
+    (data.attachedBills?.length || 0) +
+    (data.supplementaryBills?.length || 0);
+
   return (
-    <>
-      <Button
-        appearance="subtle"
-        onClick={() => {
+    <div
+      className="supply-report-card"
+      role="button"
+      tabIndex={0}
+      onClick={() => {
+        navigate('/viewSupplyReport', {
+          state: { prefillSupplyReport: data },
+        });
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
           navigate('/viewSupplyReport', {
             state: { prefillSupplyReport: data },
           });
-        }}
-      >
-        <div className="supply-report-row">
-          <Text className="sr-id">{data.receiptNumber}</Text>
-          <Text className="sr-timestamp">
-            {globalUtils.getTimeFormat(data.timestamp, true)}
-          </Text>
-          <Text className="sr-parties-length">
-            {data.orders.length +
-              (data.attachedBills?.length || 0) +
-              (data.supplementaryBills?.length || 0)}{' '}
-            Bills{' '}
-          </Text>
-          <Text className="sr-supplyman">{supplyman?.username}</Text>
-          <Text
-            className="sr-status"
-            style={{
-              backgroundColor: statusColors[data.status],
-            }}
-          >
+        }
+      }}
+    >
+      <div className="card-header">
+        <div className="sr-info">
+          <div className="user-info">
+            <div className="profile-picture-container">
+              {supplyman?.profilePicture ? (
+                <img
+                  src={supplyman.profilePicture}
+                  alt={supplyman.username}
+                  className="profile-picture"
+                />
+              ) : (
+                <div className="profile-picture-placeholder">
+                  <Text size={300} weight="bold" style={{ color: '#ffffff' }}>
+                    {supplyman?.username?.charAt(0)?.toUpperCase() || '?'}
+                  </Text>
+                </div>
+              )}
+            </div>
+            <div className="user-details">
+              <Text size={400} weight="bold" style={{ color: '#0078d4' }}>
+                {supplyman?.username || 'Loading...'}
+              </Text>
+              <Text size={200} style={{ color: '#605e5c' }}>
+                {globalUtils.getTimeFormat(data.timestamp, true)}
+              </Text>
+            </div>
+          </div>
+        </div>
+        <div
+          className="status-badge"
+          style={{ backgroundColor: statusColors[data.status] }}
+        >
+          <Text size={200} weight="medium" style={{ color: 'white' }}>
             {data?.status?.toUpperCase()}
           </Text>
         </div>
-      </Button>
-      <br />
-    </>
+      </div>
+
+      <div className="card-details">
+        <div className="detail-item">
+          <Text size={200} style={{ color: '#605e5c' }}>
+            SR Number:
+          </Text>
+          <Text size={200} weight="semibold" style={{ color: '#323130' }}>
+            {data.receiptNumber}
+          </Text>
+        </div>
+        <div className="detail-item">
+          <Text size={200} style={{ color: '#605e5c' }}>
+            Total Bills:
+          </Text>
+          <Text size={200} weight="semibold" style={{ color: '#323130' }}>
+            {totalBills}
+          </Text>
+        </div>
+      </div>
+    </div>
   );
 }

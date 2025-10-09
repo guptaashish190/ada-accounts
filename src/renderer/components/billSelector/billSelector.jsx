@@ -13,6 +13,7 @@ import {
   DialogBody,
   DialogActions,
   DialogContent,
+  Text,
 } from '@fluentui/react-components';
 
 import {
@@ -123,74 +124,97 @@ export default function BillSelector({
               setOpen(true);
             }}
             size="large"
-            style={{ width: '200px' }}
+            appearance="primary"
+            style={{ 
+              width: '180px',
+              borderRadius: '8px',
+              fontWeight: '500'
+            }}
           >
-            Add Bill
+            + Add Bill
           </Button>
         </DialogTrigger>
-        <DialogSurface>
+        <DialogSurface style={{ maxWidth: '800px', width: '90vw' }}>
           <DialogBody>
-            <DialogTitle>Dispatch Ready Bills</DialogTitle>
-            <DialogContent>
-              <br />
-              <Input
-                size="large"
-                placeholder="Party name"
-                value={searchPartyName}
-                onKeyDown={(event) => {
-                  if (event.key === 'Shift') {
-                    setOpen(false);
-                  }
-                  if (event.key === 'Enter') {
-                    if (showOrderList.length === 1) {
-                      const order1 = showOrderList[0];
-                      if (bills.findIndex((x) => x.id === order1.id) === -1) {
-                        onAdd(order1);
-                      }
+            <DialogTitle style={{ fontSize: '1.2em', fontWeight: '600' }}>
+              Select Dispatch Ready Bills
+            </DialogTitle>
+            <DialogContent style={{ padding: '16px 0' }}>
+              <div className="search-container">
+                <Input
+                  size="large"
+                  placeholder="Search by party name..."
+                  value={searchPartyName}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Shift') {
+                      setOpen(false);
                     }
-                    setSearchPartyName('');
-                  }
-                }}
-                onChange={(t) => {
-                  setSearchPartyName(t.target.value);
-                }}
-              />
-
-              <br />
-              <br />
-              {showOrderList.map((order) => {
-                return (
-                  <OrderRow
-                    key={`bill-select-id-${order.id}`}
-                    isSelected={
-                      bills.findIndex((x) => x.id === order.id) !== -1
-                    }
-                    onAddToggle={() => {
-                      const { id } = order;
-
-                      // Check if an object with the same id already exists in the list
-                      const existingIndex = bills.findIndex(
-                        (item) => item.id === id,
-                      );
-
-                      if (existingIndex !== -1) {
-                        // If the object with the same id exists, remove it from the list
-
-                        onRemove(order);
-                      } else {
-                        // If the object with the same id doesn't exist, add it to the list
-                        onAdd(order);
+                    if (event.key === 'Enter') {
+                      if (showOrderList.length === 1) {
+                        const order1 = showOrderList[0];
+                        if (bills.findIndex((x) => x.id === order1.id) === -1) {
+                          onAdd(order1);
+                        }
                       }
-                    }}
-                    order={order}
-                  />
-                );
-              })}
+                      setSearchPartyName('');
+                    }
+                  }}
+                  onChange={(t) => {
+                    setSearchPartyName(t.target.value);
+                  }}
+                  style={{
+                    borderRadius: '8px',
+                    border: '1px solid #e1e5e9'
+                  }}
+                />
+              </div>
+
+              <div className="orders-list">
+                {showOrderList.length === 0 ? (
+                  <div className="no-orders">
+                    <Text size={300} style={{ color: '#666' }}>
+                      {searchPartyName ? 'No orders found matching your search' : 'No dispatch ready orders available'}
+                    </Text>
+                  </div>
+                ) : (
+                  showOrderList.map((order) => {
+                    return (
+                      <OrderRow
+                        key={`bill-select-id-${order.id}`}
+                        isSelected={
+                          bills.findIndex((x) => x.id === order.id) !== -1
+                        }
+                        onAddToggle={() => {
+                          const { id } = order;
+
+                          // Check if an object with the same id already exists in the list
+                          const existingIndex = bills.findIndex(
+                            (item) => item.id === id,
+                          );
+
+                          if (existingIndex !== -1) {
+                            // If the object with the same id exists, remove it from the list
+                            onRemove(order);
+                          } else {
+                            // If the object with the same id doesn't exist, add it to the list
+                            onAdd(order);
+                          }
+                        }}
+                        order={order}
+                      />
+                    );
+                  })
+                )}
+              </div>
             </DialogContent>
-            <DialogActions>
+            <DialogActions style={{ padding: '16px 0 0 0' }}>
               <DialogTrigger disableButtonEnhancement>
-                <Button appearance="secondary" onClick={() => setOpen(false)}>
-                  Close
+                <Button 
+                  appearance="secondary" 
+                  onClick={() => setOpen(false)}
+                  style={{ borderRadius: '6px' }}
+                >
+                  Cancel
                 </Button>
               </DialogTrigger>
               <DialogTrigger>
@@ -199,8 +223,9 @@ export default function BillSelector({
                   onClick={() => {
                     setOpen(false);
                   }}
+                  style={{ borderRadius: '6px' }}
                 >
-                  Add
+                  Done
                 </Button>
               </DialogTrigger>
             </DialogActions>
@@ -220,30 +245,45 @@ function OrderRow({ order, onAddToggle, isSelected }) {
       key={shortid.generate()}
       className={`order-row ${isSelected ? 'is-selected' : ''}`}
     >
-      <div className="bill-number">
-        {order.challanNumber?.toUpperCase()}
-        <br />
-        {order.billNumber?.toUpperCase()}
-      </div>
-      <div className="bill-name">
-        <div>
-          {order.party?.name} {order.fileNumber}
-          <br />
-          {globalUtils.getTimeFormat(order.creationTime, true)}
+      <div className="order-info">
+        <div className="order-header">
+          <Text size={400} weight="semibold" className="party-name">
+            {order.party?.name}
+          </Text>
+          <Text size={200} className="file-number">
+            {order.fileNumber}
+          </Text>
         </div>
-        <span className="bill-number" style={{ fontSize: '0.8em' }}>
-          {' '}
-          {order.orderStatus}
-        </span>
+        <div className="order-details">
+          <Text size={200} className="challan-number">
+            {order.challanNumber?.toUpperCase()}
+          </Text>
+          <Text size={200} className="bill-number">
+            {order.billNumber?.toUpperCase()}
+          </Text>
+          <Text size={200} className="order-time">
+            {globalUtils.getTimeFormat(order.creationTime, true)}
+          </Text>
+        </div>
+        <div className="order-status">
+          <Text size={200} className="status-badge">
+            {order.orderStatus}
+          </Text>
+        </div>
       </div>
-      <div className="bill-amount">₹{order.orderAmount}</div>
+      <div className="order-amount">
+        <Text size={400} weight="semibold">
+          ₹{order.orderAmount}
+        </Text>
+      </div>
       <Button
-        appearance="secondary"
+        appearance={isSelected ? "primary" : "secondary"}
         onClick={() => onAddToggle()}
+        size="small"
         style={{
-          backgroundColor: isSelected ? '#F25C5466' : null,
-          color: 'black',
-          border: isSelected ? '1px solid #F25C5477' : '1px solid #ddd',
+          borderRadius: '6px',
+          minWidth: '80px',
+          fontWeight: '500'
         }}
       >
         {isSelected ? 'Remove' : 'Add'}

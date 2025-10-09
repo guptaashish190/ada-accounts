@@ -98,43 +98,44 @@ export default function ChequesScreen() {
           }}
         />
         <VerticalSpace1 />
-        <table style={{ width: '100%' }}>
-          <thead>
-            <tr className="table-header-container">
-              <th>Entry No.</th>
-              <th style={{ width: '80%' }}>Party Name</th>
-              <th>Cheque Number</th>
-              <th>Cheque Date</th>
-              <th>Amount</th>
-              <th>Notes</th>
-              <th>Received On</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(filteredCheques || chequeList).map((ch, i) => {
-              return (
-                <ChequeTableRow
-                  key={`checque-list-${ch.entryNumber}`}
-                  data={ch}
-                  index={i}
-                />
-              );
-            })}
-            {filteredCheques ? (
-              <tr>
-                <TableCustomCell />
-                <TableCustomCell />
-                <TableCustomCell />
-                <TableCustomCell>Total Amount</TableCustomCell>
-                <TableCustomCell>
-                  <b>{globalUtils.getCurrencyFormat(getFilteredTotal())}</b>
-                </TableCustomCell>
-                <TableCustomCell />
-                <TableCustomCell />
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+        <div className="modern-table">
+          <div className="modern-table-header" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+            <div>Entry No.</div>
+            <div>Party Name</div>
+            <div>Cheque Number</div>
+            <div>Cheque Date</div>
+            <div style={{ textAlign: 'right' }}>Amount</div>
+            <div>Notes</div>
+            <div>Received On</div>
+          </div>
+          {(filteredCheques || chequeList).map((ch, i) => (
+            <ChequeTableRow
+              key={`checque-list-${ch.entryNumber}`}
+              data={ch}
+              index={i}
+            />
+          ))}
+          {filteredCheques && (
+            <div 
+              className="modern-table-row" 
+              style={{ 
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                backgroundColor: '#fef3c7',
+                fontWeight: '600'
+              }}
+            >
+              <div></div>
+              <div></div>
+              <div></div>
+              <div>Total Amount</div>
+              <div className="modern-table-cell amount">
+                {globalUtils.getCurrencyFormat(getFilteredTotal())}
+              </div>
+              <div></div>
+              <div></div>
+            </div>
+          )}
+        </div>
       </div>
     </center>
   );
@@ -291,21 +292,24 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
 
 function ChequeTableRow({ data, index }) {
   return (
-    <tr className="cheque-data-row">
-      <TableCustomCell>{data.entryNumber}</TableCustomCell>
-      <TableCustomCell>{data.party?.name}</TableCustomCell>
-      <TableCustomCell>{data.chequeNumber}</TableCustomCell>
-      <TableCustomCell>
+    <div 
+      className="modern-table-row" 
+      style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}
+    >
+      <div className="modern-table-cell">{data.entryNumber}</div>
+      <div className="modern-table-cell">{data.party?.name}</div>
+      <div className="modern-table-cell">{data.chequeNumber}</div>
+      <div className="modern-table-cell date">
         {globalUtils.getTimeFormat(data.chequeDate, true)}
-      </TableCustomCell>
-      <TableCustomCell>
+      </div>
+      <div className="modern-table-cell amount">
         {globalUtils.getCurrencyFormat(data.amount)}
-      </TableCustomCell>
-      <TableCustomCell>{data.notes}</TableCustomCell>
-      <TableCustomCell>
+      </div>
+      <div className="modern-table-cell">{data.notes}</div>
+      <div className="modern-table-cell date">
         {globalUtils.getTimeFormat(data.timestamp, true)}
-      </TableCustomCell>
-    </tr>
+      </div>
+    </div>
   );
 }
 

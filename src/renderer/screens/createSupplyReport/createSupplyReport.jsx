@@ -251,87 +251,143 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     <>
       <Toaster toasterId={toasterId} />
       <div className="create-supply-report-screen-container">
-        <center>
-          <h3 className="title">
-            {prefillSupplyReport
-              ? `Supply Report: ${prefillSupplyReport.id}`
-              : 'Create Supply Report'}
-          </h3>
-          <div>{srNumber}</div>
-          <VerticalSpace1 />
-          {editable ? (
-            <BillSelector
-              focusFirstElement={() => {
-                const inputId = document.getElementById(
-                  `createsupreport-bill-${0}`,
-                );
-                if (inputId) {
-                  inputId.focus();
-                }
-              }}
-              bills={bills}
-              onAdd={addBills}
-              onRemove={onRemove}
-            />
-          ) : null}
-          <VerticalSpace2 />
-          {bills.length === 0 ? (
-            <div className="no-bills-added">No bills added</div>
-          ) : (
-            <div className="bill-row-container">
-              <BillRowLabelHeader />
-              {modifiedBills.map((b, i) => (
-                <BillRow
-                  originalBill={bills[i]}
-                  billsRefList={billListRefs}
-                  editable={editable}
-                  index={i * 2}
-                  key={`createsupplyreport-${b.id}`}
-                  bill={b}
-                  remove={() => {
-                    onRemove(b);
-                  }}
-                  updatedBill={(newBill) => {
-                    const tempBill = [...modifiedBills];
-                    tempBill[i] = newBill;
-                    setModifiedBills(tempBill);
-                  }}
-                />
-              ))}
+        <div className="supply-report-header">
+          <div className="header-content">
+            <h2 className="title">
+              {prefillSupplyReport
+                ? `Supply Report: ${prefillSupplyReport.id}`
+                : 'Create Supply Report'}
+            </h2>
+            <div className="sr-number">
+              <Text size={300} weight="semibold">
+                SR Number:{' '}
+              </Text>
+              <Text size={300} weight="bold">
+                {srNumber}
+              </Text>
+            </div>
+          </div>
+        </div>
+
+        <div className="supply-report-content">
+          {editable && (
+            <div className="add-bill-section">
+              <BillSelector
+                focusFirstElement={() => {
+                  const inputId = document.getElementById(
+                    `createsupreport-bill-${0}`,
+                  );
+                  if (inputId) {
+                    inputId.focus();
+                  }
+                }}
+                bills={bills}
+                onAdd={addBills}
+                onRemove={onRemove}
+              />
             </div>
           )}
-          <VerticalSpace1 />
-          {bills.length !== 0 ? (
-            <>
-              <TotalBagsComponent
-                cases={globalUtils.getTotalCases(modifiedBills)}
-                polybags={globalUtils.getTotalPolyBags(modifiedBills)}
-                packet={globalUtils.getTotalPackets(modifiedBills)}
-              />
-              <VerticalSpace2 />
-              <SelectUserDropdown
-                placeholder="Select a supplyman"
-                disabled={!editable}
-                user={selectedSupplyman}
-                setUser={setSelectedSupplyman}
-              />
-              <VerticalSpace2 />
-              <Textarea
-                disabled={!editable}
-                value={notes}
-                onChange={(x) => setNotes(x.target.value)}
-                style={{ width: '50%' }}
-                placeholder="Extra notes"
-              />
-              <VerticalSpace2 />
+
+          {bills.length === 0 ? (
+            <div className="no-bills-added">
+              <Text size={400} style={{ color: '#666' }}>
+                No bills added yet. Click &quot;Add Bill&quot; to get started.
+              </Text>
+            </div>
+          ) : (
+            <div className="bills-section">
+              <div className="bills-header">
+                <Text size={500} weight="semibold">
+                  Bills ({bills.length})
+                </Text>
+              </div>
+              <div className="bill-row-container">
+                <BillRowLabelHeader />
+                {modifiedBills.map((b, i) => (
+                  <BillRow
+                    originalBill={bills[i]}
+                    billsRefList={billListRefs}
+                    editable={editable}
+                    index={i * 2}
+                    key={`createsupplyreport-${b.id}`}
+                    bill={b}
+                    remove={() => {
+                      onRemove(b);
+                    }}
+                    updatedBill={(newBill) => {
+                      const tempBill = [...modifiedBills];
+                      tempBill[i] = newBill;
+                      setModifiedBills(tempBill);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {bills.length !== 0 && (
+            <div className="summary-section">
+              <div className="summary-header">
+                <Text size={500} weight="semibold">
+                  Summary
+                </Text>
+              </div>
+
+              <div className="summary-content">
+                <TotalBagsComponent
+                  cases={globalUtils.getTotalCases(modifiedBills)}
+                  polybags={globalUtils.getTotalPolyBags(modifiedBills)}
+                  packet={globalUtils.getTotalPackets(modifiedBills)}
+                />
+
+                <div className="form-fields">
+                  <div className="field-group">
+                    <Text size={400} weight="semibold" className="field-label">
+                      Supplyman
+                    </Text>
+                    <SelectUserDropdown
+                      placeholder="Select a supplyman"
+                      disabled={!editable}
+                      user={selectedSupplyman}
+                      setUser={setSelectedSupplyman}
+                    />
+                  </div>
+
+                  <div className="field-group">
+                    <Text size={400} weight="semibold" className="field-label">
+                      Notes
+                    </Text>
+                    <Textarea
+                      disabled={!editable}
+                      value={notes}
+                      onChange={(x) => setNotes(x.target.value)}
+                      placeholder="Add any additional notes..."
+                      style={{
+                        borderRadius: '8px',
+                        border: '1px solid #e1e5e9',
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {bills.length !== 0 && (
+            <div className="action-buttons">
               {!prefillSupplyReport ? (
                 <Button
                   onClick={() => onSubmit()}
                   size="large"
                   appearance="primary"
                   icon={<Check20Filled />}
+                  style={{
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    minWidth: '200px',
+                  }}
                 >
-                  Forward to accounts
+                  Forward to Accounts
                 </Button>
               ) : null}
 
@@ -341,8 +397,13 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
                   size="large"
                   appearance="primary"
                   icon={<Check20Filled />}
+                  style={{
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    minWidth: '120px',
+                  }}
                 >
-                  Save
+                  Save Changes
                 </Button>
               ) : null}
 
@@ -352,13 +413,18 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
                   size="large"
                   appearance="primary"
                   icon={<Check20Filled />}
+                  style={{
+                    borderRadius: '8px',
+                    fontWeight: '500',
+                    minWidth: '160px',
+                  }}
                 >
                   Edit Supply Report
                 </Button>
               ) : null}
-            </>
-          ) : null}
-        </center>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
@@ -367,24 +433,30 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 function TotalBagsComponent({ cases, polybags, packet }) {
   return (
     <div className="bag-row-total">
-      <Text size={400}>
-        Cases:{' '}
-        <Text size={600}>
-          <b>{cases}</b>
+      <div className="bag-item">
+        <Text size={300} className="bag-label">
+          Cases
         </Text>
-      </Text>
-      <Text size={400}>
-        Packets:{' '}
-        <Text size={600}>
-          <b>{packet}</b>
+        <Text size={500} weight="bold" className="bag-value">
+          {cases}
         </Text>
-      </Text>
-      <Text size={400}>
-        Polybag:{' '}
-        <Text size={600}>
-          <b>{polybags}</b>
+      </div>
+      <div className="bag-item">
+        <Text size={300} className="bag-label">
+          Packets
         </Text>
-      </Text>
+        <Text size={500} weight="bold" className="bag-value">
+          {packet}
+        </Text>
+      </div>
+      <div className="bag-item">
+        <Text size={300} className="bag-label">
+          Polybags
+        </Text>
+        <Text size={500} weight="bold" className="bag-value">
+          {polybags}
+        </Text>
+      </div>
     </div>
   );
 }
@@ -425,112 +497,159 @@ function BillRow({ originalBill, bill, updatedBill, remove, editable, index }) {
   }
 
   return (
-    <>
-      <Text className="party-name">
-        {bill.party?.name} {bill.margUpdated ? '(Marg synced)' : ''}
-      </Text>
-      <Input
-        onKeyDown={(e) => handleKeyUp(e)}
-        id={inputId}
-        style={{ marginRight: '20px', width: '100px' }}
-        contentBefore="T-"
-        defaultValue={bill.billNumber?.replace('T-', '') || ''}
-        type="number"
-        onChange={(x) => {
-          const tempBill = { ...bill };
-          tempBill.billNumber = `T-${x.target.value}`;
-          updatedBill(tempBill);
-        }}
-      />
-      <Input
-        onKeyDown={(e) => handleKeyUp2(e)}
-        id={`${inputId2}`}
-        style={{ marginRight: '20px', width: '100px' }}
-        contentBefore="₹"
-        type="number"
-        placeholder={originalBill.orderAmount}
-        onChange={(x) => {
-          const tempBill = { ...bill };
-          tempBill.orderAmount = x.target.value;
-          updatedBill(tempBill);
-        }}
-      />
-      <Text>{bill.party.area}</Text>
-      <SpinButton
-        disabled={!editable}
-        className="spinner"
-        defaultValue={bill.bags ? bill.bags[0].quantity : 0}
-        min={0}
-        max={20}
-        id={shortid.generate()}
-        onChange={(_, data) => {
-          const tempBill = { ...bill };
-          tempBill.bags[0].quantity = parseInt(
-            data.value || data.displayValue || 0,
-            10,
-          );
-          updatedBill(tempBill);
-        }}
-      />
-      <SpinButton
-        disabled={!editable}
-        className="spinner"
-        defaultValue={bill.bags ? bill.bags[1].quantity : 0}
-        onChange={(_, data) => {
-          const tempBill = { ...bill };
-          tempBill.bags[1].quantity = parseInt(
-            data.value || data.displayValue || 0,
-            10,
-          );
-          updatedBill(tempBill);
-        }}
-        min={0}
-        max={20}
-        id={shortid.generate()}
-      />
-      <SpinButton
-        disabled={!editable}
-        className="spinner"
-        defaultValue={bill.bags ? bill.bags[2].quantity : 0}
-        min={0}
-        max={20}
-        id={shortid.generate()}
-        onChange={(_, data) => {
-          const tempBill = { ...bill };
-          tempBill.bags[2].quantity = parseInt(
-            data.value || data.displayValue || 0,
-            10,
-          );
-          updatedBill(tempBill);
-        }}
-      />
-      {editable ? (
+    <div className="bill-row">
+      <div className="party-info">
+        <div className="party-header">
+          <Text size={400} weight="semibold" className="party-name">
+            {bill.party?.name}
+          </Text>
+          {bill.margUpdated && <span className="marg-sync-badge">Marg</span>}
+        </div>
+        <Text size={300} className="party-area">
+          {bill.party.area}
+        </Text>
+      </div>
+
+      <div className="bill-inputs">
+        <div className="input-row">
+          <div className="input-field">
+            <Input
+              onKeyDown={(e) => handleKeyUp(e)}
+              id={inputId}
+              contentBefore="T-"
+              defaultValue={bill.billNumber?.replace('T-', '') || ''}
+              type="number"
+              size="small"
+              disabled={!editable}
+              placeholder="Bill #"
+              style={{
+                width: '100px',
+                borderRadius: '6px',
+              }}
+              onChange={(x) => {
+                const tempBill = { ...bill };
+                tempBill.billNumber = `T-${x.target.value}`;
+                updatedBill(tempBill);
+              }}
+            />
+          </div>
+          <div className="input-field">
+            <Input
+              onKeyDown={(e) => handleKeyUp2(e)}
+              id={`${inputId2}`}
+              contentBefore="₹"
+              type="number"
+              size="small"
+              disabled={!editable}
+              placeholder={originalBill.orderAmount}
+              style={{
+                width: '100px',
+                borderRadius: '6px',
+              }}
+              onChange={(x) => {
+                const tempBill = { ...bill };
+                tempBill.orderAmount = x.target.value;
+                updatedBill(tempBill);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="bag-inputs">
+        <div className="bag-row">
+          <div className="bag-item">
+            <SpinButton
+              disabled={!editable}
+              defaultValue={bill.bags ? bill.bags[0].quantity : 0}
+              min={0}
+              max={20}
+              size="small"
+              id={shortid.generate()}
+              style={{ width: '60px' }}
+              onChange={(_, data) => {
+                const tempBill = { ...bill };
+                tempBill.bags[0].quantity = parseInt(
+                  data.value || data.displayValue || 0,
+                  10,
+                );
+                updatedBill(tempBill);
+              }}
+            />
+            <Text size={200} className="bag-label">
+              C
+            </Text>
+          </div>
+          <div className="bag-item">
+            <SpinButton
+              disabled={!editable}
+              defaultValue={bill.bags ? bill.bags[1].quantity : 0}
+              min={0}
+              max={20}
+              size="small"
+              id={shortid.generate()}
+              style={{ width: '60px' }}
+              onChange={(_, data) => {
+                const tempBill = { ...bill };
+                tempBill.bags[1].quantity = parseInt(
+                  data.value || data.displayValue || 0,
+                  10,
+                );
+                updatedBill(tempBill);
+              }}
+            />
+            <Text size={200} className="bag-label">
+              P
+            </Text>
+          </div>
+          <div className="bag-item">
+            <SpinButton
+              disabled={!editable}
+              defaultValue={bill.bags ? bill.bags[2].quantity : 0}
+              min={0}
+              max={20}
+              size="small"
+              id={shortid.generate()}
+              style={{ width: '60px' }}
+              onChange={(_, data) => {
+                const tempBill = { ...bill };
+                tempBill.bags[2].quantity = parseInt(
+                  data.value || data.displayValue || 0,
+                  10,
+                );
+                updatedBill(tempBill);
+              }}
+            />
+            <Text size={200} className="bag-label">
+              B
+            </Text>
+          </div>
+        </div>
+      </div>
+
+      {editable && (
         <Button
           className="delete-button"
           icon={<DeleteRegular />}
           aria-label="Delete"
+          size="small"
+          appearance="subtle"
           onClick={() => {
             remove();
           }}
         />
-      ) : (
-        <div />
       )}
-    </>
+    </div>
   );
 }
 
 function BillRowLabelHeader() {
   return (
-    <>
-      <Text className="party-name label-header">Party</Text>
-      <Text className="bill-number label-header">Bill Number</Text>
-      <Text className="bill-number label-header">Final Amount</Text>
-      <Text className="field label-header">Area</Text>
-      <Text className="spinner label-header">Cases</Text>
-      <Text className="spinner label-header">Packets</Text>
-      <Text className="spinner label-header">Polybags</Text>
-      <Text className="spinner" />
-    </>
+    <div className="bill-row-header">
+      <div className="header-party">Party</div>
+      <div className="header-inputs">Bill information</div>
+      <div className="header-bags">Goods</div>
+      <div className="header-actions">Action</div>
+    </div>
   );
 }

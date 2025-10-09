@@ -142,105 +142,151 @@ export default function BillRow({
           ? { pointerEvents: 'none', filter: 'grayscale(1)', opacity: 0.4 }
           : {}
       }
-      className="bill-row"
+      className={`bill-row ${isReceived1 ? 'received' : ''} ${
+        isOld ? 'old-bill' : 'new-bill'
+      }`}
     >
       <Toaster toasterId={toasterId} />
-      <center>
-        <div className="bill-row-top">
-          <Text>
-            {!isOld ? '*NEW* ' : ''}
-            {data.billNumber}
-            <b>{isReceived1 ? '  (Received)' : null}</b>
-          </Text>
-          <Text>{data.fileNumber}</Text>
-          <Text>
-            BILL AMT: {globalUtils.getCurrencyFormat(data.orderAmount)}
-          </Text>
-          <Text>BAL: {globalUtils.getCurrencyFormat(data.balance)}</Text>
-          {disabled ? (
-            <Button onClick={() => onUndo()} appearance="subtle" size="large">
-              <Text
-                className={`undo-button ${
-                  isReceived ? 'received' : 'returned'
-                }`}
-              >
-                UNDO ({isReceived ? 'Received' : 'Returned'})
-              </Text>
-            </Button>
-          ) : (
-            <div className="receive-return-container">
-              {isOld ? (
-                <div />
-              ) : (
-                <Button onClick={onReturn} appearance="subtle">
-                  RETURN
-                </Button>
-              )}
 
-              <Button
-                onClick={() => receive()}
-                appearance="subtle"
-                size="large"
-              >
-                <Text className="receive-button">RECEIVE</Text>
-              </Button>
-            </div>
-          )}
+      <div className="bill-header">
+        <div className="bill-info">
+          <div className="bill-number">
+            <span className="bill-number-text">{data.billNumber}</span>
+            {isReceived1 && <span className="received-badge">RECEIVED</span>}
+          </div>
+          <div className="bill-details">
+            <span className="bill-amount">
+              Amount: {globalUtils.getCurrencyFormat(data.orderAmount)}
+            </span>
+            <span className="balance">
+              Balance: {globalUtils.getCurrencyFormat(data.balance)}
+            </span>
+          </div>
         </div>
-        <div className="bill-row-bottom">
-          <Input
-            className={`input ${disabled ? '' : 'payment'}`}
-            onChange={(_, e) => setCash(e.value)}
-            placeholder="Cash"
-            value={cash}
-            contentBefore="₹"
-            type="number"
-          />
-          <Input
-            className={`input ${disabled ? '' : 'payment'}`}
-            onChange={(_, e) => setCheque(e.value)}
-            placeholder="Cheque"
-            contentBefore="₹"
-            value={cheque}
-            type="number"
-          />
-          <Input
-            className={`input ${disabled ? '' : 'payment'}`}
-            onChange={(_, e) => setUpi(e.value)}
-            placeholder="UPI"
-            value={upi}
-            contentBefore="₹"
-            type="number"
-          />
-          <Input
-            disabled={disabled}
-            className={`input ${disabled ? '' : 'other'}`}
-            onChange={(_, e) => setOtherPayment(e.value)}
-            placeholder="Other Payment"
-            value={otherPayment}
-            contentBefore="₹"
-            type="number"
-          />
-          <Tooltip content="Scheduled for payment">
+      </div>
+
+      <div className="payment-section">
+        <div className="payment-inputs">
+          <div className="payment-group">
+            <div className="payment-label">Cash</div>
+            <Input
+              className={`payment-input ${disabled ? 'disabled' : ''}`}
+              onChange={(_, e) => setCash(e.value)}
+              placeholder="0"
+              value={cash}
+              contentBefore="₹"
+              type="number"
+              disabled={disabled}
+              size="small"
+              aria-label="Cash amount"
+            />
+          </div>
+
+          <div className="payment-group">
+            <div className="payment-label">Cheque</div>
+            <Input
+              className={`payment-input ${disabled ? 'disabled' : ''}`}
+              onChange={(_, e) => setCheque(e.value)}
+              placeholder="0"
+              contentBefore="₹"
+              value={cheque}
+              type="number"
+              disabled={disabled}
+              size="small"
+              aria-label="Cheque amount"
+            />
+          </div>
+
+          <div className="payment-group">
+            <div className="payment-label">UPI</div>
+            <Input
+              className={`payment-input ${disabled ? 'disabled' : ''}`}
+              onChange={(_, e) => setUpi(e.value)}
+              placeholder="0"
+              value={upi}
+              contentBefore="₹"
+              type="number"
+              disabled={disabled}
+              size="small"
+              aria-label="UPI amount"
+            />
+          </div>
+
+          <div className="payment-group">
+            <div className="payment-label">Other</div>
+            <Input
+              disabled={disabled}
+              className={`payment-input ${disabled ? 'disabled' : ''}`}
+              onChange={(_, e) => setOtherPayment(e.value)}
+              placeholder="0"
+              value={otherPayment}
+              contentBefore="₹"
+              type="number"
+              size="small"
+              aria-label="Other payment amount"
+            />
+          </div>
+        </div>
+
+        <div className="additional-inputs">
+          <div className="input-group">
+            <div className="input-label">Schedule Date</div>
             <DatePicker
               disabled={disabled}
               onSelectDate={setScheduleDate}
-              placeholder="Schedule"
+              placeholder="Select date"
               value={scheduleDate}
+              size="small"
+              aria-label="Schedule payment date"
             />
-          </Tooltip>
-          <Tooltip content={data.accountsNotes}>
+          </div>
+
+          <div className="input-group">
+            <div className="input-label">Notes</div>
             <Input
               disabled={disabled}
               value={notes}
               onChange={(_, e) => setNotes(e.value)}
-              className="input"
-              placeholder="Accounts Notes"
+              placeholder="Accounts notes..."
+              size="small"
+              aria-label="Accounts notes"
             />
-          </Tooltip>
+          </div>
         </div>
-      </center>
-      <VerticalSpace1 />
+      </div>
+      <div className="bill-actions">
+        {disabled ? (
+          <Button
+            onClick={() => onUndo()}
+            appearance="subtle"
+            size="small"
+            className={`undo-button ${isReceived ? 'received' : 'returned'}`}
+          >
+            UNDO {isReceived ? 'RECEIVED' : 'RETURNED'}
+          </Button>
+        ) : (
+          <div className="action-buttons">
+            {!isOld && (
+              <Button
+                onClick={onReturn}
+                appearance="subtle"
+                size="small"
+                className="return-button"
+              >
+                RETURN
+              </Button>
+            )}
+            <Button
+              onClick={() => receive()}
+              appearance="primary"
+              size="small"
+              className="receive-button"
+            >
+              RECEIVE
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

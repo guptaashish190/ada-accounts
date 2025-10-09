@@ -1,32 +1,115 @@
-.select-bill-text {
-  width: 300px;
+.bill-selector {
+  display: inline-block;
+}
+
+.search-container {
+  margin-bottom: 16px;
+}
+
+.orders-list {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.no-orders {
+  text-align: center;
+  padding: 32px 16px;
+  color: #666;
 }
 
 .order-row {
   display: flex;
-  font-size: 12px;
-  flex-direction: row;
-  border: 1px solid rgba(128, 128, 128, 0.1);
-  border-radius: 6px;
-  margin: 5px;
-  padding: 10px;
   align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin: 4px 0;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  background-color: #fafafa;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-.order-row .bill-name {
-  margin: 0px 10px;
-  width: 100%;
+.order-row:hover {
+  background-color: #f0f0f0;
+  border-color: #d0d0d0;
 }
 
-.order-row .bill-number {
-  width: 25%;
-  color: grey;
+.order-row.is-selected {
+  background-color: #e3f2fd;
+  border-color: #2196f3;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.1);
 }
 
-.order-row .is-selected {
-  background-color: lightblue !important;
+.order-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.order-row .bill-amount {
-  margin-right: 10px;
+.order-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.party-name {
+  color: #333;
+  font-weight: 600;
+}
+
+.file-number {
+  color: #666;
+  background-color: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.order-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.challan-number,
+.bill-number {
+  color: #666;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+}
+
+.order-time {
+  color: #888;
+  font-size: 11px;
+}
+
+.order-status {
+  margin-top: 2px;
+}
+
+.status-badge {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.order-amount {
+  margin: 0 16px;
+  text-align: right;
+  min-width: 80px;
+}
+
+.order-amount .fui-Text {
+  color: #2e7d32;
+  font-weight: 600;
 }

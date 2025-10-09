@@ -110,41 +110,42 @@ export default function ScheduledBillsScreen() {
         <Spinner />
       ) : (
         <div>
-          <table>
-            <thead>
-              <th>Bill Number</th>
-              <th>Party</th>
-              <th>Amount</th>
-              <th>Balance</th>
-              <th>Scheduled For</th>
-              <th>Accounts Notes</th>
-              <th>Schedule</th>
-              <th>Action</th>
-            </thead>
-            <tbody>
-              {orders.map((x) => {
-                return <OrderScheduledRow key={`scheuled${x.id}`} order={x} />;
-              })}
-            </tbody>
-          </table>
+          <div className="modern-table">
+            <div className="modern-table-header" style={{ gridTemplateColumns: 'repeat(8, 1fr)' }}>
+              <div>Bill Number</div>
+              <div>Party</div>
+              <div style={{ textAlign: 'right' }}>Amount</div>
+              <div style={{ textAlign: 'right' }}>Balance</div>
+              <div>Scheduled For</div>
+              <div>Accounts Notes</div>
+              <div>Schedule</div>
+              <div>Action</div>
+            </div>
+            {orders.map((x) => (
+              <OrderScheduledRow key={`scheuled${x.id}`} order={x} />
+            ))}
+          </div>
           <br />
           <h2>Bills Payment Received</h2>
-          <table>
-            <thead style={{ background: '#22bb33' }}>
-              <th>Bill Number</th>
-              <th>Party</th>
-              <th>Amount</th>
-              <th>Scheduled For</th>
-              <th>Accounts Notes</th>
-            </thead>
-            <tbody>
-              {zeroBalanceBills.map((x) => {
-                return (
-                  <ZeroBalanceBillRow key={`zeroscheuled${x.id}`} order={x} />
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="modern-table">
+            <div 
+              className="modern-table-header" 
+              style={{ 
+                gridTemplateColumns: 'repeat(5, 1fr)',
+                backgroundColor: '#10b981',
+                color: 'white'
+              }}
+            >
+              <div>Bill Number</div>
+              <div>Party</div>
+              <div style={{ textAlign: 'right' }}>Amount</div>
+              <div>Scheduled For</div>
+              <div>Accounts Notes</div>
+            </div>
+            {zeroBalanceBills.map((x) => (
+              <ZeroBalanceBillRow key={`zeroscheuled${x.id}`} order={x} />
+            ))}
+          </div>
         </div>
       )}
     </center>

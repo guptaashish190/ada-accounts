@@ -285,23 +285,33 @@ export default function ReceiveSRScreen() {
     <>
       <Toaster toasterId={toasterId} />
 
-      <center>
-        <div className="receive-sr-container">
-          <h3>
+      <div className="receive-sr-container">
+        <div className="header-section">
+          <h3 className="page-title">
             Receive {isBundle ? 'Bundle' : 'Supply Report'}:{' '}
             {supplyReport.receiptNumber}
           </h3>
-          <VerticalSpace1 />
-          <Text>Accounts Notes : {supplyReport.dispatchAccountNotes}</Text>
-
-          <br />
-          <br />
+          {supplyReport.dispatchAccountNotes && (
+            <div className="accounts-notes">
+              <Text className="notes-label">Accounts Notes:</Text>
+              <Text className="notes-content">
+                {supplyReport.dispatchAccountNotes}
+              </Text>
+            </div>
+          )}
+        </div>
+        <div className="bills-section">
           {allBills.map((bill) => {
             return (
-              <div className="party-section-receive-sr">
+              <div
+                key={`party-${bill.partyId}`}
+                className="party-section-receive-sr"
+              >
                 <div className="title-sr">
-                  {bill.party?.name} (Payment: {bill.party?.paymentTerms || '-'}
-                  )
+                  <span className="party-name">{bill.party?.name}</span>
+                  <span className="payment-terms">
+                    Payment: {bill.party?.paymentTerms || '-'}
+                  </span>
                 </div>
 
                 <div className="party-bills-container">
@@ -370,8 +380,16 @@ export default function ReceiveSRScreen() {
           })}
           {Object.values(groupedSupplementaryBills).map((bills) => {
             return (
-              <div>
-                <div className="title-sr">{bills[0].party?.name}</div>
+              <div
+                key={`supp-${bills[0].partyId}`}
+                className="party-section-receive-sr"
+              >
+                <div className="title-sr">
+                  <span className="party-name">{bills[0].party?.name}</span>
+                  <span className="supplementary-label">
+                    Supplementary Bills
+                  </span>
+                </div>
                 <div className="party-bills-container">
                   {groupedSupplementaryBills[bills[0].partyId]?.map(
                     (oldBill) => {
@@ -413,23 +431,49 @@ export default function ReceiveSRScreen() {
               </div>
             );
           })}
-          <div />
         </div>
-        <VerticalSpace1 />
-        {allBillsReceived ? (
-          <Button
-            onClick={() => onComplete()}
-            size="large"
-            appearance="primary"
-          >
-            COMPLETED
-          </Button>
-        ) : (
-          <Button onClick={() => onComplete()} size="large">
-            SAVE
-          </Button>
-        )}
-      </center>
+
+        <div className="footer-section">
+          <div className="progress-info">
+            <Text className="progress-text">
+              Progress:{' '}
+              {receivedBills.length +
+                returnedBills.length +
+                (supplyReport.orderDetails?.length || 0)}{' '}
+              /{' '}
+              {
+                [
+                  ...dbBills,
+                  ...(supplyReport.supplementaryBills || []),
+                  ...(supplyReport.attachedBills || []),
+                ].length
+              }{' '}
+              bills processed
+            </Text>
+          </div>
+
+          <div className="action-buttons">
+            {allBillsReceived ? (
+              <Button
+                onClick={() => onComplete()}
+                size="large"
+                appearance="primary"
+                className="complete-button"
+              >
+                COMPLETED
+              </Button>
+            ) : (
+              <Button
+                onClick={() => onComplete()}
+                size="large"
+                className="save-button"
+              >
+                SAVE PROGRESS
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
     </>
   );
 }

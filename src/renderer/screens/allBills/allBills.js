@@ -194,34 +194,30 @@ export default function AllBillsScreen() {
         <VerticalSpace1 />
         <div className="all-bills-row-header" />
         <VerticalSpace1 />
-        <table className="all-bills-header">
-          <thead>
-            <tr>
-              <th>Party Name</th>
-              <th>Bill No.</th>
-              <th>Date</th>
-              <th>With</th>
-              <th>MR</th>
-              <th>Amount</th>
-              <th>Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+        <div className="modern-table">
+          <div className="modern-table-header" style={{ gridTemplateColumns: 'repeat(7, 1fr)' }}>
+            <div>Party Name</div>
+            <div>Bill No.</div>
+            <div>Date</div>
+            <div>With</div>
+            <div>MR</div>
+            <div style={{ textAlign: 'right' }}>Amount</div>
+            <div style={{ textAlign: 'right' }}>Balance</div>
+          </div>
+          {loading ? (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
               <Spinner />
-            ) : (
-              filteredOrders.map((sr, index) => {
-                return (
-                  <BillRow
-                    data={sr}
-                    key={`allbills-order-item-${sr.id}`}
-                    index={index}
-                  />
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            </div>
+          ) : (
+            filteredOrders.map((sr, index) => (
+              <BillRow
+                data={sr}
+                key={`allbills-order-item-${sr.id}`}
+                index={index}
+              />
+            ))
+          )}
+        </div>
       </div>
     </center>
   );
@@ -259,17 +255,29 @@ function BillRow({ data, index }) {
   return (
     <Dialog>
       <DialogTrigger>
-        <tr className="bill-row">
-          <td>{party?.name || '--'}</td>
-          <td>
-            <b>{data.billNumber?.toUpperCase() || '--'}</b>
-          </td>
-          <td>{new Date(data.billCreationTime).toLocaleDateString()}</td>
-          <td>{withUser || '--'}</td>
-          <td>{mrUser || '--'}</td>
-          <td>{globalUtils.getCurrencyFormat(data.orderAmount)}</td>
-          <td>{globalUtils.getCurrencyFormat(data.balance)}</td>
-        </tr>
+        <div 
+          className="modern-table-row" 
+          style={{ 
+            gridTemplateColumns: 'repeat(7, 1fr)',
+            cursor: 'pointer'
+          }}
+        >
+          <div className="modern-table-cell">{party?.name || '--'}</div>
+          <div className="modern-table-cell bill-number">
+            {data.billNumber?.toUpperCase() || '--'}
+          </div>
+          <div className="modern-table-cell date">
+            {new Date(data.billCreationTime).toLocaleDateString()}
+          </div>
+          <div className="modern-table-cell">{withUser || '--'}</div>
+          <div className="modern-table-cell">{mrUser || '--'}</div>
+          <div className="modern-table-cell amount">
+            {globalUtils.getCurrencyFormat(data.orderAmount)}
+          </div>
+          <div className="modern-table-cell balance">
+            {globalUtils.getCurrencyFormat(data.balance)}
+          </div>
+        </div>
       </DialogTrigger>
       <DialogSurface>
         <BillDetailDialog
