@@ -30,3 +30,5 @@ npm-debug.log.*
 
 release
 release-builds
+
+$RECYCLE.BIN

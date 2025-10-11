@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import './tabNavigator.css';
-import { Button, Image, Tab, TabList, Text } from '@fluentui/react-components';
+import { Button, Image, Tab, TabList, Text, Badge } from '@fluentui/react-components';
 import {
   SignOut20Filled,
   ArrowLeft12Filled as ArrowIcon,
+  Person20Filled,
 } from '@fluentui/react-icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Logo from '../assets/images/logo.png';
@@ -40,22 +41,30 @@ export default function TabNavigator({ children }) {
 
   return (
     <div className="tab-navigator">
-      <div className="left">
-        <TabList className="menu-container">
-          <div className="tab-options">
+      <header className="tab-header">
+        <div className="header-content">
+          <div className="header-left">
             <Button
               size="small"
-              onClick={() => {
-                navigate(-1);
-              }}
+              appearance="subtle"
+              className="back-button"
+              onClick={() => navigate(-1)}
             >
               <ArrowIcon />
             </Button>
-            {filteredTabs.map((tab, i) => {
-              return (
+            <div className="logo-section">
+              <Image width={32} height={32} src={Logo} className="logo" />
+              <Text weight="semibold" className="app-title">ADA Accounts</Text>
+            </div>
+          </div>
+          
+          <div className="header-center">
+            <TabList className="main-tabs" size="small">
+              {filteredTabs.map((tab, i) => (
                 <Tab
                   key={user.uid + tab.key}
                   value={tab.name}
+                  className={`main-tab ${currentMenu === i ? 'active' : ''}`}
                   onClick={() => {
                     setCurrentMenu(i);
                     navigate(tab.route || tab.submenu[0].route);
@@ -63,41 +72,53 @@ export default function TabNavigator({ children }) {
                 >
                   {tab.name}
                 </Tab>
-              );
-            })}
+              ))}
+            </TabList>
           </div>
-          <div className="tab-options right-options">
-            <Image className="profile-pic-tab" src={user.profilePicture} />
-            <Button
-              key="logout-buttpn"
-              appearance="subtle"
-              onClick={() => {
-                firebaseAuth.signOut();
-              }}
-            >
-              <SignOut20Filled />
-              {user?.username?.split(' ')[0]}
-            </Button>
-            <Image width={40} src={Logo} />
-          </div>
-        </TabList>
-        <TabList className="submenu-container">
-          {filteredSubmenu?.map((sb) => {
-            return (
-              <Tab
-                key={user.uid + sb.key}
-                value={sb.name}
+
+          <div className="header-right">
+            <div className="user-section">
+              <div className="user-info">
+                <Text size={200} weight="medium">{user?.username?.split(' ')[0]}</Text>
+                {user.isManager && (
+                  <Badge appearance="filled" color="brand" size="small">Manager</Badge>
+                )}
+              </div>
+              <Button
+                size="small"
+                appearance="subtle"
+                className="logout-button"
                 onClick={() => {
-                  navigate(sb.route);
+                  firebaseAuth.signOut();
                 }}
               >
-                {sb.name}
-              </Tab>
-            );
-          })}
-        </TabList>
-      </div>
-      <div className="right">{children}</div>
+                <SignOut20Filled />
+              </Button>
+            </div>
+          </div>
+        </div>
+        
+        {filteredSubmenu && filteredSubmenu.length > 0 && (
+          <div className="submenu-section">
+            <TabList className="submenu-tabs" size="small">
+              {filteredSubmenu.map((sb) => (
+                <Tab
+                  key={user.uid + sb.key}
+                  value={sb.name}
+                  className="submenu-tab"
+                  onClick={() => navigate(sb.route)}
+                >
+                  {sb.name}
+                </Tab>
+              ))}
+            </TabList>
+          </div>
+        )}
+      </header>
+      
+      <main className={`tab-content ${filteredSubmenu && filteredSubmenu.length > 0 ? 'with-submenu' : ''}`}>
+        {children}
+      </main>
     </div>
   );
 }

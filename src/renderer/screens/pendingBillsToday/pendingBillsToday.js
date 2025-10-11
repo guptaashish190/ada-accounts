@@ -209,37 +209,23 @@ function BillsList({ partyId }) {
       const upiRef = collection(firebaseDB, 'upi');
       const chequeRef = collection(firebaseDB, 'cheques');
 
-      // Get the oldest pending bill to find payments before that
-      const oldestBill = bills.length > 0 ? bills[0] : null;
-      if (!oldestBill) {
-        setLastPayment(null);
-        return;
-      }
-
-      const dateFrom = new Date(oldestBill.billCreationTime);
-      dateFrom.setHours(0);
-      dateFrom.setMinutes(0);
-      dateFrom.setSeconds(0);
 
       // Query for last payment before the oldest pending bill
       const cashQueryLast = query(
         cashRef,
         where('parties', 'array-contains', partyId),
-        where('timestamp', '<', dateFrom.getTime()),
         orderBy('timestamp', 'desc'),
         limit(1),
       );
       const chequeQueryLast = query(
         chequeRef,
         where('partyId', '==', partyId),
-        where('timestamp', '<', dateFrom.getTime()),
         orderBy('timestamp', 'desc'),
         limit(1),
       );
       const upiQueryLast = query(
         upiRef,
         where('partyId', '==', partyId),
-        where('timestamp', '<', dateFrom.getTime()),
         orderBy('timestamp', 'desc'),
         limit(1),
       );
@@ -354,15 +340,15 @@ function BillsList({ partyId }) {
                   <span style={{ color: '#059669', fontWeight: '500' }}>
                     Cash: {globalUtils.getCurrencyFormat(
                       lastPayment.prItems?.find((x) => x.partyId === partyId)?.amount,
-                    )} ({globalUtils.getTimeFormat(lastPayment.timestamp, true)?.slice(0, 5)})
+                    )} ({globalUtils.getTimeFormat(lastPayment.timestamp, true, false)}) [{calculateDaysBetween(lastPayment.timestamp, new Date())} days ago]
                   </span>
                 ) : lastPayment.type === 'upi' ? (
                   <span style={{ color: '#059669', fontWeight: '500' }}>
-                    UPI: {globalUtils.getCurrencyFormat(lastPayment.amount)} ({globalUtils.getTimeFormat(lastPayment.timestamp, true)?.slice(0, 5)})
+                    UPI: {globalUtils.getCurrencyFormat(lastPayment.amount)} ({globalUtils.getTimeFormat(lastPayment.timestamp, true, false)}) [{calculateDaysBetween(lastPayment.timestamp, new Date())} days ago]
                   </span>
                 ) : lastPayment.type === 'cheque' ? (
                   <span style={{ color: '#059669', fontWeight: '500' }}>
-                    Cheque: {globalUtils.getCurrencyFormat(lastPayment.amount)} ({globalUtils.getTimeFormat(lastPayment.timestamp, true)?.slice(0, 5)})
+                    Cheque: {globalUtils.getCurrencyFormat(lastPayment.amount)} ({globalUtils.getTimeFormat(lastPayment.timestamp, true, false)}) [{calculateDaysBetween(lastPayment.timestamp, new Date())} days ago]
                   </span>
                 ) : null}
               </div>

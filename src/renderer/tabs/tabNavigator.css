@@ -1,55 +1,215 @@
+/* Modern Tab Navigator Styles */
 .tab-navigator {
-  top: 0;
   height: 100vh;
   width: 100vw;
-  overflow: scroll;
-}
-
-.tab-navigator .left {
-  padding: 0 10px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  border-bottom: 1px solid rgba(137, 137, 137, 0.255);
-  justify-content: center;
-  margin-bottom: 20px;
+  background-color: #fafafa;
+}
+
+/* Header Section */
+.tab-header {
   position: fixed;
-  top: 0px;
-  right: 0;
+  top: 0;
   left: 0;
-  z-index: 12;
+  right: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-bottom: 1px solid #e1e5e9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
 }
 
-.tab-navigator .right {
-  margin-top: 100px;
-  position: relative;
-  padding: 10px;
-  background-color: white;
-}
-
-.tab-navigator .submenu-container {
-  width: 100%;
-  background-color: #ffffff;
-  border-top: 1px solid grey;
-}
-
-.tab-navigator .menu-container {
-  width: 100%;
-  background-color: #ffffff;
+.header-content {
   display: flex;
-  justify-content: space-between;
-}
-
-.tab-navigator .tab-options {
-  display: flex;
-  flex-direction: row;
   align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  min-height: 48px;
+  max-height: 48px;
 }
 
-.tab-navigator .tab-options.right-options {
-  margin-right: 20px;
+/* Left Section */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
 }
-.tab-navigator .profile-pic-tab {
-  width: 5vh;
-  border-radius: 50%;
+
+.back-button {
+  min-width: 32px !important;
+  height: 32px !important;
+  border-radius: 6px !important;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logo {
+  border-radius: 6px;
+}
+
+.app-title {
+  font-size: 16px;
+  color: #323130;
+  white-space: nowrap;
+}
+
+/* Center Section */
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  max-width: 600px;
+  margin: 0 24px;
+}
+
+.main-tabs {
+  background: transparent !important;
+  border: none !important;
+}
+
+.main-tab {
+  padding: 6px 16px !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+}
+
+.main-tab:hover {
+  background: rgba(0, 120, 212, 0.08) !important;
+  border-color: rgba(0, 120, 212, 0.2) !important;
+}
+
+.main-tab.active {
+  background: #0078d4 !important;
+  color: white !important;
+  border-color: #0078d4 !important;
+}
+
+/* Right Section */
+.header-right {
+  flex: 0 0 auto;
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 120, 212, 0.05);
+}
+
+.profile-button,
+.logout-button {
+  min-width: 32px !important;
+  height: 32px !important;
+  border-radius: 6px !important;
+}
+
+/* Submenu Section */
+.submenu-section {
+  border-top: 1px solid #e1e5e9;
+  background: #ffffff;
+  padding: 0 16px;
+}
+
+.submenu-tabs {
+  background: transparent !important;
+  border: none !important;
+  min-height: 36px;
+}
+
+.submenu-tab {
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #605e5c !important;
+}
+
+.submenu-tab:hover {
+  background: rgba(0, 120, 212, 0.08) !important;
+  color: #0078d4 !important;
+}
+
+/* Content Section */
+.tab-content {
+  flex: 1;
+  margin-top: 48px; /* Height of main header */
+  padding: 16px;
+  overflow-y: auto;
+  background-color: #ffffff;
+  min-height: calc(100vh - 48px);
+}
+
+/* Dynamic margin for submenu */
+.tab-content.with-submenu {
+  margin-top: 84px; /* 48px header + 36px submenu */
+  min-height: calc(100vh - 84px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 8px 12px;
+  }
+  
+  .header-center {
+    margin: 0 12px;
+  }
+  
+  .app-title {
+    display: none;
+  }
+  
+  .user-info {
+    display: none;
+  }
+  
+  .main-tab {
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+  }
+  
+  .tab-content.with-submenu {
+    margin-top: 80px; /* Slightly reduced for mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 6px 8px;
+  }
+  
+  .main-tab {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+  }
+  
+  .submenu-tab {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+  }
+  
+  .tab-content.with-submenu {
+    margin-top: 76px; /* Further reduced for small mobile */
+  }
 }

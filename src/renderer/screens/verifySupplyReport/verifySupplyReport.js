@@ -31,6 +31,7 @@ import {
 } from '@fluentui/react-icons';
 import {
   Timestamp,
+  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -219,6 +220,60 @@ export default function VerifySupplyReport() {
     return { isValid: true };
   };
 
+  // Update MR routes with party assignments
+  const updateMrRoutesWithParties = async () => {
+    try {
+      const routeUpdates = {};
+      
+      // Group parties by MR and day
+      Object.entries(orderMrAssignments).forEach(([orderId, assignment]) => {
+        if (assignment.mrName && assignment.day) {
+          const bill = bills.find((b) => b.id === orderId);
+          if (bill) {
+            const key = `${assignment.mrName}-${assignment.day}`;
+            if (!routeUpdates[key]) {
+              routeUpdates[key] = {
+                mrName: assignment.mrName,
+                day: assignment.day,
+                parties: []
+              };
+            }
+            routeUpdates[key].parties.push(bill.partyId);
+          }
+        }
+      });
+
+      // Update each MR route document
+      for (const [key, routeUpdate] of Object.entries(routeUpdates)) {
+        // Find the MR route document by name
+        const mrRouteDoc = mrRoutes.find(route => route.name === routeUpdate.mrName);
+        if (mrRouteDoc) {
+          const mrRouteRef = doc(firebaseDB, 'mr_routes', mrRouteDoc.id);
+          
+          // Find the day index in the route array
+          const dayIndex = mrRouteDoc.route.findIndex(dayRoute => dayRoute.day === routeUpdate.day);
+          
+          if (dayIndex !== -1) {
+            // Add parties to the specific day's parties array
+            for (const partyId of routeUpdate.parties) {
+              await updateDoc(mrRouteRef, {
+                [`route.${dayIndex}.parties`]: arrayUnion(partyId)
+              });
+            }
+            console.log(`Updated MR route ${routeUpdate.mrName} for day ${routeUpdate.day} with parties:`, routeUpdate.parties);
+          } else {
+            console.warn(`Day ${routeUpdate.day} not found in MR route ${routeUpdate.mrName}`);
+          }
+        } else {
+          console.warn(`MR route ${routeUpdate.mrName} not found`);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating MR routes with parties:', error);
+      showToast(dispatchToast, 'Error updating MR routes', 'error');
+    }
+  };
+
   const onDispatch = async () => {
     try {
       const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
@@ -246,6 +301,9 @@ export default function VerifySupplyReport() {
           paymentTerms: allPartiesPaymentTerms[paymentTermParty],
         });
       });
+
+      // Update MR routes with party assignments
+      await updateMrRoutesWithParties();
 
       await [...attachedBills, ...supplementaryBills].forEach(async (bill1) => {
         await updateOldOrder(bill1);
