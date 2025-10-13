@@ -60,7 +60,7 @@ import constants from '../../constants';
 
 export default function VerifySupplyReport() {
   const location = useLocation();
-  const [loading, setLoading] = useState();
+  const [loading, setLoading] = useState(false);
   const [bills, setBills] = useState([]);
   const locationState = location.state;
   const supplyReport = locationState?.supplyReport;
@@ -224,7 +224,7 @@ export default function VerifySupplyReport() {
   const updateMrRoutesWithParties = async () => {
     try {
       const routeUpdates = {};
-      
+
       // Group parties by MR and day
       Object.entries(orderMrAssignments).forEach(([orderId, assignment]) => {
         if (assignment.mrName && assignment.day) {
@@ -235,7 +235,7 @@ export default function VerifySupplyReport() {
               routeUpdates[key] = {
                 mrName: assignment.mrName,
                 day: assignment.day,
-                parties: []
+                parties: [],
               };
             }
             routeUpdates[key].parties.push(bill.partyId);
@@ -244,30 +244,76 @@ export default function VerifySupplyReport() {
       });
 
       // Update each MR route document
-      for (const [key, routeUpdate] of Object.entries(routeUpdates)) {
-        // Find the MR route document by name
-        const mrRouteDoc = mrRoutes.find(route => route.name === routeUpdate.mrName);
-        if (mrRouteDoc) {
-          const mrRouteRef = doc(firebaseDB, 'mr_routes', mrRouteDoc.id);
-          
-          // Find the day index in the route array
-          const dayIndex = mrRouteDoc.route.findIndex(dayRoute => dayRoute.day === routeUpdate.day);
-          
-          if (dayIndex !== -1) {
-            // Add parties to the specific day's parties array
-            for (const partyId of routeUpdate.parties) {
-              await updateDoc(mrRouteRef, {
-                [`route.${dayIndex}.parties`]: arrayUnion(partyId)
-              });
-            }
-            console.log(`Updated MR route ${routeUpdate.mrName} for day ${routeUpdate.day} with parties:`, routeUpdate.parties);
-          } else {
-            console.warn(`Day ${routeUpdate.day} not found in MR route ${routeUpdate.mrName}`);
+      const updatePromises = Object.entries(routeUpdates).map(
+        async ([key, routeUpdate]) => {
+          // Find the MR route document by name
+          const mrRouteDoc = mrRoutes.find(
+            (route) => route.name === routeUpdate.mrName,
+          );
+
+          if (!mrRouteDoc) {
+            console.warn(`MR route ${routeUpdate.mrName} not found`);
+            return;
           }
-        } else {
-          console.warn(`MR route ${routeUpdate.mrName} not found`);
-        }
-      }
+
+          const mrRouteRef = doc(firebaseDB, 'mr_routes', mrRouteDoc.id);
+
+          try {
+            // Get the current document data
+            const currentDoc = await getDoc(mrRouteRef);
+            if (!currentDoc.exists()) {
+              console.warn(`MR route document ${mrRouteDoc.id} not found`);
+              return;
+            }
+
+            const currentData = currentDoc.data();
+            const updatedRoute = [...currentData.route];
+
+            // Find the day index in the route array
+            const dayIndex = updatedRoute.findIndex(
+              (dayRoute) => dayRoute.day === routeUpdate.day,
+            );
+
+            if (dayIndex !== -1) {
+              // Get current parties array or initialize empty array
+              const currentParties = updatedRoute[dayIndex].parties || [];
+
+              // Add new parties that aren't already in the array
+              const newParties = routeUpdate.parties.filter(
+                (partyId) => !currentParties.includes(partyId),
+              );
+
+              // Update the parties array
+              updatedRoute[dayIndex] = {
+                ...updatedRoute[dayIndex],
+                parties: [...currentParties, ...newParties],
+              };
+
+              // Update the entire document with the modified route
+              await updateDoc(mrRouteRef, {
+                route: updatedRoute,
+              });
+
+              console.log(
+                `Updated MR route ${routeUpdate.mrName} for day ${routeUpdate.day} with new parties:`,
+                newParties,
+              );
+            } else {
+              console.warn(
+                `Day ${routeUpdate.day} not found in MR route ${routeUpdate.mrName}`,
+              );
+            }
+          } catch (error) {
+            console.error(
+              `Error updating MR route ${routeUpdate.mrName}:`,
+              error,
+            );
+          }
+        },
+      );
+
+      // Wait for all updates to complete
+      await Promise.all(updatePromises);
     } catch (error) {
       console.error('Error updating MR routes with parties:', error);
       showToast(dispatchToast, 'Error updating MR routes', 'error');
@@ -275,10 +321,11 @@ export default function VerifySupplyReport() {
   };
 
   const onDispatch = async () => {
+    setLoading(true);
     try {
       const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
 
-      updateDoc(supplyReportRef, {
+      await updateDoc(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
         dispatchTimestamp: Timestamp.now().toMillis(),
         dispatchAccountNotes: accountsNotes,
@@ -290,24 +337,31 @@ export default function VerifySupplyReport() {
           .map((b) => b.id),
       });
 
-      await bills.forEach(async (bill1) => {
-        await updateOrder(bill1);
-      });
+      await Promise.all(
+        bills.map(async (bill1) => {
+          await updateOrder(bill1);
+        }),
+      );
 
       // update payment terms for all parties
-      await Object.keys(allPartiesPaymentTerms).forEach((paymentTermParty) => {
-        const partyRef = doc(firebaseDB, 'parties', paymentTermParty);
-        updateDoc(partyRef, {
-          paymentTerms: allPartiesPaymentTerms[paymentTermParty],
-        });
-      });
+      await Promise.all(
+        Object.keys(allPartiesPaymentTerms).map(async (paymentTermParty) => {
+          const partyRef = doc(firebaseDB, 'parties', paymentTermParty);
+          await updateDoc(partyRef, {
+            paymentTerms: allPartiesPaymentTerms[paymentTermParty],
+          });
+        }),
+      );
 
       // Update MR routes with party assignments
       await updateMrRoutesWithParties();
 
-      await [...attachedBills, ...supplementaryBills].forEach(async (bill1) => {
-        await updateOldOrder(bill1);
-      });
+      await Promise.all(
+        [...attachedBills, ...supplementaryBills].map(async (bill1) => {
+          await updateOldOrder(bill1);
+        }),
+      );
+
       setLoading(false);
       navigate(-1);
     } catch (e) {
@@ -321,7 +375,7 @@ export default function VerifySupplyReport() {
       const orderRef = doc(firebaseDB, 'orders', bill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
-      updateDoc(orderRef, {
+      await updateDoc(orderRef, {
         balance: parseInt(bill1.orderAmount, 10),
         with: supplyReport.supplymanId,
         orderStatus: 'Dispatched',
@@ -348,7 +402,7 @@ export default function VerifySupplyReport() {
       const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
-      updateDoc(orderRef, {
+      await updateDoc(orderRef, {
         accountsNotes: modifiedBill1.notes || '',
         with: supplyReport.supplymanId,
       });
@@ -359,12 +413,14 @@ export default function VerifySupplyReport() {
     }
   };
 
+  if (loading) {
+    return <Loader />;
+  }
   return (
     <>
       <Toaster toasterId={toasterId} />
       <div className="verify-supply-report">
         <center>
-          {loading ? <Loader /> : null}
           <h3>Verify Supply Report</h3>
           ID: {supplyReport?.receiptNumber || '--'}{' '}
           <span style={{ color: 'grey' }}>

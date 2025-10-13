@@ -1,8 +1,87 @@
 .route-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 20px;
 }
 
+.route-card {
+    margin: 10px 0;
+    border: 1px solid rgba(151, 151, 151, 0.288);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.route-days-container {
+    padding: 16px;
+}
+
+.route-day-component {
+    margin-bottom: 12px;
+    border: 1px solid #e1e1e1;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.route-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e1e1e1;
+    transition: background-color 0.2s ease;
+}
+
+.route-day-header:hover {
+    background-color: #e9ecef;
+}
+
+.day-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.parties-list {
+    padding: 12px 16px;
+    background-color: #ffffff;
+}
+
+.party-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.party-item:last-child {
+    border-bottom: none;
+}
+
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    min-height: 200px;
+}
+
+.no-data-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    min-height: 200px;
+}
+
+.parties-loading {
+    display: flex;
+    align-items: center;
+    padding: 12px 0;
+    color: #666;
+}
+
+/* Legacy styles for backward compatibility */
 .route-container .routesettingsday {
     display: grid;
     grid-template-columns: 1fr 1fr;

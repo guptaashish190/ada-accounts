@@ -5,6 +5,7 @@
   display: flex;
   flex-direction: column;
   background-color: #fafafa;
+  overflow: hidden;
 }
 
 /* Header Section */
@@ -18,6 +19,7 @@
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(10px);
+  width: 100%;
 }
 
 .header-content {
@@ -27,6 +29,8 @@
   padding: 8px 16px;
   min-height: 48px;
   max-height: 48px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Left Section */
@@ -35,28 +39,34 @@
   align-items: center;
   gap: 12px;
   flex: 0 0 auto;
+  min-width: 0;
 }
 
 .back-button {
   min-width: 32px !important;
   height: 32px !important;
   border-radius: 6px !important;
+  flex-shrink: 0;
 }
 
 .logo-section {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .logo {
   border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .app-title {
   font-size: 16px;
   color: #323130;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Center Section */
@@ -64,13 +74,23 @@
   flex: 1;
   display: flex;
   justify-content: center;
-  max-width: 600px;
-  margin: 0 24px;
+  min-width: 0;
+  margin: 0 12px;
+  overflow: hidden;
 }
 
 .main-tabs {
   background: transparent !important;
   border: none !important;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.main-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .main-tab {
@@ -81,6 +101,8 @@
   transition: all 0.2s ease !important;
   border: 1px solid transparent !important;
   background: transparent !important;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .main-tab:hover {
@@ -97,12 +119,14 @@
 /* Right Section */
 .header-right {
   flex: 0 0 auto;
+  min-width: 0;
 }
 
 .user-section {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .user-info {
@@ -112,6 +136,13 @@
   padding: 4px 8px;
   border-radius: 6px;
   background: rgba(0, 120, 212, 0.05);
+  min-width: 0;
+}
+
+.user-info .text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-button,
@@ -119,6 +150,7 @@
   min-width: 32px !important;
   height: 32px !important;
   border-radius: 6px !important;
+  flex-shrink: 0;
 }
 
 /* Submenu Section */
@@ -126,12 +158,23 @@
   border-top: 1px solid #e1e5e9;
   background: #ffffff;
   padding: 0 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .submenu-tabs {
   background: transparent !important;
   border: none !important;
   min-height: 36px;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.submenu-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .submenu-tab {
@@ -143,6 +186,8 @@
   border: 1px solid transparent !important;
   background: transparent !important;
   color: #605e5c !important;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .submenu-tab:hover {
@@ -158,6 +203,8 @@
   overflow-y: auto;
   background-color: #ffffff;
   min-height: calc(100vh - 48px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Dynamic margin for submenu */
@@ -167,13 +214,26 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .header-center {
+    margin: 0 8px;
+  }
+  
+  .main-tab {
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .header-content {
     padding: 8px 12px;
+    gap: 8px;
   }
   
   .header-center {
-    margin: 0 12px;
+    margin: 0 8px;
+    max-width: none;
   }
   
   .app-title {
@@ -185,8 +245,21 @@
   }
   
   .main-tab {
-    padding: 6px 12px !important;
+    padding: 6px 10px !important;
     font-size: 13px !important;
+  }
+  
+  .submenu-section {
+    padding: 0 12px;
+  }
+  
+  .submenu-tab {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+  
+  .tab-content {
+    padding: 12px;
   }
   
   .tab-content.with-submenu {
@@ -197,6 +270,11 @@
 @media (max-width: 480px) {
   .header-content {
     padding: 6px 8px;
+    gap: 6px;
+  }
+  
+  .header-center {
+    margin: 0 6px;
   }
   
   .main-tab {
@@ -204,12 +282,53 @@
     font-size: 12px !important;
   }
   
+  .submenu-section {
+    padding: 0 8px;
+  }
+  
   .submenu-tab {
     padding: 4px 8px !important;
-    font-size: 12px !important;
+    font-size: 11px !important;
+  }
+  
+  .tab-content {
+    padding: 8px;
   }
   
   .tab-content.with-submenu {
     margin-top: 76px; /* Further reduced for small mobile */
+  }
+}
+
+@media (max-width: 360px) {
+  .header-content {
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  
+  .header-center {
+    margin: 0 4px;
+  }
+  
+  .main-tab {
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+  }
+  
+  .submenu-section {
+    padding: 0 6px;
+  }
+  
+  .submenu-tab {
+    padding: 3px 6px !important;
+    font-size: 10px !important;
+  }
+  
+  .tab-content {
+    padding: 6px;
+  }
+  
+  .tab-content.with-submenu {
+    margin-top: 72px; /* Even more reduced for very small screens */
   }
 }

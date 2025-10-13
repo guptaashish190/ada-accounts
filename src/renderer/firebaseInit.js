@@ -39,7 +39,7 @@ export default firebaseApp;
 
 export const firebaseDB = getFirestore(firebaseApp);
 // export const firebaseDBLastYear = getFirestore(firebaseApp, 'fy23-24');
-// connectFirestoreEmulator(firebaseDB, '127.0.0.1', '8080');
+connectFirestoreEmulator(firebaseDB, '127.0.0.1', '8080');
 
 const analytics = getAnalytics(firebaseApp);
 
