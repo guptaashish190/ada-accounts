@@ -76,17 +76,15 @@
   justify-content: center;
   min-width: 0;
   margin: 0 12px;
-  overflow: hidden;
 }
 
 .main-tabs {
   background: transparent !important;
   border: none !important;
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  overflow-x: auto;
 }
 
 .main-tabs::-webkit-scrollbar {
@@ -114,6 +112,7 @@
   background: #0078d4 !important;
   color: white !important;
   border-color: #0078d4 !important;
+
 }
 
 /* Right Section */
@@ -330,5 +329,31 @@
   
   .tab-content.with-submenu {
     margin-top: 72px; /* Even more reduced for very small screens */
+  }
+}
+
+/* Print Styles - Hide Navigation Panels */
+@media print {
+  .tab-header {
+    display: none !important;
+  }
+  
+  .tab-content {
+    margin-top: 0 !important;
+    min-height: auto !important;
+    padding: 0 !important;
+    background-color: transparent !important;
+  }
+  
+  .tab-content.with-submenu {
+    margin-top: 0 !important;
+    min-height: auto !important;
+  }
+  
+  .tab-navigator {
+    height: auto !important;
+    width: auto !important;
+    background-color: transparent !important;
+    overflow: visible !important;
   }
 }

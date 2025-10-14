@@ -58,6 +58,7 @@ body {
 .modern-table-cell {
   color: #1f2937;
   font-weight: normal;
+  text-align: left;
 }
 
 .modern-table-cell.amount {
@@ -68,17 +69,12 @@ body {
 .modern-table-cell.balance {
   text-align: right;
   font-weight: 600;
-  color: #dc2626;
 }
 
 .modern-table-cell.date {
   color: #6b7280;
 }
 
-.modern-table-cell.bill-number {
-  font-weight: 500;
-  color: #1f2937;
-}
 
 /* Legacy table styles for backward compatibility */
 table {

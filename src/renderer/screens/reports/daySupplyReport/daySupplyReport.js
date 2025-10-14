@@ -212,9 +212,6 @@ export default function DaySupplyReportPrint() {
                     <Text>Last Payment Received</Text>
                   </th>
                   <th>
-                    <Text>Last Billing</Text>
-                  </th>
-                  <th>
                     <Text>Outstanding</Text>
                   </th>
                   <th>
@@ -286,9 +283,6 @@ function SupplyReportRow({
         <th style={{ width: '20vw' }}>
           <Text>Last Payment Received</Text>
         </th>
-        <th style={{ width: '20vw' }}>
-          <Text>Last Billing</Text>
-        </th>
         <th>
           <Text>Outstanding</Text>
         </th>
@@ -322,7 +316,6 @@ function SupplyReportOrderRow({
   const [upiReceipts, setUpiReceipts] = useState([]);
   const [lastPayment, setLastPayment] = useState();
   const [isDefaulter, setIsDefaulter] = useState(true);
-  const [lastBilling, setLastBilling] = useState();
 
   const fetchOrder = async () => {
     try {
@@ -330,27 +323,10 @@ function SupplyReportOrderRow({
       const newOrder = await globalUtils.fetchPartyInfoForOrders(order1);
       setOrder(newOrder[0]);
       await fetchPayments(newOrder[0]);
-      await fetchLastBilling(newOrder[0]);
     } catch (e) {
       console.log(e);
     }
     setLoading(false);
-  };
-
-  const fetchLastBilling = async (orderData) => {
-    const orderRef = collection(firebaseDB, 'orders');
-    const lastOrder1 = query(
-      orderRef,
-      where('partyId', '==', orderData.partyId),
-      where('billCreationTime', '<=', orderData.billCreationTime - 86400000),
-      where('type', '!=', 'R'),
-      orderBy('billCreationTime', 'desc'),
-      limit(1),
-    );
-    const lastOrder2 = await getDocs(lastOrder1);
-    if (lastOrder2.docs.length === 1) {
-      setLastBilling(lastOrder2.docs[0].data());
-    }
   };
 
   const fetchPayments = async (orderObj) => {
@@ -585,18 +561,6 @@ function SupplyReportOrderRow({
         ) : (
           ''
         )}
-      </td>
-      <td>
-        {lastBilling ? (
-          <>
-            <b>{globalUtils.getCurrencyFormat(lastBilling.orderAmount)}</b>
-            &nbsp; (
-            {globalUtils
-              .getTimeFormat(lastBilling.billCreationTime, true)
-              ?.slice(0, 5)}
-            )
-          </>
-        ) : null}
       </td>
       <td>{globalUtils.getCurrencyFormat(order.party.partyBalance)}</td>
       <td>

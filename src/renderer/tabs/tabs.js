@@ -62,13 +62,13 @@ export default [
     route: '/upi',
     key: 'tab-upi',
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
-  },
 
-  {
-    name: 'Receipts',
-    route: '/paymentReceipts',
-    key: 'tab-paymentreceipts',
     submenu: [
+      {
+        name: 'UPI',
+        route: '/upi',
+        key: 'tab-upi1',
+      },
       {
         name: 'Cash Receipts',
         route: '/paymentReceipts',
@@ -79,49 +79,34 @@ export default [
         route: '/vouchers',
         key: 'tab-vouchers',
       },
+      {
+        name: 'Cheques',
+        route: '/chequesList',
+        key: 'tab-chequesList',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+      },
     ],
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
   },
+
   {
-    name: 'Cheques',
-    route: '/chequesList',
-    key: 'tab-chequesList',
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
-  },
-  {
-    name: 'Search Bills',
+    name: 'Bills',
     route: '/searchBills',
     key: 'tab-searchBills',
-  },
-  {
-    name: 'Pending Bills',
-    route: '/pendingBillsToday',
-    key: 'tab-pending-bills',
-  },
-  {
-    name: 'Scheduled',
-    route: '/scheduled',
-    key: 'tab-scheduled',
-  },
-  {
-    name: 'Settings',
-    key: 'tab-settings',
     submenu: [
       {
-        name: 'Parties',
-        route: '/partyListSettings',
-        key: 'tab-settings',
+        name: 'All Bills',
+        route: '/searchBills',
+        key: 'tab-searchBills',
       },
       {
-        name: 'Printer',
-        route: '/printerSettings',
-        key: 'tab-settings-printers',
+        name: 'Pending Bills',
+        route: '/pendingBillsToday',
+        key: 'tab-pending-bills',
       },
       {
-        name: 'Routes',
-        route: '/routeSettings',
-        key: 'tab-settings-route',
-        allowJob: [],
+        name: 'Scheduled',
+        route: '/scheduled',
+        key: 'tab-scheduled',
       },
     ],
   },
@@ -144,6 +129,28 @@ export default [
         name: 'Collection',
         route: '/collectionReport',
         key: 'tab-collectionreport',
+      },
+    ],
+  },
+  {
+    name: 'Settings',
+    key: 'tab-settings',
+    submenu: [
+      {
+        name: 'Parties',
+        route: '/partyListSettings',
+        key: 'tab-settings',
+      },
+      {
+        name: 'Printer',
+        route: '/printerSettings',
+        key: 'tab-settings-printers',
+      },
+      {
+        name: 'Routes',
+        route: '/routeSettings',
+        key: 'tab-settings-route',
+        allowJob: [],
       },
     ],
   },

@@ -655,8 +655,18 @@ function PartySection({
             {bill.party?.name}
           </Text>
         </div>
-        <div className="status-badge-compact">
-          <Text size={200} weight="medium">
+        <div
+          className="status-badge-compact"
+          style={{
+            backgroundColor: mrAssignment?.isRequired ? '#fef2f2' : '#f3f2f1',
+            borderColor: mrAssignment?.isRequired ? '#fecaca' : '#e1dfdd',
+          }}
+        >
+          <Text
+            size={200}
+            weight="medium"
+            style={{ color: mrAssignment?.isRequired ? '#dc2626' : undefined }}
+          >
             {mrAssignment?.isRequired ? '⚠️ Required' : '✅ Auto'}
           </Text>
         </div>
@@ -752,16 +762,6 @@ function PartySection({
           </Dropdown>
         </div>
       </div>
-
-      {mrAssignment?.isRequired && (
-        <div className="status-message-compact warning">
-          <Text size={200} style={{ color: '#d83b01' }}>
-            ⚠️ Manual assignment required - select Payment Terms, MR Name, and
-            Route Day
-          </Text>
-        </div>
-      )}
-
       <Button
         onClick={() => {
           if (oldBills.length === 0) {

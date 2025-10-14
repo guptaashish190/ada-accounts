@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import './tabNavigator.css';
-import { Button, Image, Tab, TabList, Text, Badge } from '@fluentui/react-components';
+import {
+  Button,
+  Image,
+  Tab,
+  TabList,
+  Text,
+  Badge,
+} from '@fluentui/react-components';
 import {
   SignOut20Filled,
   ArrowLeft12Filled as ArrowIcon,
@@ -54,10 +61,12 @@ export default function TabNavigator({ children }) {
             </Button>
             <div className="logo-section">
               <Image width={32} height={32} src={Logo} className="logo" />
-              <Text weight="semibold" className="app-title">ADA Accounts</Text>
+              <Text weight="semibold" className="app-title">
+                ADA Accounts
+              </Text>
             </div>
           </div>
-          
+
           <div className="header-center">
             <TabList className="main-tabs" size="small">
               {filteredTabs.map((tab, i) => (
@@ -79,9 +88,13 @@ export default function TabNavigator({ children }) {
           <div className="header-right">
             <div className="user-section">
               <div className="user-info">
-                <Text size={200} weight="medium">{user?.username?.split(' ')[0]}</Text>
+                <Text size={200} weight="medium">
+                  {user?.username?.split(' ')[0]}
+                </Text>
                 {user.isManager && (
-                  <Badge appearance="filled" color="brand" size="small">Manager</Badge>
+                  <Badge appearance="filled" color="brand" size="small">
+                    Manager
+                  </Badge>
                 )}
               </div>
               <Button
@@ -97,7 +110,7 @@ export default function TabNavigator({ children }) {
             </div>
           </div>
         </div>
-        
+
         {filteredSubmenu && filteredSubmenu.length > 0 && (
           <div className="submenu-section">
             <TabList className="submenu-tabs" size="small">
@@ -115,8 +128,12 @@ export default function TabNavigator({ children }) {
           </div>
         )}
       </header>
-      
-      <main className={`tab-content ${filteredSubmenu && filteredSubmenu.length > 0 ? 'with-submenu' : ''}`}>
+
+      <main
+        className={`tab-content ${
+          filteredSubmenu && filteredSubmenu.length > 0 ? 'with-submenu' : ''
+        }`}
+      >
         {children}
       </main>
     </div>

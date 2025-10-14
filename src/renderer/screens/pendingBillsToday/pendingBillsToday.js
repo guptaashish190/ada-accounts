@@ -12,24 +12,12 @@ import {
   where,
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import {
-  Button,
-  Input,
-  ProgressBar,
-  Spinner,
-} from '@fluentui/react-components';
+import { Button, Spinner } from '@fluentui/react-components';
 import { firebaseDB } from '../../firebaseInit';
-import { VerticalSpace2 } from '../../common/verticalSpace';
 import globalUtils from '../../services/globalUtils';
 
-const numColumns = 5;
-
 export default function PendingBillsToday() {
-  const [orders, setOrders] = useState([]);
   const [fromDate, setFromDate] = useState(new Date());
-  const [toDate, setToDate] = useState(new Date());
-  const [toDateOpen, setToDateOpen] = useState(false);
-  const [fromDateOpen, setfromDateOpen] = useState(true);
   const [loading, setLoading] = useState(false);
   const [mrPartiesList, setMrPartiesList] = useState({});
 
@@ -70,36 +58,45 @@ export default function PendingBillsToday() {
 
   return (
     <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        padding: '24px',
-        borderRadius: '12px',
-        marginBottom: '24px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-      }}>
-        <h2 style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '600' }}>
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          padding: '24px',
+          borderRadius: '12px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        }}
+      >
+        <h2
+          style={{ margin: '0 0 16px 0', fontSize: '24px', fontWeight: '600' }}
+        >
           Pending Bills For Collection
         </h2>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <DatePicker
             className="filter-input"
             onSelectDate={(x) => {
               setFromDate(x);
-              setToDateOpen(true);
-              setfromDateOpen(false);
             }}
             placeholder="Select Date"
             value={fromDate}
             style={{ minWidth: '200px' }}
           />
-          <Button 
+          <Button
             onClick={() => fetchTodaysBills()}
             appearance="secondary"
-            style={{ 
+            style={{
               background: 'rgba(255,255,255,0.2)',
               border: '1px solid rgba(255,255,255,0.3)',
-              color: 'white'
+              color: 'white',
             }}
           >
             Get Bills
@@ -112,35 +109,45 @@ export default function PendingBillsToday() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {Object.keys(mrPartiesList).map((mr) => (
-            <div key={`mr${mr}`} style={{
-              background: 'white',
-              borderRadius: '12px',
-              boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-              overflow: 'hidden',
-              border: '1px solid #e5e7eb'
-            }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-                padding: '16px 20px',
-                borderBottom: '1px solid #e5e7eb'
-              }}>
-                <h3 style={{ 
-                  margin: '0', 
-                  fontSize: '18px', 
-                  fontWeight: '600',
-                  color: '#374151',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <span style={{
-                    background: '#667eea',
-                    color: 'white',
-                    borderRadius: '6px',
-                    padding: '4px 8px',
-                    fontSize: '12px',
-                    fontWeight: '500'
-                  }}>
+            <div
+              key={`mr${mr}`}
+              style={{
+                background: 'white',
+                borderRadius: '12px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                overflow: 'hidden',
+                border: '1px solid #e5e7eb',
+              }}
+            >
+              <div
+                style={{
+                  background:
+                    'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
+                  padding: '16px 20px',
+                  borderBottom: '1px solid #e5e7eb',
+                }}
+              >
+                <h3
+                  style={{
+                    margin: '0',
+                    fontSize: '18px',
+                    fontWeight: '600',
+                    color: '#374151',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span
+                    style={{
+                      background: '#667eea',
+                      color: 'white',
+                      borderRadius: '6px',
+                      padding: '4px 8px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                    }}
+                  >
                     {mrPartiesList[mr]?.length ?? 0}
                   </span>
                   {mr}
@@ -208,7 +215,6 @@ function BillsList({ partyId }) {
       const cashRef = collection(firebaseDB, 'cashReceipts');
       const upiRef = collection(firebaseDB, 'upi');
       const chequeRef = collection(firebaseDB, 'cheques');
-
 
       // Query for last payment before the oldest pending bill
       const cashQueryLast = query(
@@ -289,116 +295,185 @@ function BillsList({ partyId }) {
   };
 
   return (
-    <div style={{
-      borderBottom: '1px solid #f3f4f6',
-      transition: 'all 0.2s ease'
-    }}>
-      <div 
-        style={{ 
+    <div
+      style={{
+        borderBottom: '1px solid #f3f4f6',
+        transition: 'all 0.2s ease',
+      }}
+    >
+      <div
+        style={{
           padding: '16px 20px',
           cursor: 'pointer',
           transition: 'background-color 0.2s ease',
-          backgroundColor: isCollapsed ? '#fafafa' : '#ffffff'
+          backgroundColor: isCollapsed ? '#fafafa' : '#ffffff',
         }}
         onClick={() => setIsCollapsed(!isCollapsed)}
-        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8fafc'}
-        onMouseLeave={(e) => e.target.style.backgroundColor = isCollapsed ? '#fafafa' : '#ffffff'}
+        onMouseEnter={(e) => {
+          e.target.style.backgroundColor = '#f8fafc';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.backgroundColor = isCollapsed ? '#fafafa' : '#ffffff';
+        }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            setIsCollapsed(!isCollapsed);
+          }
+        }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-              <h4 style={{ 
-                margin: '0', 
-                fontSize: '16px', 
-                fontWeight: '600',
-                color: '#1f2937'
-              }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '8px',
+              }}
+            >
+              <h4
+                style={{
+                  margin: '0',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                }}
+              >
                 {partyDetails?.name ?? partyId}
               </h4>
-              <span style={{
-                background: bills.length > 0 ? '#ef4444' : '#10b981',
-                color: 'white',
-                borderRadius: '12px',
-                padding: '2px 8px',
-                fontSize: '11px',
-                fontWeight: '500'
-              }}>
+              <span
+                style={{
+                  background: bills.length > 0 ? '#ef4444' : '#10b981',
+                  color: 'white',
+                  borderRadius: '12px',
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                }}
+              >
                 {bills.length} Bills
               </span>
             </div>
             {lastPayment && (
-              <div style={{ 
-                fontSize: '13px', 
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                marginBottom: '4px'
-              }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '4px',
+                }}
+              >
                 <span style={{ fontWeight: '500' }}>Last Payment:</span>
-                {lastPayment.type === 'cash' ? (
+                {lastPayment.type === 'cash' && (
                   <span style={{ color: '#059669', fontWeight: '500' }}>
-                    Cash: {globalUtils.getCurrencyFormat(
-                      lastPayment.prItems?.find((x) => x.partyId === partyId)?.amount,
-                    )} ({globalUtils.getTimeFormat(lastPayment.timestamp, true, false)}) [{calculateDaysBetween(lastPayment.timestamp, new Date())} days ago]
+                    Cash:{' '}
+                    {globalUtils.getCurrencyFormat(
+                      lastPayment.prItems?.find((x) => x.partyId === partyId)
+                        ?.amount,
+                    )}{' '}
+                    (
+                    {globalUtils.getTimeFormat(
+                      lastPayment.timestamp,
+                      true,
+                      false,
+                    )}
+                    ) [{calculateDaysBetween(lastPayment.timestamp, new Date())}{' '}
+                    days ago]
                   </span>
-                ) : lastPayment.type === 'upi' ? (
+                )}
+                {lastPayment.type === 'upi' && (
                   <span style={{ color: '#059669', fontWeight: '500' }}>
-                    UPI: {globalUtils.getCurrencyFormat(lastPayment.amount)} ({globalUtils.getTimeFormat(lastPayment.timestamp, true, false)}) [{calculateDaysBetween(lastPayment.timestamp, new Date())} days ago]
+                    UPI: {globalUtils.getCurrencyFormat(lastPayment.amount)} (
+                    {globalUtils.getTimeFormat(
+                      lastPayment.timestamp,
+                      true,
+                      false,
+                    )}
+                    ) [{calculateDaysBetween(lastPayment.timestamp, new Date())}{' '}
+                    days ago]
                   </span>
-                ) : lastPayment.type === 'cheque' ? (
+                )}
+                {lastPayment.type === 'cheque' && (
                   <span style={{ color: '#059669', fontWeight: '500' }}>
-                    Cheque: {globalUtils.getCurrencyFormat(lastPayment.amount)} ({globalUtils.getTimeFormat(lastPayment.timestamp, true, false)}) [{calculateDaysBetween(lastPayment.timestamp, new Date())} days ago]
+                    Cheque: {globalUtils.getCurrencyFormat(lastPayment.amount)}{' '}
+                    (
+                    {globalUtils.getTimeFormat(
+                      lastPayment.timestamp,
+                      true,
+                      false,
+                    )}
+                    ) [{calculateDaysBetween(lastPayment.timestamp, new Date())}{' '}
+                    days ago]
                   </span>
-                ) : null}
+                )}
               </div>
             )}
             {bills.length > 0 && (
-              <div style={{ 
-                fontSize: '13px', 
-                color: '#6b7280',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  color: '#6b7280',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
                 <span style={{ fontWeight: '500' }}>Total Outstanding:</span>
                 <span style={{ color: '#dc2626', fontWeight: '600' }}>
                   {globalUtils.getCurrencyFormat(
-                    bills.reduce((total, bill) => total + (bill.balance || 0), 0)
+                    bills.reduce(
+                      (total, bill) => total + (bill.balance || 0),
+                      0,
+                    ),
                   )}
                 </span>
               </div>
             )}
           </div>
-          <div style={{ 
-            fontSize: '16px', 
-            color: '#6b7280',
-            transition: 'transform 0.2s ease',
-            transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)'
-          }}>
+          <div
+            style={{
+              fontSize: '16px',
+              color: '#6b7280',
+              transition: 'transform 0.2s ease',
+              transform: isCollapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+            }}
+          >
             ▼
           </div>
         </div>
       </div>
-      
       {!isCollapsed && (
         <div style={{ padding: '0 20px 16px 20px' }}>
-          <div style={{
-            background: '#f8fafc',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            border: '1px solid #e2e8f0'
-          }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(5, 1fr)',
-              background: '#f1f5f9',
-              padding: '12px 16px',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#475569',
-              borderBottom: '1px solid #e2e8f0'
-            }}>
+          <div
+            style={{
+              background: '#f8fafc',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5, 1fr)',
+                background: '#f1f5f9',
+                padding: '12px 16px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#475569',
+                borderBottom: '1px solid #e2e8f0',
+              }}
+            >
               <div>Bill No</div>
               <div>Date</div>
               <div style={{ textAlign: 'right' }}>Amount</div>
@@ -406,22 +481,44 @@ function BillsList({ partyId }) {
               <div style={{ textAlign: 'right' }}>Days</div>
             </div>
             {bills.map((bill, index) => (
-              <div key={bill.id} style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(5, 1fr)',
-                padding: '12px 16px',
-                fontSize: '13px',
-                borderBottom: index < bills.length - 1 ? '1px solid #e2e8f0' : 'none',
-                backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc'
-              }}>
-                <div style={{ fontWeight: '500', color: '#1f2937' }}>{bill.billNumber}</div>
-                <div style={{ color: '#6b7280' }}>
-                  {globalUtils.getTimeFormat(bill.billCreationTime, true, false)}
+              <div
+                key={bill.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(5, 1fr)',
+                  padding: '12px 16px',
+                  fontSize: '13px',
+                  borderBottom:
+                    index < bills.length - 1 ? '1px solid #e2e8f0' : 'none',
+                  backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
+                }}
+              >
+                <div style={{ fontWeight: '500', color: '#1f2937' }}>
+                  {bill.billNumber}
                 </div>
-                <div style={{ textAlign: 'right', fontWeight: '500', color: '#1f2937' }}>
+                <div style={{ color: '#6b7280' }}>
+                  {globalUtils.getTimeFormat(
+                    bill.billCreationTime,
+                    true,
+                    false,
+                  )}
+                </div>
+                <div
+                  style={{
+                    textAlign: 'right',
+                    fontWeight: '500',
+                    color: '#1f2937',
+                  }}
+                >
                   {globalUtils.getCurrencyFormat(bill.orderAmount)}
                 </div>
-                <div style={{ textAlign: 'right', fontWeight: '600', color: '#dc2626' }}>
+                <div
+                  style={{
+                    textAlign: 'right',
+                    fontWeight: '600',
+                    color: '#dc2626',
+                  }}
+                >
                   {globalUtils.getCurrencyFormat(bill.balance)}
                 </div>
                 <div style={{ textAlign: 'right', color: '#6b7280' }}>

@@ -77,12 +77,6 @@
   flex-wrap: wrap;
 }
 
-.challan-number,
-.bill-number {
-  color: #666;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-}
 
 .order-time {
   color: #888;
