@@ -255,10 +255,6 @@
       "token": "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"
     }
   },
-  "devEngines": {
-    "node": ">=14.x",
-    "npm": ">=7.x"
-  },
   "electronmon": {
     "patterns": [
       "!**/**",
