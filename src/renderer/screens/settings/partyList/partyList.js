@@ -1,4 +1,4 @@
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -9,12 +9,12 @@ import {
   Text,
 } from '@fluentui/react-components';
 import { useNavigate } from 'react-router-dom';
-import { firebaseDB } from '../../../firebaseInit';
 import './style.css';
 import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
-
 import { useDebounce } from '../../../services/globalUtils';
+import { useCompany } from '../../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../../services/firestoreHelpers';
 
 export default function PartyListScreen({
   onPartySelected,
@@ -26,11 +26,14 @@ export default function PartyListScreen({
   const debouncedValue = useDebounce(queryPartyName, 500);
   const navigate = useNavigate();
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   useEffect(() => {
     if (!debouncedValue || debouncedValue.length < 3) return;
     const fetchParties = async () => {
-      // Define a reference to the "parties" collection
-      const partiesRef = collection(firebaseDB, 'parties');
+      // Define a reference to the company-scoped "parties" collection
+      const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
 
       // Create a query with a "name" field filter
       const q = query(
@@ -45,12 +48,12 @@ export default function PartyListScreen({
         setPartyDetails(partyData);
         console.log(partyData);
       } catch (error) {
-        console.error('Error fetching  parties:', error);
+        console.error('Error fetching parties:', error);
       }
     };
 
     fetchParties();
-  }, [debouncedValue]);
+  }, [debouncedValue, currentCompanyId]);
 
   const descriptiveTextStyle = { color: 'grey', textWrap: 'nowrap' };
 

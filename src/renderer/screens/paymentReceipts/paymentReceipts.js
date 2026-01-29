@@ -1,14 +1,15 @@
 import { Button, Card, Text } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { getDocs, query, where } from 'firebase/firestore';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import CreatePaymentReceiptDialog from './createPaymentReceiptDialog/createPaymentReceiptDialog';
-import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import './style.css';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import { useAuthUser } from '../../contexts/allUsersContext';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function PaymentReceipts() {
   const navigate = useNavigate();
@@ -16,8 +17,11 @@ export default function PaymentReceipts() {
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchCashReceipts = async () => {
-    const crColl = collection(firebaseDB, 'cashReceipts');
+    const crColl = getCompanyCollection(currentCompanyId, DB_NAMES.CASH_RECEIPTS);
 
     const dateFrom = new Date(fromDate);
     dateFrom.setHours(0);
@@ -50,7 +54,7 @@ export default function PaymentReceipts() {
   const { allUsers } = useAuthUser();
   useEffect(() => {
     fetchCashReceipts();
-  }, []);
+  }, [currentCompanyId]);
 
   return (
     <center>

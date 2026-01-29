@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Timestamp,
   addDoc,
-  collection,
   doc,
   getDoc,
   getDocs,
@@ -42,6 +41,8 @@ import SelectUserDropdown from '../../common/selectUser';
 import constants from '../../constants';
 import globalUtils from '../../services/globalUtils';
 import './style.css';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function AssignBillScreen() {
   const [fileNumbers, setFileNumbers] = useState([]);
@@ -52,8 +53,10 @@ export default function AssignBillScreen() {
   const [creatingLoading, setCreatingLoading] = useState(false);
   const [bundleNumber, setBundleNumber] = useState();
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const getFileNumbers = async () => {
-    const settingsCollection = collection(firebaseDB, 'settings');
     const fileNumbersDoc = doc(firebaseDB, 'settings', 'fileNumbers');
 
     const document = await getDoc(fileNumbersDoc);
@@ -63,6 +66,7 @@ export default function AssignBillScreen() {
   const getNewBundleReceiptNumber = async () => {
     const srNumber1 = await globalUtils.getNewReceiptNumber(
       constants.newReceiptCounters.BUNDLES,
+      currentCompanyId,
     );
     setBundleNumber(srNumber1);
   };
@@ -73,7 +77,7 @@ export default function AssignBillScreen() {
     }
     setCreatingLoading(true);
     try {
-      const billBundlesRef = collection(firebaseDB, 'billBundles');
+      const billBundlesRef = getCompanyCollection(currentCompanyId, DB_NAMES.BILL_BUNDLES);
 
       addDoc(billBundlesRef, {
         status: constants.firebase.billBundleFlowStatus.CREATED,
@@ -106,7 +110,7 @@ export default function AssignBillScreen() {
   const updateBills = async (modifiedBill1) => {
     try {
       // Create a reference to the specific order document
-      const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
+      const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, modifiedBill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
       updateDoc(orderRef, {
@@ -189,7 +193,7 @@ function AddPartySectionsDialog({ addParties }) {
   const getFileNumbers = async () => {
     setLoading(true);
     try {
-      const mrRoutesCollection = collection(firebaseDB, 'mr_routes');
+      const mrRoutesCollection = getCompanyCollection(currentCompanyId, DB_NAMES.MR_ROUTES);
       const querySnapshot = await getDocs(mrRoutesCollection);
 
       const reportsData = [];

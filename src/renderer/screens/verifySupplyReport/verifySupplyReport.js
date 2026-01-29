@@ -32,7 +32,6 @@ import {
 import {
   Timestamp,
   arrayUnion,
-  collection,
   doc,
   getDoc,
   getDocs,
@@ -48,6 +47,8 @@ import { confirmAlert } from 'react-confirm-alert';
 import globalUtils from '../../services/globalUtils';
 import { showToast } from '../../common/toaster';
 import './style.css';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
 import firebaseApp, { firebaseAuth, firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
@@ -75,13 +76,16 @@ export default function VerifySupplyReport() {
   const { dispatchToast } = useToastController(toasterId);
   const navigate = useNavigate();
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const [isSupplementBillAddDialogOpen, setIsSupplementBillAddDialogOpen] =
     useState(false);
 
   // Fetch MR routes from Firestore
   const fetchMrRoutes = async () => {
     try {
-      const mrRoutesCollection = collection(firebaseDB, 'mr_routes');
+      const mrRoutesCollection = getCompanyCollection(currentCompanyId, DB_NAMES.MR_ROUTES);
       const querySnapshot = await getDocs(mrRoutesCollection);
 
       const routesData = [];
@@ -256,7 +260,7 @@ export default function VerifySupplyReport() {
             return;
           }
 
-          const mrRouteRef = doc(firebaseDB, 'mr_routes', mrRouteDoc.id);
+          const mrRouteRef = getCompanyDoc(currentCompanyId, DB_NAMES.MR_ROUTES, mrRouteDoc.id);
 
           try {
             // Get the current document data
@@ -323,7 +327,7 @@ export default function VerifySupplyReport() {
   const onDispatch = async () => {
     setLoading(true);
     try {
-      const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReport.id);
+      const supplyReportRef = getCompanyDoc(currentCompanyId, DB_NAMES.SUPPLY_REPORTS, supplyReport.id);
 
       await updateDoc(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
@@ -346,7 +350,7 @@ export default function VerifySupplyReport() {
       // update payment terms for all parties
       await Promise.all(
         Object.keys(allPartiesPaymentTerms).map(async (paymentTermParty) => {
-          const partyRef = doc(firebaseDB, 'parties', paymentTermParty);
+          const partyRef = getCompanyDoc(currentCompanyId, DB_NAMES.PARTIES, paymentTermParty);
           await updateDoc(partyRef, {
             paymentTerms: allPartiesPaymentTerms[paymentTermParty],
           });
@@ -372,7 +376,7 @@ export default function VerifySupplyReport() {
   const updateOrder = async (bill1) => {
     try {
       // Create a reference to the specific order document
-      const orderRef = doc(firebaseDB, 'orders', bill1.id);
+      const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, bill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
       await updateDoc(orderRef, {
@@ -399,7 +403,7 @@ export default function VerifySupplyReport() {
   const updateOldOrder = async (modifiedBill1) => {
     try {
       // Create a reference to the specific order document
-      const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
+      const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, modifiedBill1.id);
 
       // Update the "orderStatus" field in the order document to "dispatched"
       await updateDoc(orderRef, {
@@ -591,7 +595,7 @@ function PartySection({
   const fetchData = async () => {
     setLoading(true);
     try {
-      const ordersCollection = collection(firebaseDB, 'orders');
+      const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
       const q = query(
         ordersCollection,
         where('partyId', '==', bill.partyId),
@@ -605,7 +609,7 @@ function PartySection({
         // Get data for each order
         const orderData = doc1.data();
         // Fetch party information using partyID from the order
-        const partyDocRef = doc(firebaseDB, 'parties', orderData.partyId);
+        const partyDocRef = getCompanyDoc(currentCompanyId, DB_NAMES.PARTIES, orderData.partyId);
         const partyDocSnapshot = await getDoc(partyDocRef);
         if (partyDocSnapshot.exists()) {
           const partyData = partyDocSnapshot.data();

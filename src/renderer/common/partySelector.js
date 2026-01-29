@@ -1,8 +1,9 @@
 import { Combobox, Option, Text } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { getDocs, limit, query, where } from 'firebase/firestore';
 import globalUtils, { useDebounce } from '../services/globalUtils';
-import { firebaseDB } from '../firebaseInit';
+import { useCompany } from '../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../services/firestoreHelpers';
 
 export default function PartySelector({
   onPartySelected,
@@ -13,11 +14,14 @@ export default function PartySelector({
   const [queryPartyName, setQueryPartyName] = useState('');
   const debouncedValue = useDebounce(queryPartyName, 500);
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   useEffect(() => {
     if (!debouncedValue || debouncedValue.length < 3) return;
     const fetchParties = async () => {
-      // Define a reference to the "parties" collection
-      const partiesRef = collection(firebaseDB, 'parties');
+      // Define a reference to the company-scoped "parties" collection
+      const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
 
       // Create a query with a "name" field filter
       const q = query(
@@ -37,7 +41,7 @@ export default function PartySelector({
     };
 
     fetchParties();
-  }, [debouncedValue]);
+  }, [debouncedValue, currentCompanyId]);
 
   const descriptiveTextStyle = { color: 'grey', textWrap: 'nowrap' };
 

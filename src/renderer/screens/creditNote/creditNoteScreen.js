@@ -1,4 +1,4 @@
-import { collection, getDocs, orderBy, where } from 'firebase/firestore';
+import { getDocs, orderBy } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Card,
@@ -13,22 +13,27 @@ import {
   Text,
   Tooltip,
 } from '@fluentui/react-components';
-import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import './style.css';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function CreditNoteScreen() {
   const [creditNotes, setCreditNotes] = useState([]);
 
   const [loading, setLoading] = useState(false);
+
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchCNs = async () => {
     try {
       setLoading(true);
-      const cnCollRef = collection(firebaseDB, 'creditNotes');
+      const cnCollRef = getCompanyCollection(currentCompanyId, DB_NAMES.CREDIT_NOTES);
       const cnColl = await getDocs(cnCollRef, orderBy('timestamp', 'desc'));
 
       const cnData = cnColl.docs.map((doc) => doc.data());
-      const cnWithParties = await globalUtils.fetchPartyInfoForOrders(cnData);
+      const cnWithParties = await globalUtils.fetchPartyInfoForOrders(cnData, currentCompanyId);
 
       setCreditNotes(cnWithParties);
       setLoading(false);
@@ -40,7 +45,7 @@ export default function CreditNoteScreen() {
 
   useEffect(() => {
     fetchCNs();
-  }, []);
+  }, [currentCompanyId]);
   if (loading) return <Spinner />;
 
   return (

@@ -2,7 +2,6 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import {
   Timestamp,
-  collection,
   doc,
   getDoc,
   getDocs,
@@ -35,6 +34,8 @@ import { useAuthUser } from '../../contexts/allUsersContext';
 import AdjustAmountDialog from '../receiveSupplyReport/adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../constants';
 import { ChequeEntryDialog } from '../cheques/cheques';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function UpiScreen() {
   const [receivedUpiItems, setReceivedUpiItems] = useState([]);
@@ -47,10 +48,13 @@ export default function UpiScreen() {
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchUpi = async () => {
     setLoading(true);
     try {
-      const upiCollection = collection(firebaseDB, 'upi');
+      const upiCollection = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
       let dynamicQuery = upiCollection;
 
       const dateFrom = new Date(fromDate);
@@ -91,13 +95,13 @@ export default function UpiScreen() {
   useEffect(() => {
     fetchUpi();
     fetcUnreceived();
-  }, []);
+  }, [currentCompanyId]);
 
   const fetcUnreceived = async () => {
     try {
       setLoading(true);
       const q = query(
-        collection(firebaseDB, 'upi'),
+        getCompanyCollection(currentCompanyId, DB_NAMES.UPI),
         where('isReceived', '==', false),
       );
 

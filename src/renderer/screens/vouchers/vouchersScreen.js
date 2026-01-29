@@ -13,10 +13,9 @@ import {
 } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { getDocs, query, where } from 'firebase/firestore';
 
 import { DatePicker } from '@fluentui/react-datepicker-compat';
-import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import './style.css';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
@@ -24,6 +23,8 @@ import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import CreateVoucherDialog from './createVoucherDialog/createVoucherDialog';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import voucherFormatGenerator from '../../common/printerDataGenerator/voucherFormatGenerator';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function VoucherScreen() {
   const navigate = useNavigate();
@@ -32,8 +33,12 @@ export default function VoucherScreen() {
   const [toDate, setToDate] = useState(new Date());
 
   const { allUsers } = useAuthUser();
+  // Story 0.6: Use company context for company-scoped data
+  const { currentCompanyId } = useCompany();
+
   const fetchVouchers = async () => {
-    const crColl = collection(firebaseDB, 'vouchers');
+    // Story 0.6: Use company-scoped collection
+    const crColl = getCompanyCollection(currentCompanyId, DB_NAMES.VOUCHERS);
 
     const dateFrom = new Date(fromDate);
     dateFrom.setHours(0);
@@ -65,9 +70,10 @@ export default function VoucherScreen() {
 
   const printVoucher = (voucher) => {};
 
+  // Re-fetch when company changes (Story 0.6)
   useEffect(() => {
     fetchVouchers();
-  }, []);
+  }, [currentCompanyId]);
 
   return (
     <center>

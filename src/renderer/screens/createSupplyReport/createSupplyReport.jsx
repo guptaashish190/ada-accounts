@@ -26,7 +26,6 @@ import { useLocation } from 'react-router-dom';
 import {
   Timestamp,
   addDoc,
-  collection,
   deleteDoc,
   doc,
   getDocs,
@@ -45,6 +44,8 @@ import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 import { useSettingsContext } from '../../contexts/settingsContext';
 import SelectUserDropdown from '../../common/selectUser';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const location = useLocation();
@@ -60,6 +61,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const [editable, setEditable] = useState(true);
   const [srNumber, setSrNumber] = useState();
   const billListRefs = useRef([]);
+
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
 
   const prefillState = async () => {
     setLoading(true);
@@ -157,9 +161,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 
       let reportDocRef;
       if (save) {
-        reportDocRef = doc(firebaseDB, 'supplyReports', prefillSupplyReport.id);
+        reportDocRef = getCompanyDoc(currentCompanyId, DB_NAMES.SUPPLY_REPORTS, prefillSupplyReport.id);
       } else {
-        const supplyReportsCol = collection(firebaseDB, 'supplyReports');
+        const supplyReportsCol = getCompanyCollection(currentCompanyId, DB_NAMES.SUPPLY_REPORTS);
         reportDocRef = doc(supplyReportsCol);
       }
 
@@ -193,7 +197,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       const docRef = setDoc(reportDocRef, supplyReport);
 
       for (const modifiedBill1 of modifiedBills) {
-        const orderRef = doc(firebaseDB, 'orders', modifiedBill1.id);
+        const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, modifiedBill1.id);
         const toUpdateData = {
           orderStatus: constants.firebase.supplyReportStatus.TOACCOUNTS,
           billNumber: modifiedBill1.billNumber,

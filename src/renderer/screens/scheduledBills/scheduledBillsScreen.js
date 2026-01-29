@@ -1,7 +1,6 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import {
-  collection,
   doc,
   getDoc,
   getDocs,
@@ -18,9 +17,10 @@ import {
   ProgressBar,
   Spinner,
 } from '@fluentui/react-components';
-import { firebaseDB } from '../../firebaseInit';
 import { VerticalSpace2 } from '../../common/verticalSpace';
 import globalUtils from '../../services/globalUtils';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function ScheduledBillsScreen() {
   const [orders, setOrders] = useState([]);
@@ -31,10 +31,13 @@ export default function ScheduledBillsScreen() {
   const [zeroBalanceBills, setZeroBalanceBills] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchScheduledBills = async () => {
     try {
       setLoading(true);
-      const ordersCollection = collection(firebaseDB, 'orders');
+      const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
       const dateFrom = new Date(fromDate);
       dateFrom.setHours(0);
       dateFrom.setMinutes(0);

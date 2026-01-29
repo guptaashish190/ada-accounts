@@ -21,6 +21,7 @@ import constants from '../constants';
 import tabs from './tabs';
 import config from '../config';
 import { firebaseAuth } from '../firebaseInit';
+import CompanySwitcher from '../common/companySwitcher';
 
 export default function TabNavigator({ children }) {
   const navigate = useNavigate();
@@ -86,6 +87,9 @@ export default function TabNavigator({ children }) {
           </div>
 
           <div className="header-right">
+            {/* Story 0.4: Company Switcher for owners */}
+            <CompanySwitcher />
+
             <div className="user-section">
               <div className="user-info">
                 <Text size={200} weight="medium">

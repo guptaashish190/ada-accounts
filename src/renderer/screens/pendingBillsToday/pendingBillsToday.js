@@ -1,7 +1,6 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import {
-  collection,
   doc,
   getDoc,
   getDocs,
@@ -15,17 +14,22 @@ import React, { useEffect, useState } from 'react';
 import { Button, Spinner } from '@fluentui/react-components';
 import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function PendingBillsToday() {
   const [fromDate, setFromDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [mrPartiesList, setMrPartiesList] = useState({});
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchTodaysBills = async () => {
     try {
       setLoading(true);
-      const ordersCollection = collection(firebaseDB, 'orders');
-      const routeCollection = collection(firebaseDB, 'mr_routes');
+      const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
+      const routeCollection = getCompanyCollection(currentCompanyId, DB_NAMES.MR_ROUTES);
       const dateFrom = new Date(fromDate);
       dateFrom.setHours(0);
       dateFrom.setMinutes(0);
@@ -173,9 +177,12 @@ function BillsList({ partyId }) {
   const [lastPayment, setLastPayment] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(true);
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchPartyDetails = async () => {
     try {
-      const partyDoc = doc(firebaseDB, 'parties', partyId);
+      const partyDoc = getCompanyDoc(currentCompanyId, DB_NAMES.PARTIES, partyId);
       const partySnap = await getDoc(partyDoc);
       if (partySnap.exists()) {
         setPartyDetails(partySnap.data());
@@ -188,7 +195,7 @@ function BillsList({ partyId }) {
   };
   const fetchPartyBills = async () => {
     try {
-      const ordersCollection = collection(firebaseDB, 'orders');
+      const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
       const q = query(
         ordersCollection,
         where('partyId', '==', partyId),
@@ -212,9 +219,9 @@ function BillsList({ partyId }) {
 
   const fetchLastPayment = async () => {
     try {
-      const cashRef = collection(firebaseDB, 'cashReceipts');
-      const upiRef = collection(firebaseDB, 'upi');
-      const chequeRef = collection(firebaseDB, 'cheques');
+      const cashRef = getCompanyCollection(currentCompanyId, DB_NAMES.CASH_RECEIPTS);
+      const upiRef = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
+      const chequeRef = getCompanyCollection(currentCompanyId, DB_NAMES.CHEQUES);
 
       // Query for last payment before the oldest pending bill
       const cashQueryLast = query(

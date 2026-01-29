@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import { collection, doc, getDoc, getDocs } from 'firebase/firestore';
+import { doc, getDoc, getDocs } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Button,
@@ -11,9 +11,10 @@ import {
   Badge,
 } from '@fluentui/react-components';
 import './style.css';
-import { firebaseDB } from '../../../firebaseInit';
 import { useSettingsContext } from '../../../contexts/settingsContext';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
+import { useCompany } from '../../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../../services/firestoreHelpers';
 
 export default function RouteSettings() {
   const [routes, setRoutes] = useState([]);
@@ -22,10 +23,13 @@ export default function RouteSettings() {
   const [partiesLoading, setPartiesLoading] = useState(true);
   const [routesLoading, setRoutesLoading] = useState(true);
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchParties = async () => {
     setPartiesLoading(true);
     try {
-      const partiesCollection = collection(firebaseDB, 'parties');
+      const partiesCollection = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
       const partiesSnapshot = await getDocs(partiesCollection);
       const partiesData = {};
 
@@ -46,7 +50,7 @@ export default function RouteSettings() {
   const fetchRoutes = async () => {
     setRoutesLoading(true);
     try {
-      const routesCollection = collection(firebaseDB, 'mr_routes');
+      const routesCollection = getCompanyCollection(currentCompanyId, DB_NAMES.MR_ROUTES);
       const routesSnapshot = await getDocs(routesCollection);
       const routesData = routesSnapshot.docs.map((docSnapshot) => ({
         id: docSnapshot.id,
@@ -70,7 +74,7 @@ export default function RouteSettings() {
       }
     };
     loadData();
-  }, []);
+  }, [currentCompanyId]);
 
   const getPartyName = (partyId) => {
     return parties[partyId] || `Party ID: ${partyId}`;

@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,11 +12,12 @@ import {
   Text,
 } from '@fluentui/react-components';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
-import { firebaseDB } from '../../firebaseInit';
 import './style.css';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 import { useAuthUser } from '../../contexts/allUsersContext';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 const statusColors = {
   Completed: '#00A9A5',
@@ -39,8 +40,11 @@ export default function AllSupplyReportsScreen() {
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const onSearch = (clear) => {
-    const supplyReportRef = collection(firebaseDB, 'supplyReports');
+    const supplyReportRef = getCompanyCollection(currentCompanyId, DB_NAMES.SUPPLY_REPORTS);
 
     // Build the query dynamically based on non-empty filter fields
     let dynamicQuery = supplyReportRef;

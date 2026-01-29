@@ -1,6 +1,5 @@
 /* eslint-disable no-restricted-syntax */
 import {
-  collection,
   getDocs,
   limit,
   orderBy,
@@ -28,7 +27,6 @@ import {
   Spinner,
   Text,
 } from '@fluentui/react-components';
-import { firebaseDB } from '../../firebaseInit';
 import './style.css';
 import Loader from '../../common/loader';
 import globalUtils, { useDebounce } from '../../services/globalUtils';
@@ -36,6 +34,8 @@ import { VerticalSpace1 } from '../../common/verticalSpace';
 import BillDetailDialog from './billDetail/billDetail';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import PartySelector from '../../common/partySelector';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function AllBillsScreen() {
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -48,13 +48,17 @@ export default function AllBillsScreen() {
   const [queryMR, setQueryMR] = useState('');
 
   const [filteredOrders, setFilteredOrders] = useState([]);
+
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [currentCompanyId]);
 
   const fetchOrders = async () => {
     try {
-      const ordersCollection = collection(firebaseDB, 'orders');
+      const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
       const q = query(
         ordersCollection,
         orderBy('creationTime', 'desc'),
@@ -69,12 +73,12 @@ export default function AllBillsScreen() {
 
       setFilteredOrders(orderList);
     } catch (error) {
-      console.error('Error fetchisng parties: ', error);
+      console.error('Error fetching orders: ', error);
     }
   };
 
   const onSearchBill = () => {
-    const ordersRef = collection(firebaseDB, 'orders');
+    const ordersRef = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
 
     // Build the query dynamically based on non-empty filter fields
     let dynamicQuery = ordersRef;

@@ -1,4 +1,4 @@
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
@@ -10,12 +10,13 @@ import {
   TabList,
   Text,
 } from '@fluentui/react-components';
-import { firebaseDB } from '../../firebaseInit';
 import './style.css';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 import constants from '../../constants';
 import { VerticalSpace2 } from '../../common/verticalSpace';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 const statusColors = {
   [constants.firebase.billBundleFlowStatus.CREATED]: '#00A9A5',
@@ -30,10 +31,13 @@ export default function AllBundlesScreen() {
   const [toDate, setToDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchbundles = async () => {
     setLoading(true);
     try {
-      const bundlesCollection = collection(firebaseDB, 'billBundles');
+      const bundlesCollection = getCompanyCollection(currentCompanyId, DB_NAMES.BILL_BUNDLES);
       let dynamicQuery = bundlesCollection;
 
       const dateFrom = new Date(fromDate);

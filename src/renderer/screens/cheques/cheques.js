@@ -25,7 +25,6 @@ import {
 import {
   Timestamp,
   addDoc,
-  collection,
   getDocs,
   limit,
   orderBy,
@@ -37,16 +36,20 @@ import React, { useEffect, useState } from 'react';
 import PartySelector from '../../common/partySelector';
 import './style.css';
 import { VerticalSpace1 } from '../../common/verticalSpace';
-import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import constants from '../../constants';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function ChequesScreen() {
   const [chequeList, setChequeList] = useState([]);
   const [filteredCheques, setFilteredCheques] = useState();
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchCheques = async () => {
-    const chequeCollection = collection(firebaseDB, 'cheques');
+    const chequeCollection = getCompanyCollection(currentCompanyId, DB_NAMES.CHEQUES);
 
     try {
       const qs = query(
@@ -79,7 +82,8 @@ export default function ChequesScreen() {
 
   useEffect(() => {
     fetchCheques();
-  }, []);
+  }, [currentCompanyId]);
+
   return (
     <center>
       <div className="cheques-screen">
@@ -96,6 +100,7 @@ export default function ChequesScreen() {
           clearFilters={() => {
             setFilteredCheques();
           }}
+          currentCompanyId={currentCompanyId}
         />
         <VerticalSpace1 />
         <div className="modern-table">
@@ -141,7 +146,7 @@ export default function ChequesScreen() {
   );
 }
 
-function FilterSection({ setFilteredCheques, clearFilters }) {
+function FilterSection({ setFilteredCheques, clearFilters, currentCompanyId }) {
   const [party, setParty] = useState();
   const [chequeNumber, setChequeNumber] = useState('');
   const [dateFrom, setDateFrom] = useState();
@@ -151,7 +156,7 @@ function FilterSection({ setFilteredCheques, clearFilters }) {
 
   const onFilter = async () => {
     try {
-      const chequesRef = collection(firebaseDB, 'cheques');
+      const chequesRef = getCompanyCollection(currentCompanyId, DB_NAMES.CHEQUES);
 
       let dynamicQuery = chequesRef;
       let isFiltered = false;

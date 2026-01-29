@@ -1,12 +1,13 @@
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
+import { getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Text, Input } from '@fluentui/react-components';
-import { firebaseDB } from '../../firebaseInit';
 import './style.css';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
 import { VerticalSpace1 } from '../../common/verticalSpace';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function ReceiveSupplyReportScreen() {
   const [supplyReports, setSupplyReports] = useState([]);
@@ -16,10 +17,13 @@ export default function ReceiveSupplyReportScreen() {
 
   const [loading, setLoading] = useState(false);
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   const fetchDispatchedSupplyReports = async () => {
     setLoading(true);
     try {
-      const supplyReportsCollection = collection(firebaseDB, 'supplyReports');
+      const supplyReportsCollection = getCompanyCollection(currentCompanyId, DB_NAMES.SUPPLY_REPORTS);
 
       const q = query(
         supplyReportsCollection,
@@ -58,6 +62,10 @@ export default function ReceiveSupplyReportScreen() {
   };
   useEffect(() => {
     fetchDispatchedSupplyReports();
+  }, [currentCompanyId]);
+
+  // eslint-disable-next-line
+  useEffect(() => {
   }, []);
 
   useEffect(() => {

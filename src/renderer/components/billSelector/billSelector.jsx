@@ -17,7 +17,6 @@ import {
 } from '@fluentui/react-components';
 
 import {
-  collection,
   query,
   getDocs,
   getDoc,
@@ -27,9 +26,10 @@ import {
   or,
 } from 'firebase/firestore';
 import shortid from 'shortid';
-import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import constants from '../../constants';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function BillSelector({
   bills,
@@ -42,6 +42,9 @@ export default function BillSelector({
   const [showOrderList, setShowOrderList] = useState([]);
   const [searchPartyName, setSearchPartyName] = useState('');
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   useEffect(() => {
     if (!open) {
       focusFirstElement();
@@ -49,7 +52,7 @@ export default function BillSelector({
   }, [open]);
 
   const getDispatchableBills = async () => {
-    const ordersRef = collection(firebaseDB, 'orders');
+    const ordersRef = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
     const q = query(
       ordersRef,
       or(

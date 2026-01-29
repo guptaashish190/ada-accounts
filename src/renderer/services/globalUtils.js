@@ -11,8 +11,17 @@ import {
 } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import firebaseApp, { firebaseDB } from '../firebaseInit';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DEFAULT_COMPANY_ID,
+  DB_NAMES,
+} from './firestoreHelpers';
 
 export default {
+  /**
+   * Fetch user by ID (from root /users collection)
+   */
   fetchUserById: async (userId) => {
     try {
       const userDocRef = doc(firebaseDB, 'users', userId);
@@ -28,77 +37,77 @@ export default {
       throw error;
     }
   },
-  // Function to fetch orders by a list of order IDs
-  fetchOrdersByIds: async (orderIds) => {
-    try {
-      // Reference to the "orders" collection
-      const ordersCollection = collection(firebaseDB, 'orders');
 
-      // Use Promise.all to fetch all orders concurrently
+  /**
+   * Fetch orders by IDs - COMPANY SCOPED (Story 0.6)
+   * @param {string[]} orderIds - Array of order IDs
+   * @param {string} companyId - Company ID (required for multi-company)
+   */
+  fetchOrdersByIds: async (orderIds, companyId = DEFAULT_COMPANY_ID) => {
+    try {
+      const ordersCollection = getCompanyCollection(companyId, DB_NAMES.ORDERS);
+
       const ordersPromises = orderIds.map(async (orderId) => {
         const orderDoc = await getDoc(doc(ordersCollection, orderId));
         if (orderDoc.exists) {
           return { id: orderId, ...orderDoc.data() };
         }
-        // Handle the case where the order with the given ID doesn't exist
         return { id: orderId, error: 'Order not found' };
       });
 
-      // Wait for all promises to resolve
       const ordersData = await Promise.all(ordersPromises);
-
       return ordersData;
     } catch (error) {
-      // Handle any errors that occur during the fetch
       console.error('Error fetching orders:', error);
       throw error;
     }
   },
-  // Function to fetch orders by a list of order IDs
-  fetchPartyByIds: async (partyIds) => {
-    try {
-      // Reference to the "orders" collection
-      const partiesCollection = collection(firebaseDB, 'parties');
 
-      // Use Promise.all to fetch all orders concurrently
+  /**
+   * Fetch parties by IDs - COMPANY SCOPED (Story 0.6)
+   * @param {string[]} partyIds - Array of party IDs
+   * @param {string} companyId - Company ID (required for multi-company)
+   */
+  fetchPartyByIds: async (partyIds, companyId = DEFAULT_COMPANY_ID) => {
+    try {
+      const partiesCollection = getCompanyCollection(companyId, DB_NAMES.PARTIES);
+
       const partyPromises = partyIds.map(async (partyId) => {
         const partyDoc = await getDoc(doc(partiesCollection, partyId));
         if (partyDoc.exists) {
           return { id: partyId, ...partyDoc.data() };
         }
-        // Handle the case where the order with the given ID doesn't exist
-        return { id: partyId, error: 'Order not found' };
+        return { id: partyId, error: 'Party not found' };
       });
 
-      // Wait for all promises to resolve
       const partyData = await Promise.all(partyPromises);
-
       return partyData;
     } catch (error) {
-      // Handle any errors that occur during the fetch
-      console.error('Error fetching orders:', error);
+      console.error('Error fetching parties:', error);
       throw error;
     }
   },
-  fetchPartyInfoForOrders: async (orders) => {
+
+  /**
+   * Fetch party info for orders - COMPANY SCOPED (Story 0.6)
+   * @param {Object[]} orders - Array of order objects
+   * @param {string} companyId - Company ID (required for multi-company)
+   */
+  fetchPartyInfoForOrders: async (orders, companyId = DEFAULT_COMPANY_ID) => {
     try {
       const updatedOrders = await Promise.all(
         orders.map(async (order) => {
           try {
-            const partyRef = doc(firebaseDB, 'parties', order.partyId); // Replace 'parties' with your collection name
-
+            const partyRef = getCompanyDoc(companyId, DB_NAMES.PARTIES, order.partyId);
             const partySnapshot = await getDoc(partyRef);
 
             if (partySnapshot.exists()) {
               const partyData = partySnapshot.data();
-              // Replace the partyId with the party object
               return { ...order, party: partyData };
             }
           } catch (e) {
             console.error(e);
           }
-          // If the party document doesn't exist, you can handle this case as needed.
-          // For example, you can return the order as is or mark it as an invalid order.
           return order;
         }),
       );
@@ -106,15 +115,19 @@ export default {
       return updatedOrders;
     } catch (error) {
       console.error('Error fetching party information:', error);
-      return orders; // Return the original list of orders if there's an 6aerror
+      return orders;
     }
   },
-  fetchPartyInfo: async (partyId) => {
+
+  /**
+   * Fetch single party info - COMPANY SCOPED (Story 0.6)
+   * @param {string} partyId - Party ID
+   * @param {string} companyId - Company ID (required for multi-company)
+   */
+  fetchPartyInfo: async (partyId, companyId = DEFAULT_COMPANY_ID) => {
     try {
-      const partyRef = doc(firebaseDB, 'parties', partyId); // Replace 'parties' with your collection name
-
+      const partyRef = getCompanyDoc(companyId, DB_NAMES.PARTIES, partyId);
       const partySnapshot = await getDoc(partyRef);
-
       return partySnapshot.data();
     } catch (error) {
       console.error('Error fetching party information:', error);
@@ -189,8 +202,13 @@ export default {
     );
     return date;
   },
-  getNewReceiptNumber: async (counter) => {
-    const cashReceiptsRef = doc(firebaseDB, '/counters', counter.name);
+  /**
+   * Get new receipt number - COMPANY SCOPED (Story 0.6)
+   * @param {Object} counter - Counter config with name and prefix
+   * @param {string} companyId - Company ID (required for multi-company)
+   */
+  getNewReceiptNumber: async (counter, companyId = DEFAULT_COMPANY_ID) => {
+    const cashReceiptsRef = getCompanyDoc(companyId, DB_NAMES.COUNTERS, counter.name);
 
     const cashReceiptsDoc = await getDoc(cashReceiptsRef);
     let counter1;
@@ -204,6 +222,7 @@ export default {
     // Use String.prototype.padStart to add leading zeros
     return `${counter.prefix}-${String(counter1).padStart(6, '0')}`;
   },
+
   dateDifferenceInDays: (date1, date2, diff) => {
     // Convert the dates to milliseconds
     const time1 = new Date(date1).getTime();
@@ -216,8 +235,14 @@ export default {
     const differenceInDays = differenceInMilliseconds / (1000 * 60 * 60 * 24);
     return differenceInDays;
   },
-  incrementReceiptCounter: async (counter) => {
-    const cashReceiptsRef = doc(firebaseDB, '/counters', counter.name);
+
+  /**
+   * Increment receipt counter - COMPANY SCOPED (Story 0.6)
+   * @param {Object} counter - Counter config with name
+   * @param {string} companyId - Company ID (required for multi-company)
+   */
+  incrementReceiptCounter: async (counter, companyId = DEFAULT_COMPANY_ID) => {
+    const cashReceiptsRef = getCompanyDoc(companyId, DB_NAMES.COUNTERS, counter.name);
 
     const cashReceiptsDoc = await getDoc(cashReceiptsRef);
 

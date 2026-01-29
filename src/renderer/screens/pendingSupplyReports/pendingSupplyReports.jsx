@@ -1,23 +1,27 @@
-import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { getDocs, orderBy, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Text } from '@fluentui/react-components';
-import { firebaseDB } from '../../firebaseInit';
 import './style.css';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function PendingSupplyReports() {
   const [supplyReports, setSupplyReports] = useState([]);
 
   const [loading, setLoading] = useState(false);
 
+  // Company context for company-scoped queries
+  const { currentCompanyId } = useCompany();
+
   // Function to fetch supply reports where "isDispatched" is false
   const fetchUndispatchedSupplyReports = async () => {
     setLoading(true);
     try {
-      // Reference to the "supplyReports" collection
-      const supplyReportsCollection = collection(firebaseDB, 'supplyReports');
+      // Reference to the company-scoped "supplyReports" collection
+      const supplyReportsCollection = getCompanyCollection(currentCompanyId, DB_NAMES.SUPPLY_REPORTS);
 
       // Create a query to filter where "isDispatched" is false
       const q = query(
@@ -45,7 +49,7 @@ export default function PendingSupplyReports() {
   };
   useEffect(() => {
     fetchUndispatchedSupplyReports();
-  }, []);
+  }, [currentCompanyId]);
 
   if (loading) return <Loader />;
 
