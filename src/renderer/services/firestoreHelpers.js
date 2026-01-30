@@ -56,7 +56,7 @@ export const getUsersCollection = () => {
 
 /**
  * Fetch all active companies
- * @returns {Promise<Array>} Array of company objects
+ * @returns {Promise<Array>} Array of company objects (always returns an array)
  */
 export const fetchActiveCompanies = async () => {
   try {
@@ -64,19 +64,25 @@ export const fetchActiveCompanies = async () => {
     const querySnapshot = await getDocs(companiesRef);
 
     const companies = [];
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data.isActive !== false) {
-        companies.push({
-          id: docSnap.id,
-          ...data,
-        });
-      }
-    });
+    if (querySnapshot && querySnapshot.forEach) {
+      querySnapshot.forEach((docSnap) => {
+        if (docSnap && docSnap.data) {
+          const data = docSnap.data();
+          if (data && data.isActive !== false) {
+            companies.push({
+              id: docSnap.id,
+              ...data,
+            });
+          }
+        }
+      });
+    }
 
-    return companies;
+    // Always return an array, never null or undefined
+    return Array.isArray(companies) ? companies : [];
   } catch (error) {
     console.error('Error fetching companies:', error);
+    // Always return an array, even on error
     return [];
   }
 };

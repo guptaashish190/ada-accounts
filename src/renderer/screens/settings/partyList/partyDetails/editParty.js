@@ -14,12 +14,14 @@ import {
   Spinner,
 } from '@fluentui/react-components';
 import { Edit12Filled } from '@fluentui/react-icons';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './style.css';
-import { doc, updateDoc } from 'firebase/firestore';
+import { updateDoc } from 'firebase/firestore';
 import { useSettingsContext } from '../../../../contexts/settingsContext';
-import { firebaseDB } from '../../../../firebaseInit';
 import constants from '../../../../constants';
+import { useCompany } from '../../../../contexts/companyContext';
+import { getCompanyDoc, DB_NAMES } from '../../../../services/firestoreHelpers';
+import { useCurrentUser } from '../../../../contexts/userContext';
 
 export default function EditPartyDetails({ party, refreshParty }) {
   const [open, setOpen] = useState(false);
@@ -28,24 +30,48 @@ export default function EditPartyDetails({ party, refreshParty }) {
   const [paymentTerms, setPaymentTerms] = useState(party?.paymentTerms || '');
   const [fileNumber, setFileNumber] = useState(party?.fileNumber || '');
   const [phone, setPhoneNumber] = useState(party?.fileNumber || '');
+  const [creditDays, setCreditDays] = useState(
+    party?.creditDays?.toString() || '',
+  );
 
   const [loading, setLoading] = useState(false);
   const { settings } = useSettingsContext();
+  const { currentCompanyId } = useCompany();
+  const { user } = useCurrentUser();
+
+  // Only managers/owners can edit credit days
+  const canEditCreditDays = user?.isManager || false;
 
   const onSave = async () => {
     if (loading) return;
     setLoading(true);
     try {
-      // Assuming 'parties' is the name of your collection
-      const partyRef = doc(firebaseDB, 'parties', party.id);
+      // Use company-scoped party document
+      const partyRef = getCompanyDoc(currentCompanyId, DB_NAMES.PARTIES, party.id);
 
       // Update the fields
-      await updateDoc(partyRef, {
+      const updateData = {
         name,
         area,
         paymentTerms,
         fileNumber,
-      });
+      };
+
+      // Only update creditDays if user is manager/owner
+      if (canEditCreditDays) {
+        // Parse and validate creditDays (null if empty/not set)
+        if (creditDays.trim() !== '') {
+          const parsed = parseInt(creditDays.trim(), 10);
+          if (!isNaN(parsed) && parsed > 0 && parsed <= 120) {
+            updateData.creditDays = parsed;
+          }
+        } else {
+          // Explicitly set to null to clear the field
+          updateData.creditDays = null;
+        }
+      }
+
+      await updateDoc(partyRef, updateData);
       refreshParty();
       setOpen(false);
       console.log('Document updated successfully');
@@ -54,6 +80,17 @@ export default function EditPartyDetails({ party, refreshParty }) {
     }
     setLoading(false);
   };
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setName(party?.name || '');
+      setArea(party?.area || '');
+      setPaymentTerms(party?.paymentTerms || '');
+      setFileNumber(party?.fileNumber || '');
+      setCreditDays(party?.creditDays?.toString() || '');
+    }
+  }, [open, party]);
 
   return (
     <Dialog open={open}>
@@ -122,6 +159,23 @@ export default function EditPartyDetails({ party, refreshParty }) {
                 ))}
               </Dropdown>
             </div>
+            {canEditCreditDays && (
+              <div className="edit-party-input-container">
+                <Label htmlFor="edit-party-credit-days">Credit Days</Label>
+                <Input
+                  id="edit-party-credit-days"
+                  type="number"
+                  min={1}
+                  max={120}
+                  placeholder="Leave empty if not set (1-120)"
+                  value={creditDays}
+                  onChange={(e) => setCreditDays(e.target.value)}
+                />
+                <small style={{ color: 'var(--colorNeutralForeground3)' }}>
+                  Number of days before payment is due. Leave empty if not set.
+                </small>
+              </div>
+            )}
           </DialogContent>
           <DialogActions>
             <DialogTrigger disableButtonEnhancement>

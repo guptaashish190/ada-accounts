@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  collection,
   deleteDoc,
   doc,
   getDoc,
@@ -19,7 +18,6 @@ import {
   Spinner,
 } from '@fluentui/react-components';
 import { confirmAlert } from 'react-confirm-alert';
-import { firebaseDB } from '../../../../firebaseInit';
 import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
 import './style.css';
 import BillDetailDialog from '../../../allBills/billDetail/billDetail';
@@ -27,6 +25,12 @@ import globalUtils from '../../../../services/globalUtils';
 import { VerticalSpace1 } from '../../../../common/verticalSpace';
 import EditPartyDetails from './editParty';
 import { useCurrentUser } from '../../../../contexts/userContext';
+import { useCompany } from '../../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../../../services/firestoreHelpers';
 
 export default function PartyDetailsScreen() {
   const { state } = useLocation();
@@ -36,14 +40,16 @@ export default function PartyDetailsScreen() {
   const navigate = useNavigate();
 
   const { user } = useCurrentUser();
+  const { currentCompanyId } = useCompany();
 
   const { partyId } = state;
 
   const fetchDocument = async () => {
     try {
       setLoading(true);
-      const supplyReportRef = doc(firebaseDB, 'parties', partyId);
-      const docSnapshot = await getDoc(supplyReportRef);
+      // Use company-scoped party document
+      const partyRef = getCompanyDoc(currentCompanyId, DB_NAMES.PARTIES, partyId);
+      const docSnapshot = await getDoc(partyRef);
       if (docSnapshot.exists()) {
         setParty(docSnapshot.data());
       } else {
@@ -58,7 +64,11 @@ export default function PartyDetailsScreen() {
   };
   const fetchOutstanding = async () => {
     try {
-      const ordersCollection = collection(firebaseDB, 'orders');
+      // Use company-scoped orders collection
+      const ordersCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+      );
       const q = query(
         ordersCollection,
         where('partyId', '==', partyId),
@@ -82,7 +92,7 @@ export default function PartyDetailsScreen() {
   };
   useEffect(() => {
     fetchDocument();
-  }, []);
+  }, [currentCompanyId]);
 
   const getOutstandigBalance = () => {
     if (!outstandingBills || !outstandingBills.length) return '--';
@@ -104,7 +114,8 @@ export default function PartyDetailsScreen() {
 
   const onDelete = async () => {
     setLoading(true);
-    const partyRef = doc(firebaseDB, 'parties', partyId);
+    // Use company-scoped party document
+    const partyRef = getCompanyDoc(currentCompanyId, DB_NAMES.PARTIES, partyId);
 
     try {
       await deleteDoc(partyRef);
@@ -175,6 +186,12 @@ export default function PartyDetailsScreen() {
           <div className="vsrc-detail-items">
             <div className="label">Mobile: </div>
             <div className="value">{party?.mobile}</div>
+          </div>
+          <div className="vsrc-detail-items">
+            <div className="label">Credit Days: </div>
+            <div className="value">
+              {party?.creditDays != null ? `${party.creditDays} days` : 'Not Set'}
+            </div>
           </div>
         </div>
         <VerticalSpace1 />

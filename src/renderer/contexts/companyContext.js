@@ -74,7 +74,7 @@ export default function CompanyProvider({ children }) {
           setNeedsCompanySelection(true);
           // Fetch companies for selection
           const activeCompanies = await fetchActiveCompanies();
-          setCompanies(activeCompanies || []);
+          setCompanies(Array.isArray(activeCompanies) ? activeCompanies : []);
         } else {
           // User has company assigned
           setCurrentCompanyId(userData.companyId);
@@ -83,9 +83,17 @@ export default function CompanyProvider({ children }) {
           // If user can switch, load all companies
           if (userData.canSwitchCompany) {
             const activeCompanies = await fetchActiveCompanies();
-            setCompanies(activeCompanies || []);
+            setCompanies(Array.isArray(activeCompanies) ? activeCompanies : []);
+          } else {
+            // Ensure companies is always an array, even if user can't switch
+            setCompanies([]);
           }
         }
+      } else {
+        // User document doesn't exist - set defaults
+        setCurrentCompanyId(DEFAULT_COMPANY_ID);
+        setCompanies([]);
+        setNeedsCompanySelection(false);
       }
 
       setLoading(false);
@@ -112,8 +120,17 @@ export default function CompanyProvider({ children }) {
       console.warn('User cannot switch companies');
       return;
     }
+    
+    if (!companyId || companyId === currentCompanyId) {
+      console.log('No change needed or invalid company ID');
+      return;
+    }
+
+    console.log('Switching company from', currentCompanyId, 'to', companyId);
     setCurrentCompanyId(companyId);
+    
     // Note: Data will re-fetch automatically when components use the new companyId
+    // Components should have currentCompanyId in their useEffect dependencies
   };
 
   /**
@@ -143,6 +160,9 @@ export default function CompanyProvider({ children }) {
    * Get current company name
    */
   const getCurrentCompanyName = () => {
+    if (!Array.isArray(companies) || companies.length === 0) {
+      return 'Company';
+    }
     const company = companies.find((c) => c.id === currentCompanyId);
     return company?.name || 'Company';
   };
@@ -151,12 +171,15 @@ export default function CompanyProvider({ children }) {
     return <Loader />;
   }
 
+  // Ensure companies is always an array (defensive guard)
+  const safeCompanies = Array.isArray(companies) ? companies : [];
+
   return (
     <CompanyContext.Provider
       value={{
         currentCompanyId,
         canSwitchCompany,
-        companies,
+        companies: safeCompanies,
         needsCompanySelection,
         switchCompany,
         saveSelectedCompany,

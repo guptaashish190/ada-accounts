@@ -55,6 +55,7 @@ import CashReport from './screens/reports/cashReport/cashReport';
 import ViewVoucherScreen from './screens/vouchers/viewVoucherScreen';
 import PendingBillsToday from './screens/pendingBillsToday/pendingBillsToday';
 import CompanySelectionScreen from './screens/companySelection/companySelection';
+import CompaniesManagementScreen from './screens/settings/companies/companiesManagement';
 
 const myNewTheme = {
   10: '#010304',
@@ -143,6 +144,10 @@ function AppContent() {
           <Route path="/upi" element={<UpiScreen />} />
           <Route path="/printerSettings" element={<PrinterSettings />} />
           <Route path="/routeSettings" element={<RouteSettings />} />
+          <Route
+            path="/companiesManagement"
+            element={<CompaniesManagementScreen />}
+          />
           <Route
             path="/receivePendingUser"
             element={<ReceivePendingUser />}

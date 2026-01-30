@@ -152,6 +152,12 @@ export default [
         key: 'tab-settings-route',
         allowJob: [],
       },
+      {
+        name: 'Companies',
+        route: '/companiesManagement',
+        key: 'tab-settings-companies',
+        allowJob: [],
+      },
     ],
   },
 ];

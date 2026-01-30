@@ -41,7 +41,7 @@ export default function CompanySwitcher() {
   const styles = useStyles();
 
   // Guard against null/undefined companies
-  const safeCompanies = companies || [];
+  const safeCompanies = Array.isArray(companies) ? companies : [];
 
   // Don't render if user can't switch companies
   if (!canSwitchCompany || safeCompanies.length <= 1) {
@@ -59,17 +59,34 @@ export default function CompanySwitcher() {
   }
 
   const handleCompanyChange = (event, data) => {
-    if (data.optionValue) {
-      switchCompany(data.optionValue);
+    console.log('Company switcher - event:', event, 'data:', data);
+    
+    // Handle both data.optionValue and data.selectedOptions patterns
+    const selectedCompanyId = data?.optionValue || data?.selectedOptions?.[0];
+    
+    if (!selectedCompanyId) {
+      console.warn('No company ID found in selection data');
+      return;
     }
+
+    if (selectedCompanyId === currentCompanyId) {
+      console.log('Same company selected, no change needed');
+      return;
+    }
+
+    console.log('Switching company from', currentCompanyId, 'to', selectedCompanyId);
+    switchCompany(selectedCompanyId);
   };
+
+  const currentCompany = safeCompanies.find((c) => c.id === currentCompanyId);
 
   return (
     <div className={styles.container}>
       <BuildingMultiple20Regular className={styles.icon} />
       <Dropdown
+        key={`company-switcher-${currentCompanyId}`}
         className={styles.dropdown}
-        value={safeCompanies.find((c) => c.id === currentCompanyId)?.name || ''}
+        value={currentCompany?.name || ''}
         selectedOptions={[currentCompanyId]}
         onOptionSelect={handleCompanyChange}
         placeholder="Select company"
@@ -93,8 +110,16 @@ export function CompanySwitcherCompact() {
   const styles = useStyles();
 
   // Guard against null/undefined companies
-  const safeCompanies = companies || [];
+  const safeCompanies = Array.isArray(companies) ? companies : [];
   const currentCompany = safeCompanies.find((c) => c.id === currentCompanyId);
+
+  const handleCompactChange = (event, data) => {
+    const selectedCompanyId = data?.optionValue || data?.selectedOptions?.[0];
+    if (selectedCompanyId && selectedCompanyId !== currentCompanyId) {
+      console.log('Compact switcher - switching to:', selectedCompanyId);
+      switchCompany(selectedCompanyId);
+    }
+  };
 
   if (!canSwitchCompany) {
     return (
@@ -106,11 +131,12 @@ export function CompanySwitcherCompact() {
 
   return (
     <Dropdown
+      key={`company-switcher-compact-${currentCompanyId}`}
       size="small"
       appearance="underline"
       value={currentCompany?.name || ''}
       selectedOptions={[currentCompanyId]}
-      onOptionSelect={(e, data) => data.optionValue && switchCompany(data.optionValue)}
+      onOptionSelect={handleCompactChange}
     >
       {safeCompanies.map((company) => (
         <Option key={company.id} value={company.id}>
