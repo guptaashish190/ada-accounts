@@ -48,7 +48,11 @@ import globalUtils from '../../services/globalUtils';
 import { showToast } from '../../common/toaster';
 import './style.css';
 import { useCompany } from '../../contexts/companyContext';
-import { getCompanyCollection, getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../services/firestoreHelpers';
 import firebaseApp, { firebaseAuth, firebaseDB } from '../../firebaseInit';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
@@ -66,7 +70,11 @@ export default function VerifySupplyReport() {
   const locationState = location.state;
   const supplyReport = locationState?.supplyReport;
   const [accountsNotes, setAccountsNotes] = useState('');
-  const [allPartiesPaymentTerms, setAllPartiesPaymentTerms] = useState({});
+  const [allPartiesCreditDays, setAllPartiesCreditDays] = useState({});
+  /** Party IDs that already had credit days from DB on load — field stays read-only until next visit */
+  const [creditDaysLockedByPartyId, setCreditDaysLockedByPartyId] = useState(
+    {},
+  );
   const [attachedBills, setAttachedBills] = useState([]);
   const [supplementaryBills, setSupplementaryBills] = useState([]);
   const [supplymanUser, setSupplymanUser] = useState();
@@ -85,7 +93,10 @@ export default function VerifySupplyReport() {
   // Fetch MR routes from Firestore
   const fetchMrRoutes = async () => {
     try {
-      const mrRoutesCollection = getCompanyCollection(currentCompanyId, DB_NAMES.MR_ROUTES);
+      const mrRoutesCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.MR_ROUTES,
+      );
       const querySnapshot = await getDocs(mrRoutesCollection);
 
       const routesData = [];
@@ -144,26 +155,34 @@ export default function VerifySupplyReport() {
     try {
       // Fetch orders and MR routes in parallel
       const [fetchedOrders, routesData] = await Promise.all([
-        globalUtils.fetchOrdersByIds(supplyReport.orders),
+        globalUtils.fetchOrdersByIds(supplyReport.orders, currentCompanyId),
         fetchMrRoutes(),
       ]);
 
       let orders = (await fetchedOrders).filter((fo) => !fo.error);
-      orders = await globalUtils.fetchPartyInfoForOrders(orders);
+      orders = await globalUtils.fetchPartyInfoForOrders(
+        orders,
+        currentCompanyId,
+      );
       setBills(orders);
 
       // Initialize MR assignments
       initializeMrAssignments(orders, routesData);
-
-      // set payment terms
-      const fetchedPaymentTerms = {};
+      console.log(orders);
+      // set credit days from party data
+      const fetchedCreditDays = {};
+      const lockedFromDb = {};
       orders.forEach((o) => {
-        if (o.party.paymentTerms)
-          fetchedPaymentTerms[o.partyId] = o.party.paymentTerms;
+        if (o.party?.creditDays != null) {
+          fetchedCreditDays[o.partyId] = o.party.creditDays;
+          lockedFromDb[o.partyId] = true;
+        }
       });
 
-      console.log(fetchedPaymentTerms);
-      setAllPartiesPaymentTerms(fetchedPaymentTerms);
+      console.log('Fetched credit days:', fetchedCreditDays);
+      console.log('Party data sample:', orders[0]?.party);
+      setAllPartiesCreditDays(fetchedCreditDays);
+      setCreditDaysLockedByPartyId(lockedFromDb);
 
       const supplymanUser1 = await globalUtils.fetchUserById(
         supplyReport.supplymanId,
@@ -210,13 +229,13 @@ export default function VerifySupplyReport() {
       }
     }
 
-    // Also validate payment terms for required orders
+    // Also validate credit days for required orders
     for (const [orderId, assignment] of requiredOrders) {
       const bill = bills.find((b) => b.id === orderId);
-      if (bill && !allPartiesPaymentTerms[bill.partyId]) {
+      if (bill && allPartiesCreditDays[bill.partyId] == null) {
         return {
           isValid: false,
-          message: 'Please select Payment Terms for all required orders',
+          message: 'Please set Credit Days for all required orders',
         };
       }
     }
@@ -260,7 +279,11 @@ export default function VerifySupplyReport() {
             return;
           }
 
-          const mrRouteRef = getCompanyDoc(currentCompanyId, DB_NAMES.MR_ROUTES, mrRouteDoc.id);
+          const mrRouteRef = getCompanyDoc(
+            currentCompanyId,
+            DB_NAMES.MR_ROUTES,
+            mrRouteDoc.id,
+          );
 
           try {
             // Get the current document data
@@ -327,7 +350,11 @@ export default function VerifySupplyReport() {
   const onDispatch = async () => {
     setLoading(true);
     try {
-      const supplyReportRef = getCompanyDoc(currentCompanyId, DB_NAMES.SUPPLY_REPORTS, supplyReport.id);
+      const supplyReportRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.SUPPLY_REPORTS,
+        supplyReport.id,
+      );
 
       await updateDoc(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
@@ -347,12 +374,16 @@ export default function VerifySupplyReport() {
         }),
       );
 
-      // update payment terms for all parties
+      // update credit days for all parties
       await Promise.all(
-        Object.keys(allPartiesPaymentTerms).map(async (paymentTermParty) => {
-          const partyRef = getCompanyDoc(currentCompanyId, DB_NAMES.PARTIES, paymentTermParty);
+        Object.keys(allPartiesCreditDays).map(async (creditDaysParty) => {
+          const partyRef = getCompanyDoc(
+            currentCompanyId,
+            DB_NAMES.PARTIES,
+            creditDaysParty,
+          );
           await updateDoc(partyRef, {
-            paymentTerms: allPartiesPaymentTerms[paymentTermParty],
+            creditDays: allPartiesCreditDays[creditDaysParty],
           });
         }),
       );
@@ -376,7 +407,21 @@ export default function VerifySupplyReport() {
   const updateOrder = async (bill1) => {
     try {
       // Create a reference to the specific order document
-      const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, bill1.id);
+      const orderRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+        bill1.id,
+      );
+
+      // Calculate due date based on credit days
+      const partyCreditDays = allPartiesCreditDays[bill1.partyId];
+      const billDate = bill1.billCreationTime || Timestamp.now().toMillis();
+      let dueDate = null;
+      if (partyCreditDays != null) {
+        const billDateObj = new Date(billDate);
+        billDateObj.setDate(billDateObj.getDate() + partyCreditDays);
+        dueDate = billDateObj.getTime();
+      }
 
       // Update the "orderStatus" field in the order document to "dispatched"
       await updateDoc(orderRef, {
@@ -384,6 +429,10 @@ export default function VerifySupplyReport() {
         with: supplyReport.supplymanId,
         orderStatus: 'Dispatched',
         supplyReportId: supplyReport.id,
+        // Credit days tracking (Story 1.1/1.2)
+        creditDays: partyCreditDays,
+        dueDate,
+        paymentStatus: 'NOT_DUE', // Initial status
         flow: [
           ...bill1.flow,
           {
@@ -403,7 +452,11 @@ export default function VerifySupplyReport() {
   const updateOldOrder = async (modifiedBill1) => {
     try {
       // Create a reference to the specific order document
-      const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, modifiedBill1.id);
+      const orderRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+        modifiedBill1.id,
+      );
 
       // Update the "orderStatus" field in the order document to "dispatched"
       await updateDoc(orderRef, {
@@ -437,15 +490,17 @@ export default function VerifySupplyReport() {
                 attachedBills={[...attachedBills, ...supplementaryBills]}
                 setAttachedBills={setAttachedBills}
                 key={`party-section-${b.id}`}
-                paymentTerms={allPartiesPaymentTerms[b.partyId]}
-                setPaymentTerms={(pay) =>
-                  setAllPartiesPaymentTerms((p) => ({ ...p, [b.partyId]: pay }))
+                creditDays={allPartiesCreditDays[b.partyId]}
+                creditDaysLocked={!!creditDaysLockedByPartyId[b.partyId]}
+                setCreditDays={(days) =>
+                  setAllPartiesCreditDays((p) => ({ ...p, [b.partyId]: days }))
                 }
                 index={i}
                 bill={b}
                 mrRoutes={mrRoutes}
                 mrAssignment={orderMrAssignments[b.id]}
                 updateMrAssignment={updateMrAssignment}
+                currentCompanyId={currentCompanyId}
               />
             );
           })}
@@ -501,14 +556,14 @@ export default function VerifySupplyReport() {
                   : uniqueParties.push(x.partyId),
               );
 
-              // Validate payment terms
-              if (
-                uniqueParties.length !==
-                Object.keys(allPartiesPaymentTerms).length
-              ) {
+              // Validate credit days - all parties must have credit days set
+              const partiesWithoutCreditDays = uniqueParties.filter(
+                (partyId) => allPartiesCreditDays[partyId] == null,
+              );
+              if (partiesWithoutCreditDays.length > 0) {
                 showToast(
                   dispatchToast,
-                  'Please select Payment Terms of all the parties',
+                  'Please set Credit Days for all parties',
                   'error',
                 );
                 return;
@@ -581,21 +636,35 @@ function PartySection({
   index,
   setAttachedBills,
   attachedBills,
-  setPaymentTerms,
-  paymentTerms,
+  setCreditDays,
+  creditDays,
+  creditDaysLocked,
   mrRoutes,
   mrAssignment,
   updateMrAssignment,
+  currentCompanyId,
 }) {
-  console.log(paymentTerms);
   const [oldBills, setOldBills] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showOldBills, setShowOldBills] = useState(false);
+  const [creditDaysInput, setCreditDaysInput] = useState(
+    creditDays != null ? creditDays.toString() : '',
+  );
+
+  // Sync display when creditDays prop changes (e.g. initial load); do not tie disabled state to this
+  useEffect(() => {
+    if (creditDays != null) {
+      setCreditDaysInput(creditDays.toString());
+    }
+  }, [creditDays]);
   // Fetch orders based on the query
   const fetchData = async () => {
     setLoading(true);
     try {
-      const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
+      const ordersCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+      );
       const q = query(
         ordersCollection,
         where('partyId', '==', bill.partyId),
@@ -609,7 +678,11 @@ function PartySection({
         // Get data for each order
         const orderData = doc1.data();
         // Fetch party information using partyID from the order
-        const partyDocRef = getCompanyDoc(currentCompanyId, DB_NAMES.PARTIES, orderData.partyId);
+        const partyDocRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.PARTIES,
+          orderData.partyId,
+        );
         const partyDocSnapshot = await getDoc(partyDocRef);
         if (partyDocSnapshot.exists()) {
           const partyData = partyDocSnapshot.data();
@@ -662,16 +735,29 @@ function PartySection({
         <div
           className="status-badge-compact"
           style={{
-            backgroundColor: mrAssignment?.isRequired ? '#fef2f2' : '#f3f2f1',
-            borderColor: mrAssignment?.isRequired ? '#fecaca' : '#e1dfdd',
+            backgroundColor:
+              mrAssignment?.isRequired || creditDays == null
+                ? '#fef2f2'
+                : '#f3f2f1',
+            borderColor:
+              mrAssignment?.isRequired || creditDays == null
+                ? '#fecaca'
+                : '#e1dfdd',
           }}
         >
           <Text
             size={200}
             weight="medium"
-            style={{ color: mrAssignment?.isRequired ? '#dc2626' : undefined }}
+            style={{
+              color:
+                mrAssignment?.isRequired || creditDays == null
+                  ? '#dc2626'
+                  : undefined,
+            }}
           >
-            {mrAssignment?.isRequired ? '⚠️ Required' : '✅ Auto'}
+            {mrAssignment?.isRequired || creditDays == null
+              ? '⚠️ Required'
+              : '✅ Auto'}
           </Text>
         </div>
       </div>
@@ -696,24 +782,33 @@ function PartySection({
       <div className="dropdowns-row-compact">
         <div className="dropdown-item-compact">
           <Label size="small" weight="semibold">
-            Payment Terms
+            Credit Days
             {mrAssignment?.isRequired && (
               <span className="required-asterisk"> *</span>
             )}
           </Label>
-          <Dropdown
-            onOptionSelect={(_, e) => setPaymentTerms(e.optionValue)}
-            placeholder="Select Terms"
-            defaultValue={paymentTerms}
+          <Input
+            type="number"
+            min={1}
+            max={120}
+            placeholder="Days"
+            disabled={creditDaysLocked}
+            value={creditDaysInput}
+            onChange={(e) => {
+              const { value } = e.target;
+              setCreditDaysInput(value);
+              if (value.trim() !== '') {
+                const parsed = parseInt(value, 10);
+                if (!Number.isNaN(parsed) && parsed > 0 && parsed <= 120) {
+                  setCreditDays(parsed);
+                }
+              } else {
+                setCreditDays(null);
+              }
+            }}
             size="small"
-            style={{ width: '140px' }}
-          >
-            {constants.paymentTermsListItems.map((x) => (
-              <Option text={x} value={x} key={`payment-terms-${x}`}>
-                {x}
-              </Option>
-            ))}
-          </Dropdown>
+            style={{ width: '80px' }}
+          />
         </div>
 
         <div className="dropdown-item-compact">
@@ -787,8 +882,8 @@ function PartySection({
         <div className="party-old-bills-header">WITH</div>
         <div className="party-old-bills-header">AMOUNT</div>
         <div className="party-old-bills-header">BALANCE</div>
-        <div className="party-old-bills-header">DAYS</div>
-        <div className="party-old-bills-header">SCHEDULED</div>
+        <div className="party-old-bills-header">AGE</div>
+        <div className="party-old-bills-header">DUE STATUS</div>
         <div className="party-old-bills-header">NOTE</div>
         <div className="party-old-bills-header" />
         {!loading ? (
@@ -797,6 +892,7 @@ function PartySection({
               <OldBillRow
                 key={`ob-${ob.id}`}
                 oldbill={ob}
+                creditDays={creditDays}
                 attachBill={(mod) => {
                   setAttachedBills((ab) => [...ab, mod]);
                 }}
@@ -827,11 +923,41 @@ function OldBillRow({
   isAttached,
   removeAttachedBill,
   saveBill,
+  creditDays,
 }) {
   const [newBalance, setNewBalance] = useState('');
   const [newNotes, setNewNotes] = useState('');
-  const [scheduledData, setScheduledDate] = useState();
   const [withUser, setWithUser] = useState();
+
+  // Calculate due status based on credit days
+  const getDueStatus = () => {
+    if (creditDays == null) {
+      return { text: 'Not Set', color: '#8a8886' };
+    }
+
+    const billDate = new Date(oldbill.billCreationTime);
+    const dueDate = new Date(billDate);
+    dueDate.setDate(dueDate.getDate() + creditDays);
+
+    const today = new Date();
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) {
+      return { text: `Due in ${diffDays}d`, color: '#107c10' }; // Green - not due yet
+    }
+    if (diffDays === 0) {
+      return { text: 'Due Today', color: '#ff8c00' }; // Orange - due today
+    }
+    const overdueDays = Math.abs(diffDays);
+    const criticalThreshold = creditDays * 2;
+    if (overdueDays > criticalThreshold) {
+      return { text: `CRITICAL (${overdueDays}d)`, color: '#d13438' }; // Red - critical
+    }
+    return { text: `Overdue ${overdueDays}d`, color: '#ff8c00' }; // Orange - overdue
+  };
+
+  const dueStatus = getDueStatus();
 
   const onAttachBill = (save) => {
     const modifiedBill = { ...oldbill };
@@ -874,10 +1000,13 @@ function OldBillRow({
       </div>
 
       <div className="old-bill">
-        {globalUtils.getDaysPassed(oldbill.billCreationTime)}
+        {globalUtils.getDaysPassed(oldbill.billCreationTime)}d
       </div>
-      <div className="old-bill scheduled">
-        {globalUtils.getTimeFormat(oldbill.schedulePaymentDate, true) || '--'}
+      <div
+        className="old-bill due-status"
+        style={{ color: dueStatus.color, fontWeight: 'bold' }}
+      >
+        {dueStatus.text}
       </div>
       <Tooltip content={oldbill.note}>
         <Input

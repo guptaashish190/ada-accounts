@@ -96,7 +96,6 @@ table tr:not(:nth-child(1)):hover {
 }
 
 table * {
-  padding: 10px;
   font-size: 13px;
   max-width: 100%;
   text-wrap: nowrap;

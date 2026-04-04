@@ -4,18 +4,7 @@
 /* eslint-disable radix */
 /* eslint-disable no-restricted-syntax */
 
-import {
-  FieldValue,
-  Timestamp,
-  arrayUnion,
-  collection,
-  doc,
-  getDoc,
-  limit,
-  query,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
+import { Timestamp, getDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DatePicker, setMonth } from '@fluentui/react-datepicker-compat';
@@ -39,7 +28,13 @@ import { VerticalSpace1 } from '../../../common/verticalSpace';
 import globalUtils from '../../../services/globalUtils';
 import { showToast } from '../../../common/toaster';
 import './style.css';
-import firebaseApp, { firebaseAuth, firebaseDB } from '../../../firebaseInit';
+import { firebaseAuth } from '../../../firebaseInit';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 import AdjustAmountDialog from '../adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../../constants';
 import BillRow from './billRow';
@@ -60,16 +55,24 @@ export default function ReceiveSRScreen() {
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
-  const dbName = isBundle ? '/billBundles' : 'supplyReports';
+  const { currentCompanyId } = useCompany();
+
+  const dbName = isBundle ? DB_NAMES.BILL_BUNDLES : DB_NAMES.SUPPLY_REPORTS;
   const dbBills = isBundle ? supplyReport.bills : supplyReport.orders;
   const [loading, setLoading] = useState(false);
   const getAllBills = async () => {
     console.log(supplyReport);
     try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds(dbBills);
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        dbBills,
+        currentCompanyId,
+      );
 
-      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
+        fetchedOrders,
+        currentCompanyId,
+      );
       setAllBills(fetchedOrders);
     } catch (e) {
       console.error(e);
@@ -77,9 +80,15 @@ export default function ReceiveSRScreen() {
   };
   const getGroupedBills = async (orderIds) => {
     try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds(orderIds);
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        orderIds,
+        currentCompanyId,
+      );
       fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
+        fetchedOrders,
+        currentCompanyId,
+      );
       const groupedOrders = {};
       for (const element of fetchedOrders) {
         if (groupedOrders[element.partyId] !== undefined) {
@@ -101,10 +110,14 @@ export default function ReceiveSRScreen() {
     try {
       let fetchedOrders = await globalUtils.fetchOrdersByIds(
         supplyReport.returnedBills.map((x) => x.billId),
+        currentCompanyId,
       );
 
-      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
+        fetchedOrders,
+        currentCompanyId,
+      );
       setReturnedBills(fetchedOrders);
     } catch (e) {
       console.error(e);
@@ -133,8 +146,9 @@ export default function ReceiveSRScreen() {
     setLoading(false);
   };
 
-  useState(() => {
+  useEffect(() => {
     init();
+    console.log('init');
   }, []);
 
   const receiveBill = (bi) => {
@@ -156,8 +170,13 @@ export default function ReceiveSRScreen() {
     setLoading(true);
 
     try {
-      const supplyReportRef = doc(firebaseDB, dbName, supplyReport.id);
+      const supplyReportRef = getCompanyDoc(
+        currentCompanyId,
+        dbName,
+        supplyReport.id,
+      );
       const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
+      console.log(dbName, supplyReport.id);
       // update supply report for all the bill rec details
       updateDoc(supplyReportRef, {
         ...(allBillsReceived
@@ -190,7 +209,11 @@ export default function ReceiveSRScreen() {
 
       // update current bills with balance and updated flow
       for await (const rb2 of receivedBills) {
-        const orderRef = doc(firebaseDB, 'orders', rb2.id);
+        const orderRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.ORDERS,
+          rb2.id,
+        );
         const orderData = await getDoc(orderRef);
         const paymentsObj = orderData.data().payments || [];
         updateDoc(orderRef, {
@@ -215,7 +238,11 @@ export default function ReceiveSRScreen() {
 
       // update returned bills
       for await (const rb2 of returnedBills) {
-        const orderRef = doc(firebaseDB, 'orders', rb2.id);
+        const orderRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.ORDERS,
+          rb2.id,
+        );
 
         updateDoc(orderRef, {
           flow: [

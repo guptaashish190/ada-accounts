@@ -1,13 +1,6 @@
 /* eslint-disable no-nested-ternary */
 /* eslint-disable no-restricted-syntax */
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  where,
-} from 'firebase/firestore';
+import { getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import { evaluate } from 'mathjs';
 import {
@@ -18,11 +11,16 @@ import {
   Tooltip,
 } from '@fluentui/react-components';
 import { DeleteRegular } from '@fluentui/react-icons';
-import { firebaseDB } from '../../../firebaseInit';
 import Loader from '../../../common/loader';
 import globalUtils from '../../../services/globalUtils';
 import './style.css';
 import { VerticalSpace2 } from '../../../common/verticalSpace';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 
 export default function PartySection({
   party,
@@ -32,12 +30,17 @@ export default function PartySection({
 }) {
   const [oldBills, setOldBills] = useState([]);
   const [loading, setLoading] = useState(false);
-  // Fetch orders based on the query
+
+  const { currentCompanyId } = useCompany();
+
   const fetchData = async () => {
     console.log(party);
     setLoading(true);
     try {
-      const ordersCollection = collection(firebaseDB, 'orders');
+      const ordersCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+      );
       const q = query(
         ordersCollection,
         where('partyId', '==', party.id),
@@ -48,10 +51,12 @@ export default function PartySection({
       console.log(querySnapshot.size);
       const ordersData = [];
       for await (const doc1 of querySnapshot.docs) {
-        // Get data for each order
         const orderData = doc1.data();
-        // Fetch party information using partyID from the order
-        const partyDocRef = doc(firebaseDB, 'parties', orderData.partyId);
+        const partyDocRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.PARTIES,
+          orderData.partyId,
+        );
         const partyDocSnapshot = await getDoc(partyDocRef);
 
         if (partyDocSnapshot.exists()) {

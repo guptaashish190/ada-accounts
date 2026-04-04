@@ -57,6 +57,27 @@
     border-bottom: none;
 }
 
+.party-item-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.party-item-row:last-of-type {
+    border-bottom: none;
+}
+
+.add-party-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 10px;
+    margin-top: 6px;
+    border-top: 1px solid #e1e1e1;
+}
+
 .loading-container {
     display: flex;
     flex-direction: column;

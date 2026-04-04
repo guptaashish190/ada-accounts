@@ -65,6 +65,12 @@ export default [
 
     submenu: [
       {
+        name: 'Payment Dashboard',
+        route: '/cashierDashboard',
+        key: 'tab-cashier-dashboard',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+      },
+      {
         name: 'UPI',
         route: '/upi',
         key: 'tab-upi1',
@@ -156,6 +162,12 @@ export default [
         name: 'Companies',
         route: '/companiesManagement',
         key: 'tab-settings-companies',
+        allowJob: [],
+      },
+      {
+        name: 'Users',
+        route: '/usersManagement',
+        key: 'tab-settings-users',
         allowJob: [],
       },
     ],

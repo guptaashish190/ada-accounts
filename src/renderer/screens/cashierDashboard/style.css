@@ -1,0 +1,234 @@
+.cashier-dashboard {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.cashier-dashboard-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 400px;
+}
+
+.cashier-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.cashier-dashboard-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.date-picker {
+  min-width: 180px;
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.summary-card .summary-value {
+  font-size: 32px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.critical-card {
+  background-color: #fee;
+  border-left: 4px solid #c50f1f;
+}
+
+.critical-card .summary-value {
+  color: #c50f1f;
+}
+
+.overdue-card {
+  background-color: #fff4e5;
+  border-left: 4px solid #f7630c;
+}
+
+.overdue-card .summary-value {
+  color: #f7630c;
+}
+
+.count-card {
+  background-color: #f0f6ff;
+  border-left: 4px solid #0078d4;
+}
+
+.count-card .summary-value {
+  color: #0078d4;
+}
+
+/* Filters */
+.dashboard-filters {
+  margin-bottom: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+/* Parties List */
+.parties-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.party-card {
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.party-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.party-card.critical-status {
+  border-left: 4px solid #c50f1f;
+  background-color: #fef5f5;
+}
+
+.party-card.overdue-status {
+  border-left: 4px solid #f7630c;
+  background-color: #fffaf5;
+}
+
+.party-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  gap: 16px;
+}
+
+.party-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.party-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.party-details-row {
+  color: #605e5c;
+}
+
+.party-details-row.mr-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.critical {
+  background-color: #c50f1f;
+  color: white;
+}
+
+.status-badge.overdue {
+  background-color: #f7630c;
+  color: white;
+}
+
+.party-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Bill Breakdown */
+.bill-breakdown {
+  padding: 0 16px 16px 16px;
+  border-top: 1px solid #e1dfdd;
+  margin-top: 8px;
+  padding-top: 16px;
+}
+
+.bills-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.bills-table th {
+  text-align: left;
+  padding: 8px 12px;
+  background-color: #f3f2f1;
+  font-weight: 600;
+  border-bottom: 2px solid #e1dfdd;
+}
+
+.bills-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #edebe9;
+}
+
+.bills-table tbody tr:hover {
+  background-color: #faf9f8;
+}
+
+.status-pill {
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-pill.critical {
+  background-color: #fde7e9;
+  color: #c50f1f;
+}
+
+.status-pill.overdue {
+  background-color: #fff4e5;
+  color: #f7630c;
+}
+
+.status-pill.paid {
+  background-color: #dff6dd;
+  color: #107c10;
+}
+
+.status-pill.not_due {
+  background-color: #f3f2f1;
+  color: #605e5c;
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #605e5c;
+}

@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import { doc, getDoc, getDocs } from 'firebase/firestore';
+import { getDocs, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Button,
@@ -9,12 +9,19 @@ import {
   CardPreview,
   Text,
   Badge,
+  Combobox,
+  Option,
 } from '@fluentui/react-components';
+import { DismissRegular } from '@fluentui/react-icons';
 import './style.css';
 import { useSettingsContext } from '../../../contexts/settingsContext';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import { useCompany } from '../../../contexts/companyContext';
-import { getCompanyCollection, DB_NAMES } from '../../../services/firestoreHelpers';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 
 export default function RouteSettings() {
   const [routes, setRoutes] = useState([]);
@@ -23,7 +30,6 @@ export default function RouteSettings() {
   const [partiesLoading, setPartiesLoading] = useState(true);
   const [routesLoading, setRoutesLoading] = useState(true);
 
-  // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
 
   const fetchParties = async () => {
@@ -80,6 +86,47 @@ export default function RouteSettings() {
     return parties[partyId] || `Party ID: ${partyId}`;
   };
 
+  const updateRouteInFirestore = async (routeId, updatedRouteArray) => {
+    try {
+      const routeRef = getCompanyDoc(currentCompanyId, DB_NAMES.MR_ROUTES, routeId);
+      await updateDoc(routeRef, { route: updatedRouteArray });
+    } catch (error) {
+      console.error('Error updating route:', error);
+      throw error;
+    }
+  };
+
+  const addPartyToDay = async (routeId, dayIndex, partyId) => {
+    const route = routes.find((r) => r.id === routeId);
+    if (!route) return;
+
+    const updatedRoute = route.route.map((day, i) => {
+      if (i !== dayIndex) return day;
+      if (day.parties?.includes(partyId)) return day;
+      return { ...day, parties: [...(day.parties || []), partyId] };
+    });
+
+    await updateRouteInFirestore(routeId, updatedRoute);
+    setRoutes((prev) =>
+      prev.map((r) => (r.id === routeId ? { ...r, route: updatedRoute } : r)),
+    );
+  };
+
+  const removePartyFromDay = async (routeId, dayIndex, partyId) => {
+    const route = routes.find((r) => r.id === routeId);
+    if (!route) return;
+
+    const updatedRoute = route.route.map((day, i) => {
+      if (i !== dayIndex) return day;
+      return { ...day, parties: (day.parties || []).filter((p) => p !== partyId) };
+    });
+
+    await updateRouteInFirestore(routeId, updatedRoute);
+    setRoutes((prev) =>
+      prev.map((r) => (r.id === routeId ? { ...r, route: updatedRoute } : r)),
+    );
+  };
+
   if (loading) {
     return (
       <center>
@@ -109,8 +156,15 @@ export default function RouteSettings() {
             <RouteComponent
               key={`route-${route.id}`}
               route={route}
+              parties={parties}
               getPartyName={getPartyName}
               partiesLoading={partiesLoading}
+              onAddParty={(dayIndex, partyId) =>
+                addPartyToDay(route.id, dayIndex, partyId)
+              }
+              onRemoveParty={(dayIndex, partyId) =>
+                removePartyFromDay(route.id, dayIndex, partyId)
+              }
             />
           ))
         )}
@@ -119,7 +173,14 @@ export default function RouteSettings() {
   );
 }
 
-function RouteComponent({ route, getPartyName, partiesLoading }) {
+function RouteComponent({
+  route,
+  parties,
+  getPartyName,
+  partiesLoading,
+  onAddParty,
+  onRemoveParty,
+}) {
   const { settings } = useSettingsContext();
   const [expandedDays, setExpandedDays] = useState({});
 
@@ -158,10 +219,13 @@ function RouteComponent({ route, getPartyName, partiesLoading }) {
                 routeDay={routeDay}
                 dayIndex={index}
                 dayName={daysOfWeek[index] || `Day ${index + 1}`}
+                parties={parties}
                 getPartyName={getPartyName}
                 isExpanded={expandedDays[index]}
                 onToggleExpansion={() => toggleDayExpansion(index)}
                 partiesLoading={partiesLoading}
+                onAddParty={(partyId) => onAddParty(index, partyId)}
+                onRemoveParty={(partyId) => onRemoveParty(index, partyId)}
               />
             ))
           ) : (
@@ -177,12 +241,45 @@ function RouteDayComponent({
   routeDay,
   dayIndex,
   dayName,
+  parties,
   getPartyName,
   isExpanded,
   onToggleExpansion,
   partiesLoading,
+  onAddParty,
+  onRemoveParty,
 }) {
   const partyCount = routeDay.parties ? routeDay.parties.length : 0;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const assignedPartyIds = new Set(routeDay.parties || []);
+  const availableParties = Object.entries(parties)
+    .filter(([id]) => !assignedPartyIds.has(id))
+    .filter(
+      ([, name]) =>
+        !searchQuery || name.toLowerCase().includes(searchQuery.toLowerCase()),
+    )
+    .sort((a, b) => a[1].localeCompare(b[1]));
+
+  const handleAddParty = async (partyId) => {
+    setSaving(true);
+    try {
+      await onAddParty(partyId);
+    } finally {
+      setSaving(false);
+      setSearchQuery('');
+    }
+  };
+
+  const handleRemoveParty = async (partyId) => {
+    setSaving(true);
+    try {
+      await onRemoveParty(partyId);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="route-day-component">
@@ -222,18 +319,59 @@ function RouteDayComponent({
               );
             }
 
-            if (routeDay.parties && routeDay.parties.length > 0) {
-              return routeDay.parties.map((partyId) => (
-                <div key={`party-${partyId}`} className="party-item">
-                  <Text size={300}>{getPartyName(partyId)}</Text>
-                </div>
-              ));
-            }
-
             return (
-              <Text size={300} style={{ color: '#666' }}>
-                No parties assigned to this day
-              </Text>
+              <>
+                {routeDay.parties && routeDay.parties.length > 0 ? (
+                  routeDay.parties.map((partyId) => (
+                    <div key={`party-${partyId}`} className="party-item-row">
+                      <Text size={300}>{getPartyName(partyId)}</Text>
+                      <Button
+                        appearance="subtle"
+                        size="small"
+                        icon={<DismissRegular />}
+                        disabled={saving}
+                        onClick={() => handleRemoveParty(partyId)}
+                        title="Remove party"
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <Text size={300} style={{ color: '#666', padding: '4px 0' }}>
+                    No parties assigned
+                  </Text>
+                )}
+
+                <div className="add-party-row">
+                  <Combobox
+                    placeholder="Search & add party..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onOptionSelect={(_, data) => {
+                      if (data.optionValue) {
+                        handleAddParty(data.optionValue);
+                      }
+                    }}
+                    disabled={saving}
+                    size="small"
+                    style={{ flex: 1, minWidth: 0 }}
+                    freeform
+                  >
+                    {availableParties.length > 0 ? (
+                      availableParties.slice(0, 50).map(([id, name]) => (
+                        <Option key={id} value={id} text={name}>
+                          {name}
+                        </Option>
+                      ))
+                    ) : (
+                      <Option disabled value="" text="No parties available">
+                        {searchQuery
+                          ? 'No matching parties'
+                          : 'All parties assigned'}
+                      </Option>
+                    )}
+                  </Combobox>
+                </div>
+              </>
             );
           })()}
         </div>

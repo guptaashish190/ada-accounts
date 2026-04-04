@@ -2,49 +2,29 @@
 /* eslint-disable radix */
 /* eslint-disable no-restricted-syntax */
 
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
+import { getDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { DatePicker, setMonth } from '@fluentui/react-datepicker-compat';
 import {
   Button,
-  Card,
-  Field,
-  Input,
-  Skeleton,
-  SkeletonItem,
   Spinner,
-  Table,
-  TableBody,
-  TableCell,
-  TableCellLayout,
-  TableHeader,
-  th,
   TableRow,
   Text,
   Toaster,
-  Tooltip,
-  makeStyles,
   useId,
   useToastController,
 } from '@fluentui/react-components';
-import math, { parse } from 'mathjs';
 import Loader from '../../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import globalUtils from '../../../services/globalUtils';
 import { showToast } from '../../../common/toaster';
 import './style.css';
-import firebaseApp, { firebaseDB } from '../../../firebaseInit';
 import { useAuthUser } from '../../../contexts/allUsersContext';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 import constants from '../../../constants';
 import supplyReportFormatGenerator from '../../../common/printerDataGenerator/supplyReportFormatGenerator';
 import supplyReportRecievingFormatGenerator from '../../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
@@ -62,6 +42,8 @@ export default function ViewBundleScreen() {
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
+  const { currentCompanyId } = useCompany();
+
   useEffect(() => {
     getAllBills();
   }, []);
@@ -70,16 +52,26 @@ export default function ViewBundleScreen() {
     if (!bundleId) return;
     setLoading(true);
     try {
-      const bundleRef = doc(firebaseDB, 'billBundles', bundleId);
+      const bundleRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.BILL_BUNDLES,
+        bundleId,
+      );
       const bundlerefData = await getDoc(bundleRef);
       const bundleData = bundlerefData.data();
       setBundle({ ...bundleData, id: bundlerefData.id });
       setuser(allUsers.find((x) => x.uid === bundleData.assignedTo));
 
-      let fetchedOrders = await globalUtils.fetchOrdersByIds(bundleData.bills);
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        bundleData.bills,
+        currentCompanyId,
+      );
 
-      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
+        fetchedOrders,
+        currentCompanyId,
+      );
       setAllBills(fetchedOrders);
 
       setLoading(false);
@@ -94,7 +86,11 @@ export default function ViewBundleScreen() {
 
     setLoading(true);
     try {
-      const billBundleRef = doc(firebaseDB, 'billBundles', bundleId);
+      const billBundleRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.BILL_BUNDLES,
+        bundleId,
+      );
 
       updateDoc(billBundleRef, {
         status: constants.firebase.billBundleFlowStatus.HANDOVER,
@@ -117,10 +113,12 @@ export default function ViewBundleScreen() {
   };
   const updateBills = async (bill1) => {
     try {
-      // Create a reference to the specific order document
-      const orderRef = doc(firebaseDB, 'orders', bill1.id);
+      const orderRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+        bill1.id,
+      );
 
-      // Update the "orderStatus" field in the order document to "dispatched"
       updateDoc(orderRef, {
         with: user.uid,
       });
@@ -363,18 +361,26 @@ function OtherAdjustedBillsRow({ data, index }) {
 
   const [loading, setLoading] = useState(false);
 
+  const { currentCompanyId } = useCompany();
+
   const fetchOrderAndParty = async () => {
     try {
       setLoading(true);
-      // Fetch the order using orderId
-      const orderRef = doc(firebaseDB, 'orders', data.billId);
+      const orderRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+        data.billId,
+      );
       const orderSnapshot = await getDoc(orderRef);
       if (orderSnapshot.exists()) {
         const fetchedOrder = orderSnapshot.data();
         setOrder(fetchedOrder);
 
-        // Fetch party information using partyId from the fetched order
-        const partyRef = doc(firebaseDB, 'parties', fetchedOrder.partyId);
+        const partyRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.PARTIES,
+          fetchedOrder.partyId,
+        );
         const partySnapshot = await getDoc(partyRef);
         if (partySnapshot.exists()) {
           const fetchedParty = partySnapshot.data();

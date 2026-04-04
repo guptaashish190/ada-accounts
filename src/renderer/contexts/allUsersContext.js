@@ -26,8 +26,8 @@ export default function AllUsersContext({ children }) {
 
       // Loop through the documents in the collection
       querySnapshot.forEach((doc) => {
-        // Extract the data for each user
-        const userData = doc.data();
+        // Extract the data for each user and include the document ID
+        const userData = { ...doc.data(), id: doc.id };
         userList.push(userData);
       });
 

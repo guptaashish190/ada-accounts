@@ -97,6 +97,7 @@ export default function AssignBillScreen() {
 
       await globalUtils.incrementReceiptCounter(
         constants.newReceiptCounters.BUNDLES,
+        currentCompanyId,
       );
 
       getNewBundleReceiptNumber();
@@ -190,6 +191,8 @@ function AddPartySectionsDialog({ addParties }) {
   const [selectedDay, setSelectedDay] = useState();
   const [loading, setLoading] = useState(false);
 
+  const { currentCompanyId } = useCompany();
+
   const getFileNumbers = async () => {
     setLoading(true);
     try {
@@ -217,7 +220,10 @@ function AddPartySectionsDialog({ addParties }) {
   const onDaySelect = async (parties) => {
     try {
       setLoading(true);
-      const partiesData = await globalUtils.fetchPartyByIds(parties);
+      const partiesData = await globalUtils.fetchPartyByIds(
+        parties,
+        currentCompanyId,
+      );
       setAddedParties(partiesData);
     } catch (e) {
       console.log(e);

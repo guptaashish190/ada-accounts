@@ -1,0 +1,96 @@
+.users-management-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.users-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.users-filters {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.users-table-container {
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+}
+
+.jobs-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-hint {
+  color: var(--colorNeutralForeground3);
+  font-size: 12px;
+  margin-top: -4px;
+}
+
+.switch-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.switch-label {
+  min-width: 60px;
+  color: var(--colorNeutralForeground1);
+}
+
+.jobs-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid var(--colorNeutralStroke1);
+  border-radius: 4px;
+}
+
+.job-checkbox-item {
+  display: flex;
+  align-items: center;
+}

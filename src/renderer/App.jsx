@@ -56,6 +56,8 @@ import ViewVoucherScreen from './screens/vouchers/viewVoucherScreen';
 import PendingBillsToday from './screens/pendingBillsToday/pendingBillsToday';
 import CompanySelectionScreen from './screens/companySelection/companySelection';
 import CompaniesManagementScreen from './screens/settings/companies/companiesManagement';
+import UsersManagementScreen from './screens/settings/users/usersManagement';
+import CashierDashboard from './screens/cashierDashboard/cashierDashboard';
 
 const myNewTheme = {
   10: '#010304',
@@ -149,6 +151,10 @@ function AppContent() {
             element={<CompaniesManagementScreen />}
           />
           <Route
+            path="/usersManagement"
+            element={<UsersManagementScreen />}
+          />
+          <Route
             path="/receivePendingUser"
             element={<ReceivePendingUser />}
           />
@@ -162,6 +168,7 @@ function AppContent() {
           <Route path="/expenseReport" element={<ExpenseReport />} />
           <Route path="/collectionReport" element={<CashReport />} />
           <Route path="/viewVoucherScreen" element={<ViewVoucherScreen />} />
+          <Route path="/cashierDashboard" element={<CashierDashboard />} />
         </Routes>
       </TabNavigator>
     </Router>
