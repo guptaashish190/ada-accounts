@@ -106,10 +106,13 @@ export const DB_NAMES = {
   CHEQUES: 'cheques',
   CREDIT_NOTES: 'creditNotes',
   BILL_BUNDLES: 'billBundles',
+  ORDER_REGISTER: 'orderRegister',
+  LOCATION_TRACKING: 'locationTracking',
   USERS: 'users',
   COMPANIES: 'companies',
   USER_REQUESTS: 'userRequests',
   SETTINGS: 'settings',
+  PRODUCTS: 'products',
 };
 
 export default {

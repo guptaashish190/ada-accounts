@@ -3,6 +3,9 @@ export default {
   printConstants: {
     PRINT_CASHRECEIPT: 'PRINT_CASH_RECEIPT',
   },
+  windowConstants: {
+    MR_DETAIL: 'MR_DETAIL',
+  },
   paymentOkBuffer: 2,
   paymentTermsListItems: ['Monthly', 'Weekly', 'Cash', 'Bill to Bill'],
   firebase: {
@@ -68,6 +71,8 @@ export default {
     JOBS: {
       DISPATCH: 'BiT2WpxL7rBnjovrxP54',
       CASHIER: '3PyLZYPjuyfGwY3LJTY9',
+      MR: 'cAf2yrduIKDf7jLQ8KWu',
+      SUPPLY: 'vh8bGmg9haGmpNs4a9vw',
     },
   },
 };

@@ -1,13 +1,6 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable no-restricted-syntax */
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  where,
-} from 'firebase/firestore';
+import { getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
@@ -25,10 +18,14 @@ import { DatePicker } from '@fluentui/react-datepicker-compat';
 import '../style.css';
 import ReactToPrint, { useReactToPrint } from 'react-to-print';
 import { useAuthUser } from '../../../contexts/allUsersContext';
-import { firebaseDB } from '../../../firebaseInit';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 
 export default function CashReport() {
   const [cashVouchers, setCashVouchers] = useState([]);
@@ -37,6 +34,7 @@ export default function CashReport() {
   const [upis, setUpis] = useState([]);
   const [cheques, setCheques] = useState([]);
   const [loading, setLoading] = useState(false);
+  const { currentCompanyId } = useCompany();
 
   const handlePrint = () => {
     window.electron.ipcRenderer.sendMessage('printCurrentPage');
@@ -45,12 +43,23 @@ export default function CashReport() {
     setLoading(true);
     try {
       const cashData = await getFirebaseMappedData(
-        'cashReceipts',
+        DB_NAMES.CASH_RECEIPTS,
         selectedDate,
         setCashVouchers,
+        currentCompanyId,
       );
-      await getFirebaseMappedData('upi', selectedDate, setUpis);
-      await getFirebaseMappedData('cheques', selectedDate, setCheques);
+      await getFirebaseMappedData(
+        DB_NAMES.UPI,
+        selectedDate,
+        setUpis,
+        currentCompanyId,
+      );
+      await getFirebaseMappedData(
+        DB_NAMES.CHEQUES,
+        selectedDate,
+        setCheques,
+        currentCompanyId,
+      );
 
       let total1 = 0;
       cashData.forEach((x) => {
@@ -176,10 +185,14 @@ function UpiRow({ data, index }) {
   const [party, setParty] = useState();
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
+  const { currentCompanyId } = useCompany();
   const fetchParty = async () => {
     setLoading(true);
     try {
-      const party1 = await globalUtils.fetchPartyInfo(data.partyId);
+      const party1 = await globalUtils.fetchPartyInfo(
+        data.partyId,
+        currentCompanyId,
+      );
 
       setParty(party1);
     } catch (e) {
@@ -209,10 +222,14 @@ function ChequesRow({ data, index }) {
   const [party, setParty] = useState();
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
+  const { currentCompanyId } = useCompany();
   const fetchParty = async () => {
     setLoading(true);
     try {
-      const party1 = await globalUtils.fetchPartyInfo(data.partyId);
+      const party1 = await globalUtils.fetchPartyInfo(
+        data.partyId,
+        currentCompanyId,
+      );
 
       setParty(party1);
     } catch (e) {
@@ -289,10 +306,14 @@ function SupplyReportOrderRow({ prItem }) {
   const [party, setParty] = useState();
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
+  const { currentCompanyId } = useCompany();
   const fetchParty = async () => {
     setLoading(true);
     try {
-      const party1 = await globalUtils.fetchPartyInfo(prItem.partyId);
+      const party1 = await globalUtils.fetchPartyInfo(
+        prItem.partyId,
+        currentCompanyId,
+      );
 
       setParty(party1);
     } catch (e) {
@@ -320,8 +341,13 @@ function SupplyReportOrderRow({ prItem }) {
   );
 }
 
-const getFirebaseMappedData = async (refName, selectedDate, setList) => {
-  let refMain = collection(firebaseDB, refName);
+const getFirebaseMappedData = async (
+  refName,
+  selectedDate,
+  setList,
+  currentCompanyId,
+) => {
+  let refMain = getCompanyCollection(currentCompanyId, refName);
 
   const dateFrom = new Date(selectedDate);
   dateFrom.setHours(0);

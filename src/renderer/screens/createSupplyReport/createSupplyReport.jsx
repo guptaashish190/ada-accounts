@@ -70,10 +70,14 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     try {
       let fetchedOrders = await globalUtils.fetchOrdersByIds(
         prefillSupplyReport.orders,
+        currentCompanyId,
       );
 
-      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
+        fetchedOrders,
+        currentCompanyId,
+      );
       setBills(fetchedOrders);
       setModifiedBills(fetchedOrders);
 
@@ -97,6 +101,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
   const getNewSupplyReportNumber = async () => {
     const srNumber1 = await globalUtils.getNewReceiptNumber(
       constants.newReceiptCounters.SUPPLYREPORTS,
+      currentCompanyId,
     );
     setSrNumber(srNumber1);
     return srNumber1;
@@ -219,6 +224,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
 
       await globalUtils.incrementReceiptCounter(
         constants.newReceiptCounters.SUPPLYREPORTS,
+        currentCompanyId,
       );
       showToast(dispatchToast, 'Forwarded to accounts', 'success');
       if (!save) {

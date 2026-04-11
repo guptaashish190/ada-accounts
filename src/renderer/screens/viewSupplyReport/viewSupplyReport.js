@@ -1,16 +1,7 @@
 /* eslint-disable radix */
 /* eslint-disable no-restricted-syntax */
 
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
+import { getDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DatePicker, setMonth } from '@fluentui/react-datepicker-compat';
@@ -50,8 +41,9 @@ import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import globalUtils from '../../services/globalUtils';
 import { showToast } from '../../common/toaster';
 import './style.css';
-import firebaseApp, { firebaseDB } from '../../firebaseInit';
 import { useAuthUser } from '../../contexts/allUsersContext';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
 import constants from '../../constants';
 import supplyReportRecievingFormatGenerator from '../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
 import supplyReportFormatGenerator from '../../common/printerDataGenerator/supplyReportFormatGenerator';
@@ -73,15 +65,16 @@ export default function ViewSupplyReportScreen() {
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
+  const { currentCompanyId } = useCompany();
 
   // Fetch the document data
   const fetchSupplyReport = async () => {
     console.log(state);
     try {
       setLoading(true);
-      const supplyReportRef = doc(
-        firebaseDB,
-        'supplyReports',
+      const supplyReportRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.SUPPLY_REPORTS,
         supplyReportIdState || supplyReport.id,
       );
       const docSnapshot = await getDoc(supplyReportRef);
@@ -139,10 +132,16 @@ export default function ViewSupplyReportScreen() {
     if (!billList) return [];
     console.log(billList);
     try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds(billList);
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        billList,
+        currentCompanyId,
+      );
 
-      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
+        fetchedOrders,
+        currentCompanyId,
+      );
 
       return fetchedOrders;
     } catch (e) {
@@ -161,9 +160,9 @@ export default function ViewSupplyReportScreen() {
     try {
       setLoading(true);
 
-      const supplyReportsCol = doc(
-        firebaseDB,
-        'supplyReports',
+      const supplyReportsCol = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.SUPPLY_REPORTS,
         supplyReport.id,
       );
 
@@ -172,7 +171,7 @@ export default function ViewSupplyReportScreen() {
       });
 
       supplyReport.orders.forEach((x) => {
-        const orderRef = doc(firebaseDB, 'orders', x);
+        const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, x);
 
         updateDoc(orderRef, {
           orderStatus: constants.firebase.billFlowTypes.SUPPLY_REPORT_CANCELLED,
@@ -237,12 +236,16 @@ export default function ViewSupplyReportScreen() {
   const getOtherAdjustedBills = async () => {
     setLoading(true);
     try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds([
-        ...supplyReport.otherAdjustedBills,
-      ]);
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        [...supplyReport.otherAdjustedBills],
+        currentCompanyId,
+      );
 
-      fetchedOrders = (await fetchedOrders).filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(fetchedOrders);
+      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
+        fetchedOrders,
+        currentCompanyId,
+      );
       setAllBills(fetchedOrders);
 
       setLoading(false);
@@ -253,9 +256,9 @@ export default function ViewSupplyReportScreen() {
   };
 
   const removePartyFromSupplyReport = async (bill) => {
-    const supplyReportRef = doc(
-      firebaseDB,
-      'supplyReports',
+    const supplyReportRef = getCompanyDoc(
+      currentCompanyId,
+      DB_NAMES.SUPPLY_REPORTS,
       supplyReportIdState || supplyReport.id,
     );
 
@@ -658,11 +661,15 @@ function EditSupplymanDialog({ currentUser, supplyReportId, refresh }) {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState(currentUser);
   const [loading, setLoading] = useState(false);
+  const { currentCompanyId } = useCompany();
 
   const setSupplymanFunc = async () => {
     try {
-      // Reference to the order document
-      const supplyReportRef = doc(firebaseDB, 'supplyReports', supplyReportId);
+      const supplyReportRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.SUPPLY_REPORTS,
+        supplyReportId,
+      );
 
       // Update the supplymanId field
       updateDoc(supplyReportRef, { supplymanId: user.uid });

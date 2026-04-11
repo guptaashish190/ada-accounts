@@ -3,17 +3,7 @@
 /* eslint-disable radix */
 /* eslint-disable no-restricted-syntax */
 
-import {
-  Timestamp,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
+import { Timestamp, getDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DatePicker, setMonth } from '@fluentui/react-datepicker-compat';
@@ -37,7 +27,9 @@ import { VerticalSpace1 } from '../../../common/verticalSpace';
 import globalUtils from '../../../services/globalUtils';
 import { showToast } from '../../../common/toaster';
 import './style.css';
-import firebaseApp, { firebaseAuth, firebaseDB } from '../../../firebaseInit';
+import { firebaseAuth } from '../../../firebaseInit';
+import { useCompany } from '../../../contexts/companyContext';
+import { getCompanyDoc, DB_NAMES } from '../../../services/firestoreHelpers';
 import constants from '../../../constants';
 import AdjustAmountDialog from '../../receiveSupplyReport/adjustAmountOnBills/adjustAmountDialog';
 
@@ -54,6 +46,7 @@ export default function ReceiveBundle() {
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
+  const { currentCompanyId } = useCompany();
 
   const receiveBill = (bi) => {
     setReceivedBills((r) => [...r, bi]);
@@ -63,7 +56,11 @@ export default function ReceiveBundle() {
   const onComplete = async () => {
     setLoading(true);
     // Reference to the document in the "bundles" collection
-    const bundleRef = doc(firebaseDB, 'billBundles', bundle.id);
+    const bundleRef = getCompanyDoc(
+      currentCompanyId,
+      DB_NAMES.BILL_BUNDLES,
+      bundle.id,
+    );
 
     try {
       // update supply report for all the bill rec details
@@ -89,7 +86,11 @@ export default function ReceiveBundle() {
 
       // update current bills updated flow
       for await (const rb2 of receivedBills) {
-        const orderRef = doc(firebaseDB, 'orders', rb2.id);
+        const orderRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.ORDERS,
+          rb2.id,
+        );
 
         updateDoc(orderRef, {
           with: rb2.with,
@@ -104,7 +105,11 @@ export default function ReceiveBundle() {
       // Update  balance of other bills adjusted
       for await (const oab1 of [...receivedBills, ...otherAdjustedBills]) {
         if (oab1.payments?.length) {
-          const partyRef = doc(firebaseDB, 'parties', oab1.partyId);
+          const partyRef = getCompanyDoc(
+            currentCompanyId,
+            DB_NAMES.PARTIES,
+            oab1.partyId,
+          );
 
           const partySnapshot = await getDoc(partyRef);
           let newPayments = partySnapshot.data().payments || [];

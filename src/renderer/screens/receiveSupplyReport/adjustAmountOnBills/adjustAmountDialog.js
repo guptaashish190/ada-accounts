@@ -16,11 +16,12 @@ import {
   useId,
   useToastController,
 } from '@fluentui/react-components';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { firebaseDB } from '../../../firebaseInit';
+import { getDocs, query, where } from 'firebase/firestore';
 import globalUtils from '../../../services/globalUtils';
 import './style.css';
 import { showToast } from '../../../common/toaster';
+import { useCompany } from '../../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../../services/firestoreHelpers';
 
 function AdjustAmountDialog({
   onDone,
@@ -34,12 +35,13 @@ function AdjustAmountDialog({
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [amountLeft, setAmountLeft] = useState(amountToAdjust);
+  const { currentCompanyId } = useCompany();
 
   const fetchData = async () => {
     if (!party?.id) return;
     setLoading(true);
     const q = query(
-      collection(firebaseDB, 'orders'),
+      getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS),
       where('balance', '!=', 0), // Filter by balance greater than zero
       where('partyId', '==', party?.id), // Filter by specific partyId
     );

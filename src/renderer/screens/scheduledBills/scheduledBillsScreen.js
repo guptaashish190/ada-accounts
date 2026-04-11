@@ -1,7 +1,6 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import {
-  doc,
   getDoc,
   getDocs,
   limit,
@@ -20,7 +19,11 @@ import {
 import { VerticalSpace2 } from '../../common/verticalSpace';
 import globalUtils from '../../services/globalUtils';
 import { useCompany } from '../../contexts/companyContext';
-import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../services/firestoreHelpers';
 
 export default function ScheduledBillsScreen() {
   const [orders, setOrders] = useState([]);
@@ -161,14 +164,22 @@ function OrderScheduledRow({ order }) {
   const [scheduleDate, setScheduleDate] = useState();
   const [accNotes, setAccNotes] = useState('');
   const [loading, setLoading] = useState(false);
+  const { currentCompanyId } = useCompany();
   const getParty = async () => {
-    const party1 = await globalUtils.fetchPartyInfo(orderUpdated.partyId);
+    const party1 = await globalUtils.fetchPartyInfo(
+      orderUpdated.partyId,
+      currentCompanyId,
+    );
     setParty(party1);
   };
 
   const onSave = async () => {
     setLoading(true);
-    const orderDoc = doc(firebaseDB, 'orders', orderUpdated.id);
+    const orderDoc = getCompanyDoc(
+      currentCompanyId,
+      DB_NAMES.ORDERS,
+      orderUpdated.id,
+    );
     await updateDoc(orderDoc, {
       schedulePaymentDate: scheduleDate.getTime(),
       accountsNotes: accNotes.length ? accNotes : undefined,
@@ -231,8 +242,12 @@ function OrderScheduledRow({ order }) {
 
 function ZeroBalanceBillRow({ order }) {
   const [party, setParty] = useState();
+  const { currentCompanyId } = useCompany();
   const getParty = async () => {
-    const party1 = await globalUtils.fetchPartyInfo(order.partyId);
+    const party1 = await globalUtils.fetchPartyInfo(
+      order.partyId,
+      currentCompanyId,
+    );
     setParty(party1);
   };
 

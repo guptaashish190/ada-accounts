@@ -281,17 +281,20 @@ app.on('window-all-closed', () => {
 
 // Handle the "new-window" event
 ipcMain.on('new-window', (event, args) => {
+  const isMrDetail = args && args.type === 'MR_DETAIL';
+  const winWidth = isMrDetail ? 1100 : 800;
+  const winHeight = isMrDetail ? 750 : 600;
+
   if (childWindow) {
-    // If the child window already exists, you can bring it to the front and pass args to it
+    childWindow.setSize(winWidth, winHeight);
     childWindow.show();
     childWindow.webContents.send('child-window-args', args);
   } else {
-    // Create a new child window and pass args to it
     childWindow = new BrowserWindow({
-      width: 800,
-      height: 600,
+      width: winWidth,
+      height: winHeight,
       webPreferences: {
-        devTools: false,
+        devTools: isMrDetail,
         nodeIntegration: true,
         contextIsolation: true,
         preload: app.isPackaged

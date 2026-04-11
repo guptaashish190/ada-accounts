@@ -14,7 +14,10 @@ import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
 import { useDebounce } from '../../../services/globalUtils';
 import { useCompany } from '../../../contexts/companyContext';
-import { getCompanyCollection, DB_NAMES } from '../../../services/firestoreHelpers';
+import {
+  getCompanyCollection,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 
 export default function PartyListScreen({
   onPartySelected,
@@ -33,7 +36,10 @@ export default function PartyListScreen({
     if (!debouncedValue || debouncedValue.length < 3) return;
     const fetchParties = async () => {
       // Define a reference to the company-scoped "parties" collection
-      const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
+      const partiesRef = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.PARTIES,
+      );
 
       // Create a query with a "name" field filter
       const q = query(

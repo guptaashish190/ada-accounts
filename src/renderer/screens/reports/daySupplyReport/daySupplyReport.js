@@ -1,7 +1,5 @@
 /* eslint-disable no-restricted-syntax */
 import {
-  collection,
-  doc,
   getDocs,
   limit,
   orderBy,
@@ -28,10 +26,15 @@ import '../style.css';
 import ReactToPrint, { useReactToPrint } from 'react-to-print';
 import { min } from 'mathjs';
 import { useAuthUser } from '../../../contexts/allUsersContext';
-import { firebaseDB } from '../../../firebaseInit';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
 import defaulterPartyAlgo from './defaulterPartyAlgo';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 
 export default function DaySupplyReportPrint() {
   const [supplyReports, setSupplyReports] = useState([]);
@@ -43,14 +46,18 @@ export default function DaySupplyReportPrint() {
 
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
+  const { currentCompanyId } = useCompany();
 
   const handlePrint = () => {
     window.electron.ipcRenderer.sendMessage('printCurrentPage');
   };
 
   const onSearch = (clear) => {
-    const supplyReportRef = collection(firebaseDB, 'supplyReports');
-    const ordersRef = collection(firebaseDB, 'orders');
+    const supplyReportRef = getCompanyCollection(
+      currentCompanyId,
+      DB_NAMES.SUPPLY_REPORTS,
+    );
+    const ordersRef = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
 
     // Build the query dynamically based on non-empty filter fields
     let dynamicQuery = supplyReportRef;
@@ -121,7 +128,11 @@ export default function DaySupplyReportPrint() {
     }
     try {
       Object.keys(newRemarks).forEach(async (orderId) => {
-        const orderRef = doc(firebaseDB, 'orders', orderId);
+        const orderRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.ORDERS,
+          orderId,
+        );
         await updateDoc(orderRef, {
           accountsNotes: newRemarks[orderId],
         });
@@ -316,11 +327,18 @@ function SupplyReportOrderRow({
   const [upiReceipts, setUpiReceipts] = useState([]);
   const [lastPayment, setLastPayment] = useState();
   const [isDefaulter, setIsDefaulter] = useState(true);
+  const { currentCompanyId } = useCompany();
 
   const fetchOrder = async () => {
     try {
-      const order1 = await globalUtils.fetchOrdersByIds([billId]);
-      const newOrder = await globalUtils.fetchPartyInfoForOrders(order1);
+      const order1 = await globalUtils.fetchOrdersByIds(
+        [billId],
+        currentCompanyId,
+      );
+      const newOrder = await globalUtils.fetchPartyInfoForOrders(
+        order1,
+        currentCompanyId,
+      );
       setOrder(newOrder[0]);
       await fetchPayments(newOrder[0]);
     } catch (e) {
@@ -331,9 +349,15 @@ function SupplyReportOrderRow({
 
   const fetchPayments = async (orderObj) => {
     try {
-      const cashRef = collection(firebaseDB, 'cashReceipts');
-      const upiRef = collection(firebaseDB, 'upi');
-      const chequeRef = collection(firebaseDB, 'cheques');
+      const cashRef = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.CASH_RECEIPTS,
+      );
+      const upiRef = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
+      const chequeRef = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.CHEQUES,
+      );
 
       const PAYMENT_BEFORE_DAYS = 3;
       const PAYMENT_AFTER_DAYS = 7;

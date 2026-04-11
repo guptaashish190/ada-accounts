@@ -2,7 +2,6 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import {
   Timestamp,
-  doc,
   getDoc,
   getDocs,
   limit,
@@ -27,7 +26,7 @@ import {
   Text,
 } from '@fluentui/react-components';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
-import { firebaseAuth, firebaseDB } from '../../firebaseInit';
+import { firebaseAuth } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import { useAuthUser } from '../../contexts/allUsersContext';
@@ -35,7 +34,11 @@ import AdjustAmountDialog from '../receiveSupplyReport/adjustAmountOnBills/adjus
 import constants from '../../constants';
 import { ChequeEntryDialog } from '../cheques/cheques';
 import { useCompany } from '../../contexts/companyContext';
-import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
+import {
+  getCompanyCollection,
+  getCompanyDoc,
+  DB_NAMES,
+} from '../../services/firestoreHelpers';
 
 export default function UpiScreen() {
   const [receivedUpiItems, setReceivedUpiItems] = useState([]);
@@ -83,8 +86,10 @@ export default function UpiScreen() {
       });
 
       reportsData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
-      const dataWithParty2 =
-        await globalUtils.fetchPartyInfoForOrders(reportsData);
+      const dataWithParty2 = await globalUtils.fetchPartyInfoForOrders(
+        reportsData,
+        currentCompanyId,
+      );
       setReceivedUpiItems(dataWithParty2);
       setLoading(false);
     } catch (error) {
@@ -114,8 +119,10 @@ export default function UpiScreen() {
         documents.push({ id: doc1.id, ...doc1.data() });
       });
 
-      const dataWithParty =
-        await globalUtils.fetchPartyInfoForOrders(documents);
+      const dataWithParty = await globalUtils.fetchPartyInfoForOrders(
+        documents,
+        currentCompanyId,
+      );
       setUnReceivedUpiItems(
         dataWithParty.filter((x) => x.type === 'upi' || x.type === undefined),
       );
@@ -201,6 +208,7 @@ export default function UpiScreen() {
 function UpiItemRow({ data, refreshData }) {
   const { allUsers } = useAuthUser();
   const [loading, setLoading] = useState(false);
+  const { currentCompanyId } = useCompany();
   return (
     <tr>
       <td>{globalUtils.getTimeFormat(data.timestamp, true)}</td>
@@ -224,7 +232,11 @@ function UpiItemRow({ data, refreshData }) {
               if (loading) return;
               setLoading(true);
               try {
-                const upiRef = doc(firebaseDB, 'upi', data.id);
+                const upiRef = getCompanyDoc(
+                  currentCompanyId,
+                  DB_NAMES.UPI,
+                  data.id,
+                );
                 updateDoc(upiRef, {
                   receivedBy: firebaseAuth.currentUser.uid,
                   isReceived: true,
@@ -259,12 +271,17 @@ function UPIDialog({ data, createdBy }) {
   const [openDialog, setOpenDialog] = useState(false);
 
   const [loading, setLoading] = useState(false);
+  const { currentCompanyId } = useCompany();
 
   const onDone = async () => {
     if (loading) return;
     setLoading(true);
     try {
-      const partyRef = doc(firebaseDB, 'parties', data.partyId);
+      const partyRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.PARTIES,
+        data.partyId,
+      );
       const partySnapshot = await getDoc(partyRef);
       let newPayments = partySnapshot.data().payments || [];
 
@@ -281,7 +298,7 @@ function UPIDialog({ data, createdBy }) {
         payments: newPayments,
       });
 
-      const upiRef = doc(firebaseDB, 'upi', data.id);
+      const upiRef = getCompanyDoc(currentCompanyId, DB_NAMES.UPI, data.id);
       updateDoc(upiRef, {
         receivedBy: firebaseAuth.currentUser.uid,
         isReceived: true,

@@ -13,13 +13,26 @@ import {
 import { useEffect } from 'react';
 import constants from '../constants';
 import PrintCashReceipt from './printCashReceipt/printCasheReceipt';
+import MrDetailPanel from './mrDetailPanel/mrDetailPanel';
 
 export default function App({ args }) {
+  const isPrint = args.type === constants.printConstants.PRINT_CASHRECEIPT;
+
   useEffect(() => {
-    window.print();
+    if (isPrint) {
+      window.print();
+    }
   }, []);
 
-  if (args.type === constants.printConstants.PRINT_CASHRECEIPT) {
+  if (args.type === constants.windowConstants.MR_DETAIL) {
+    return (
+      <FluentProvider theme={webLightTheme}>
+        <MrDetailPanel data={args.data} />
+      </FluentProvider>
+    );
+  }
+
+  if (isPrint) {
     return (
       <>
         <PrintCashReceipt data={args.printData} />

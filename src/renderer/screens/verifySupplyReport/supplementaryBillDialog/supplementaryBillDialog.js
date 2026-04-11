@@ -1,15 +1,7 @@
 /* eslint-disable no-restricted-syntax */
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  where,
-} from 'firebase/firestore';
+import { getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-// import { throttle, debounce } from 'lodash';
 
 import {
   Button,
@@ -28,12 +20,16 @@ import {
   Spinner,
   Text,
 } from '@fluentui/react-components';
-import { firebaseDB } from '../../../firebaseInit';
 import './style.css';
 import Loader from '../../../common/loader';
 import globalUtils, { useDebounce } from '../../../services/globalUtils';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
 import { useAuthUser } from '../../../contexts/allUsersContext';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 
 export default function SupplementaryBillDialog({
   addSupplementaryBill,
@@ -54,9 +50,14 @@ export default function SupplementaryBillDialog({
 
   const [filteredOrders, setFilteredOrders] = useState([]);
 
+  const { currentCompanyId } = useCompany();
+
   const fetchOrders = async () => {
     try {
-      const ordersCollection = collection(firebaseDB, 'orders');
+      const ordersCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+      );
       const q = query(
         ordersCollection,
         orderBy('creationTime', 'desc'),
@@ -76,7 +77,7 @@ export default function SupplementaryBillDialog({
   };
 
   const onSearchBill = () => {
-    const ordersRef = collection(firebaseDB, 'orders');
+    const ordersRef = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
 
     // Build the query dynamically based on non-empty filter fields
     let dynamicQuery = ordersRef;
@@ -120,7 +121,10 @@ export default function SupplementaryBillDialog({
     if (!debouncedValue || debouncedValue.length < 3) return;
     const fetchParties = async () => {
       // Define a reference to the "parties" collection
-      const partiesRef = collection(firebaseDB, 'parties');
+      const partiesRef = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.PARTIES,
+      );
 
       // Create a query with a "name" field filter
       const q = query(
@@ -223,9 +227,10 @@ function BillRow({ data, index, isAttached, addSupplementaryBill }) {
   const navigate = useNavigate();
   const [party, setParty] = useState();
   const [withUser, setWithUser] = useState();
+  const { currentCompanyId } = useCompany();
 
   const getParty = async () => {
-    const party1 = await globalUtils.fetchPartyInfo(data.partyId);
+    const party1 = await globalUtils.fetchPartyInfo(data.partyId, currentCompanyId);
     setParty(party1);
   };
   const getWithUser = async () => {

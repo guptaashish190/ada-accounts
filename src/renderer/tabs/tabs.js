@@ -2,6 +2,12 @@ import constants from '../constants';
 
 export default [
   {
+    name: 'Dashboard',
+    route: '/managerDashboard',
+    key: 'tab-manager-dashboard',
+    allowJob: [],
+  },
+  {
     name: 'Supply Report',
     key: 'tab-supply-report',
     submenu: [
@@ -142,6 +148,11 @@ export default [
     name: 'Settings',
     key: 'tab-settings',
     submenu: [
+      {
+        name: 'Products',
+        route: '/products',
+        key: 'tab-settings-products',
+      },
       {
         name: 'Parties',
         route: '/partyListSettings',

@@ -194,6 +194,13 @@
   color: #0078d4 !important;
 }
 
+.submenu-tab.active {
+  background: rgba(0, 120, 212, 0.12) !important;
+  color: #0078d4 !important;
+  border-color: rgba(0, 120, 212, 0.3) !important;
+  font-weight: 500 !important;
+}
+
 /* Content Section */
 .tab-content {
   flex: 1;

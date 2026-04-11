@@ -80,8 +80,10 @@ export default function BillSelector({
         ...sn.data(),
         id: sn.id,
       }));
-      const allOrders =
-        await globalUtils.fetchPartyInfoForOrders(snapshotDocData);
+      const allOrders = await globalUtils.fetchPartyInfoForOrders(
+        snapshotDocData,
+        currentCompanyId,
+      );
       allOrders.sort((a, b) =>
         a.orderStatus === constants.firebase.billFlowTypes.MARG_DATA ? 1 : -1,
       );

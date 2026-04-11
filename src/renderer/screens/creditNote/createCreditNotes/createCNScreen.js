@@ -15,20 +15,19 @@ import {
   useToastController,
 } from '@fluentui/react-components';
 import { Delete20Regular } from '@fluentui/react-icons';
-import {
-  Timestamp,
-  addDoc,
-  collection,
-  doc,
-  updateDoc,
-} from 'firebase/firestore';
+import { Timestamp, addDoc } from 'firebase/firestore';
 import SupplementaryBillDialog from '../../verifySupplyReport/supplementaryBillDialog/supplementaryBillDialog';
 import globalUtils from '../../../services/globalUtils';
 import './style.css';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
-import { firebaseAuth, firebaseDB } from '../../../firebaseInit';
+import { firebaseAuth } from '../../../firebaseInit';
 import { showToast } from '../../../common/toaster';
 import constants from '../../../constants';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 
 export default function CreateCreditNoteScreen() {
   const [bill, setBill] = useState();
@@ -38,6 +37,7 @@ export default function CreateCreditNoteScreen() {
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
+  const { currentCompanyId } = useCompany();
 
   const onCreate = async () => {
     if (!amount || !amount.length) {
@@ -47,9 +47,13 @@ export default function CreateCreditNoteScreen() {
     try {
       const newReciptNumber = await globalUtils.getNewReceiptNumber(
         constants.newReceiptCounters.CREDITNOTE,
+        currentCompanyId,
       );
       setCreatingLoading(true);
-      const cnCollRef = collection(firebaseDB, 'creditNotes');
+      const cnCollRef = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.CREDIT_NOTES,
+      );
       addDoc(cnCollRef, {
         timestamp: Timestamp.now().toMillis(),
         amount,
@@ -59,10 +63,9 @@ export default function CreateCreditNoteScreen() {
         receiptNumber: newReciptNumber,
       });
 
-      const orderRef = doc(firebaseDB, 'orders', bill.id);
-
       await globalUtils.incrementReceiptCounter(
         constants.newReceiptCounters.CREDITNOTE,
+        currentCompanyId,
       );
 
       showToast(
@@ -127,9 +130,10 @@ export default function CreateCreditNoteScreen() {
 
 function BillRow({ bill, onRemove, setAmount, amount, remark, setRemark }) {
   const [party, setParty] = useState();
+  const { currentCompanyId } = useCompany();
 
   const getParty = async () => {
-    const party1 = await globalUtils.fetchPartyInfo(bill.partyId);
+    const party1 = await globalUtils.fetchPartyInfo(bill.partyId, currentCompanyId);
     setParty(party1);
   };
 

@@ -58,6 +58,8 @@ import CompanySelectionScreen from './screens/companySelection/companySelection'
 import CompaniesManagementScreen from './screens/settings/companies/companiesManagement';
 import UsersManagementScreen from './screens/settings/users/usersManagement';
 import CashierDashboard from './screens/cashierDashboard/cashierDashboard';
+import ProductsListScreen from './screens/products/productsList';
+import ManagerDashboard from './screens/managerDashboard/managerDashboard';
 
 const myNewTheme = {
   10: '#010304',
@@ -169,6 +171,8 @@ function AppContent() {
           <Route path="/collectionReport" element={<CashReport />} />
           <Route path="/viewVoucherScreen" element={<ViewVoucherScreen />} />
           <Route path="/cashierDashboard" element={<CashierDashboard />} />
+          <Route path="/products" element={<ProductsListScreen />} />
+          <Route path="/managerDashboard" element={<ManagerDashboard />} />
         </Routes>
       </TabNavigator>
     </Router>

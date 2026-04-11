@@ -27,17 +27,14 @@ import {
   Dropdown,
   Option,
 } from '@fluentui/react-components';
-import {
-  Timestamp,
-  addDoc,
-  collection,
-  getDoc,
-  getDocs,
-  runTransaction,
-  serverTimestamp,
-} from 'firebase/firestore';
+import { Timestamp, addDoc, runTransaction } from 'firebase/firestore';
 import { useLocation, useNavigate } from 'react-router-dom';
-import firebaseApp, { firebaseAuth, firebaseDB } from '../../../firebaseInit';
+import { firebaseAuth, firebaseDB } from '../../../firebaseInit';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import './style.css';
@@ -64,6 +61,7 @@ export default function CreatePaymentReceiptDialog({
   const [currentReceiptNumber, setCurrentReceiptNumber] = useState();
   const [paymentFrom, setPaymentFrom] = useState();
   const { allUsers } = useAuthUser();
+  const { currentCompanyId } = useCompany();
 
   const getTotal = () => {
     return (
@@ -93,12 +91,13 @@ export default function CreatePaymentReceiptDialog({
       });
 
       await runTransaction(firebaseDB, async (transaction) => {
-        const cashReceiptsCollectionRef = collection(
-          firebaseDB,
-          '/cashReceipts',
+        const cashReceiptsCollectionRef = getCompanyCollection(
+          currentCompanyId,
+          DB_NAMES.CASH_RECEIPTS,
         );
         const newReceiptNumber = await globalUtils.getNewReceiptNumber(
           constants.newReceiptCounters.CASHRECEIPTS,
+          currentCompanyId,
         );
 
         // Add a new document with a generated ID to the "cashReceipts" collection
@@ -117,6 +116,7 @@ export default function CreatePaymentReceiptDialog({
         });
         globalUtils.incrementReceiptCounter(
           constants.newReceiptCounters.CASHRECEIPTS,
+          currentCompanyId,
         );
       });
 
@@ -135,6 +135,7 @@ export default function CreatePaymentReceiptDialog({
     setLoading(true);
     const prItemsFetched = await globalUtils.fetchPartyInfoForOrders(
       state?.prItems,
+      currentCompanyId,
     );
     setPrItems(prItemsFetched || []);
     setLoading(false);
@@ -144,6 +145,7 @@ export default function CreatePaymentReceiptDialog({
     try {
       const newRN = await globalUtils.getNewReceiptNumber(
         constants.newReceiptCounters.CASHRECEIPTS,
+        currentCompanyId,
       );
       setCurrentReceiptNumber(newRN);
     } catch (e) {

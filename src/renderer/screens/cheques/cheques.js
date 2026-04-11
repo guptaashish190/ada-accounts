@@ -64,7 +64,10 @@ export default function ChequesScreen() {
         chequesData.push(doc.data());
       });
 
-      const newData = await globalUtils.fetchPartyInfoForOrders(chequesData);
+      const newData = await globalUtils.fetchPartyInfoForOrders(
+        chequesData,
+        currentCompanyId,
+      );
       setChequeList(newData);
     } catch (error) {
       console.error('Error fetching documents: ', error);
@@ -216,7 +219,10 @@ function FilterSection({ setFilteredCheques, clearFilters, currentCompanyId }) {
         chequesData.push(doc.data());
       });
 
-      const newData = await globalUtils.fetchPartyInfoForOrders(chequesData);
+      const newData = await globalUtils.fetchPartyInfoForOrders(
+        chequesData,
+        currentCompanyId,
+      );
       setFilteredCheques(newData);
     } catch (e) {
       // eslint-disable-next-line no-alert
@@ -330,6 +336,7 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
   const [party, setParty] = useState(chequeData?.party);
   const [amount, setAmount] = useState();
   const [notes, setNotes] = useState('');
+  const { currentCompanyId } = useCompany();
 
   const handleAddCheque = async () => {
     if (loading) return;
@@ -339,11 +346,15 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
       return;
     }
     setLoading(true);
-    const chequeCollection = collection(firebaseDB, 'cheques');
+    const chequeCollection = getCompanyCollection(
+      currentCompanyId,
+      DB_NAMES.CHEQUES,
+    );
 
     try {
       const newEntryNumber = await globalUtils.getNewReceiptNumber(
         constants.newReceiptCounters.CHEQUES,
+        currentCompanyId,
       );
       addDoc(chequeCollection, {
         chequeNumber,
@@ -354,7 +365,10 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
         timestamp: Timestamp.now().toMillis(),
         entryNumber: newEntryNumber,
       });
-      globalUtils.incrementReceiptCounter(constants.newReceiptCounters.CHEQUES);
+      globalUtils.incrementReceiptCounter(
+        constants.newReceiptCounters.CHEQUES,
+        currentCompanyId,
+      );
       onClose();
       setShowChequeEntryDialog(false);
       setLoading(false);

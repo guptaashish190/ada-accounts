@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import './tabNavigator.css';
 import {
   Button,
@@ -26,10 +26,9 @@ import CompanySwitcher from '../common/companySwitcher';
 export default function TabNavigator({ children }) {
   const navigate = useNavigate();
 
-  const [currentMenu, setCurrentMenu] = useState(0);
   const location = useLocation();
   const { user } = useCurrentUser();
-  const { pathname, search, hash } = location;
+  const { pathname } = location;
 
   const filterJobs = (toFilter) => {
     if (toFilter) {
@@ -42,6 +41,20 @@ export default function TabNavigator({ children }) {
 
   const filteredTabs =
     config.enableAllTabs || user.isManager ? tabs : filterJobs(tabs);
+
+  const currentMenu = (() => {
+    for (let i = 0; i < filteredTabs.length; i++) {
+      const tab = filteredTabs[i];
+      if (tab.route && tab.route === pathname) return i;
+      if (tab.submenu) {
+        for (const sub of tab.submenu) {
+          if (sub.route === pathname) return i;
+        }
+      }
+    }
+    return 0;
+  })();
+
   const filteredSubmenu =
     config.enableAllTabs || user.isManager
       ? filteredTabs[currentMenu]?.submenu
@@ -76,7 +89,6 @@ export default function TabNavigator({ children }) {
                   value={tab.name}
                   className={`main-tab ${currentMenu === i ? 'active' : ''}`}
                   onClick={() => {
-                    setCurrentMenu(i);
                     navigate(tab.route || tab.submenu[0].route);
                   }}
                 >
@@ -122,7 +134,7 @@ export default function TabNavigator({ children }) {
                 <Tab
                   key={user.uid + sb.key}
                   value={sb.name}
-                  className="submenu-tab"
+                  className={`submenu-tab ${sb.route === pathname ? 'active' : ''}`}
                   onClick={() => navigate(sb.route)}
                 >
                   {sb.name}

@@ -1,9 +1,10 @@
 import { Dropdown, Option, Spinner } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { getDocs, query, where } from 'firebase/firestore';
 import { useAuthUser } from '../../contexts/allUsersContext';
-import { firebaseDB } from '../../firebaseInit';
 import constants from '../../constants';
+import { useCompany } from '../../contexts/companyContext';
+import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 import {
   SupplyReportRow,
   SupplyRowListHeader,
@@ -17,11 +18,15 @@ export default function ReceivePendingUser() {
   const [loading, setLoading] = useState(false);
   const [pendingSupplyReport, setPendingSupplyReport] = useState([]);
   const [pendingBundles, setPendingBundles] = useState([]);
+  const { currentCompanyId } = useCompany();
 
   const fetchbundles = async (date) => {
     setLoading(true);
     try {
-      const bundlesCollection = collection(firebaseDB, 'billBundles');
+      const bundlesCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.BILL_BUNDLES,
+      );
 
       const q = query(
         bundlesCollection,
@@ -47,7 +52,10 @@ export default function ReceivePendingUser() {
   const fetchSupplyReport = async (date) => {
     setLoading(true);
     try {
-      const supplyReportColl = collection(firebaseDB, 'supplyReports');
+      const supplyReportColl = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.SUPPLY_REPORTS,
+      );
       // Create a query with a "name" field filter
       const q = query(
         supplyReportColl,

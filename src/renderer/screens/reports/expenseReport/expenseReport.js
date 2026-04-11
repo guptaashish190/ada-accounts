@@ -1,12 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  where,
-} from 'firebase/firestore';
+import { getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
@@ -24,9 +17,13 @@ import { DatePicker } from '@fluentui/react-datepicker-compat';
 import '../style.css';
 import ReactToPrint, { useReactToPrint } from 'react-to-print';
 import { useAuthUser } from '../../../contexts/allUsersContext';
-import { firebaseDB } from '../../../firebaseInit';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 
 export default function ExpenseReport() {
   const [expenseVouchers, setExpenseVouchers] = useState({});
@@ -35,6 +32,7 @@ export default function ExpenseReport() {
 
   const [loading, setLoading] = useState(false);
   const { allUsers } = useAuthUser();
+  const { currentCompanyId } = useCompany();
 
   const printingRef = useRef();
   // const handlePrint = useReactToPrint({
@@ -47,7 +45,10 @@ export default function ExpenseReport() {
     window.electron.ipcRenderer.sendMessage('printCurrentPage');
   };
   const onSearch = (clear) => {
-    const vouchersRef = collection(firebaseDB, 'vouchers');
+    const vouchersRef = getCompanyCollection(
+      currentCompanyId,
+      DB_NAMES.VOUCHERS,
+    );
 
     // Build the query dynamically based on non-empty filter fields
     let dynamicQuery = vouchersRef;

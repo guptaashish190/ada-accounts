@@ -32,26 +32,19 @@ import {
   Textarea,
   Image,
 } from '@fluentui/react-components';
-import {
-  Timestamp,
-  addDoc,
-  collection,
-  getDoc,
-  getDocs,
-  runTransaction,
-  serverTimestamp,
-} from 'firebase/firestore';
+import { Timestamp, addDoc } from 'firebase/firestore';
 import { Delete12Filled } from '@fluentui/react-icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { File } from 'buffer';
 import { confirmAlert } from 'react-confirm-alert';
-import firebaseApp, {
-  firebaseAuth,
-  firebaseDB,
-  firebaseStorage,
-} from '../../../firebaseInit';
+import { firebaseAuth, firebaseStorage } from '../../../firebaseInit';
+import { useCompany } from '../../../contexts/companyContext';
+import {
+  getCompanyCollection,
+  DB_NAMES,
+} from '../../../services/firestoreHelpers';
 import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import './style.css';
@@ -78,6 +71,7 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
   const [currentReceiptNumber, setCurrentReceiptNumber] = useState();
 
   const { allUsers } = useAuthUser();
+  const { currentCompanyId } = useCompany();
 
   const uploadImages = async () => {
     try {
@@ -128,10 +122,14 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
 
     setLoading(true);
     const images = await uploadImages();
-    const voucherRef = collection(firebaseDB, 'vouchers');
+    const voucherRef = getCompanyCollection(
+      currentCompanyId,
+      DB_NAMES.VOUCHERS,
+    );
 
     const newEntryNumber = await globalUtils.getNewReceiptNumber(
       constants.newReceiptCounters.VOUCHERS,
+      currentCompanyId,
     );
     addDoc(voucherRef, {
       type,
@@ -143,7 +141,10 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
       requesterId: firebaseAuth.currentUser.uid,
       timestamp: Timestamp.now().toMillis(),
     });
-    globalUtils.incrementReceiptCounter(constants.newReceiptCounters.VOUCHERS);
+    globalUtils.incrementReceiptCounter(
+      constants.newReceiptCounters.VOUCHERS,
+      currentCompanyId,
+    );
     setLoading(false);
     setOpen(false);
     setSelectedFiles([]);
