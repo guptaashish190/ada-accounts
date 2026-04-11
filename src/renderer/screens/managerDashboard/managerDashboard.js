@@ -33,6 +33,7 @@ import {
   updateDoc,
   deleteDoc,
 } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { useCompany } from '../../contexts/companyContext';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import {
@@ -47,6 +48,7 @@ import LocationDialog from './locationDialog';
 import './style.css';
 
 const MR_JOB_ID = constants.firebaseIds.JOBS.MR;
+const SUPPLY_JOB_ID = constants.firebaseIds.JOBS.SUPPLY;
 
 const formatTime = (ms) => {
   if (!ms) return '—';
@@ -368,6 +370,7 @@ function EditOrderDialog({
 function ManagerDashboard() {
   const { currentCompanyId } = useCompany();
   const { allUsers } = useAuthUser();
+  const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(
@@ -403,11 +406,22 @@ function ManagerDashboard() {
   const [registerDocs, setRegisterDocs] = useState(null);
   const [ordersDocs, setOrdersDocs] = useState(null);
   const [attendanceDocs, setAttendanceDocs] = useState(null);
+  const [supplyReportsDocs, setSupplyReportsDocs] = useState(null);
+
+  const [supplyRows, setSupplyRows] = useState([]);
 
   const mrUsers = useMemo(
     () =>
       (allUsers || []).filter(
         (u) => u.jobs && u.jobs.includes(MR_JOB_ID) && !u.isDeactivated,
+      ),
+    [allUsers],
+  );
+
+  const supplyUsers = useMemo(
+    () =>
+      (allUsers || []).filter(
+        (u) => u.jobs && u.jobs.includes(SUPPLY_JOB_ID) && !u.isDeactivated,
       ),
     [allUsers],
   );
@@ -472,6 +486,7 @@ function ManagerDashboard() {
     setRegisterDocs(null);
     setOrdersDocs(null);
     setAttendanceDocs(null);
+    setSupplyReportsDocs(null);
 
     const unsubRoutes = onSnapshot(
       getCompanyCollection(currentCompanyId, DB_NAMES.MR_ROUTES),
@@ -506,11 +521,21 @@ function ManagerDashboard() {
       (snap) => setAttendanceDocs(snap.docs),
     );
 
+    const unsubSupplyReports = onSnapshot(
+      query(
+        getCompanyCollection(currentCompanyId, DB_NAMES.SUPPLY_REPORTS),
+        where('timestamp', '>=', startMs),
+        where('timestamp', '<', endMs),
+      ),
+      (snap) => setSupplyReportsDocs(snap.docs),
+    );
+
     return () => {
       unsubRoutes();
       unsubRegister();
       unsubOrders();
       unsubAttendance();
+      unsubSupplyReports();
     };
   }, [currentCompanyId, selectedDate]);
 
@@ -521,6 +546,7 @@ function ManagerDashboard() {
       !registerDocs ||
       !ordersDocs ||
       !attendanceDocs ||
+      !supplyReportsDocs ||
       !allUsers
     ) {
       setLoading(true);
@@ -646,14 +672,69 @@ function ManagerDashboard() {
     const pIds = oRows.map((o) => o.partyId).filter(Boolean);
     if (pIds.length > 0) fetchPartyNames(pIds);
 
+    // Build supply rows
+    const srBySupplyman = {};
+    supplyReportsDocs.forEach((d) => {
+      const data = d.data();
+      const uid = data.supplymanId || '';
+      if (!srBySupplyman[uid]) srBySupplyman[uid] = [];
+      srBySupplyman[uid].push({ id: d.id, ...data });
+    });
+
+    const supplyUidSet = new Set(supplyUsers.map((su) => su.uid));
+    const allSupplyUids = new Set([
+      ...supplyUidSet,
+      ...Object.keys(srBySupplyman).filter(Boolean),
+    ]);
+
+    const buildSupplyRow = (uid) => {
+      const user = (allUsers || []).find((u) => u.uid === uid);
+      const name = user ? user.username || user.email || uid : uid;
+      const isOnline = onlineMrUids.has(uid);
+      const reports = srBySupplyman[uid] || [];
+      const totalSRs = reports.length;
+      const activeSR = reports.find((r) => r.status === 'Dispatched') || null;
+      const completedSRs = reports.filter(
+        (r) => r.status === 'Completed' || r.status === 'Delivered',
+      ).length;
+      const dispatchTime = activeSR ? activeSR.dispatchTimestamp : null;
+      const activeBillCount = activeSR ? (activeSR.orders || []).length : 0;
+
+      return {
+        uid,
+        name,
+        isOnline,
+        activeSR,
+        activeSRLabel: activeSR
+          ? `${activeSR.receiptNumber} (${activeBillCount} bills)`
+          : '—',
+        totalSRs,
+        completedSRs,
+        dispatchTime,
+      };
+    };
+
+    const sRows = [...allSupplyUids].map(buildSupplyRow);
+
+    sRows.sort((a, b) => {
+      const aRank = a.isOnline ? 0 : 1;
+      const bRank = b.isOnline ? 0 : 1;
+      if (aRank !== bRank) return aRank - bRank;
+      return a.name.localeCompare(b.name);
+    });
+
+    setSupplyRows(sRows);
+
     setLoading(false);
   }, [
     routesDocs,
     registerDocs,
     ordersDocs,
     attendanceDocs,
+    supplyReportsDocs,
     allUsers,
     mrUsers,
+    supplyUsers,
     selectedDate,
   ]);
 
@@ -722,6 +803,22 @@ function ManagerDashboard() {
     e.stopPropagation();
     setEditOrder(order);
     setEditDialogOpen(true);
+  };
+
+  const handleShowSupplyLocation = (e, row) => {
+    e.stopPropagation();
+    if (!row.uid || !row.isOnline) return;
+    setLocationUserId(row.uid);
+    setLocationUserName(row.name);
+    setLocationDialogOpen(true);
+  };
+
+  const handleActiveSRClick = (e, row) => {
+    e.stopPropagation();
+    if (!row.activeSR) return;
+    navigate('/viewSupplyReport', {
+      state: { prefillSupplyReport: row.activeSR },
+    });
   };
 
   if (loading) {
@@ -841,6 +938,71 @@ function ManagerDashboard() {
                       size="small"
                       disabled={!row.mrUid || !row.isOnline}
                       onClick={(e) => handleShowLocation(e, row)}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Supply Performance Table */}
+      <div className="mr-table-section">
+        <h2>Supply Performance</h2>
+        {supplyRows.length === 0 ? (
+          <div className="empty-state">
+            <Text>No supplymen found</Text>
+          </div>
+        ) : (
+          <table className="mr-performance-table">
+            <thead>
+              <tr>
+                <th>Supplyman</th>
+                <th>Status</th>
+                <th>Active SR</th>
+                <th>Total SRs</th>
+                <th>Completed</th>
+                <th>Dispatch Time</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody>
+              {supplyRows.map((row) => (
+                <tr key={row.uid} className={row.isOnline ? 'row-online' : ''}>
+                  <td>{row.name}</td>
+                  <td>
+                    <div className="mr-name-cell">
+                      <div
+                        className={row.isOnline ? 'online-dot' : 'offline-dot'}
+                      />
+                      {row.isOnline ? 'Online' : 'Offline'}
+                    </div>
+                  </td>
+                  <td>
+                    {row.activeSR ? (
+                      <Button
+                        appearance="subtle"
+                        size="small"
+                        className="active-sr-link"
+                        onClick={(e) => handleActiveSRClick(e, row)}
+                      >
+                        {row.activeSRLabel}
+                      </Button>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td>{row.totalSRs}</td>
+                  <td>{row.completedSRs}</td>
+                  <td>{formatTime(row.dispatchTime)}</td>
+                  <td>
+                    <Button
+                      appearance="subtle"
+                      icon={<Location24Regular />}
+                      size="small"
+                      disabled={!row.isOnline}
+                      onClick={(e) => handleShowSupplyLocation(e, row)}
                     />
                   </td>
                 </tr>

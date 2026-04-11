@@ -338,3 +338,12 @@
   background-color: #dff6dd;
   font-weight: 600;
 }
+
+.active-sr-link {
+  color: #0078d4;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 2px 6px;
+  min-width: auto;
+}
