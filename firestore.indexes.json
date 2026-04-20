@@ -149,6 +149,20 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "schedulePaymentDate",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "balance",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "orders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "partyId",
           "order": "ASCENDING"
         },

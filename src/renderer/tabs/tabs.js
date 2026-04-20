@@ -115,11 +115,6 @@ export default [
         route: '/pendingBillsToday',
         key: 'tab-pending-bills',
       },
-      {
-        name: 'Scheduled',
-        route: '/scheduled',
-        key: 'tab-scheduled',
-      },
     ],
   },
   {

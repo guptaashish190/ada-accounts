@@ -432,7 +432,8 @@ export default function VerifySupplyReport() {
         // Credit days tracking (Story 1.1/1.2)
         creditDays: partyCreditDays,
         dueDate,
-        paymentStatus: 'NOT_DUE', // Initial status
+        schedulePaymentDate: dueDate,
+        paymentStatus: 'NOT_DUE',
         flow: [
           ...bill1.flow,
           {

@@ -66,18 +66,14 @@ function LocationDialog({
   const partyNamesCacheRef = useRef({});
 
   const fetchPartyNames = async (partyIds) => {
-    const missing = partyIds.filter((id) => id && !partyNamesCacheRef.current[id]);
-    if (missing.length === 0) return;
-    const chunks = [];
-    for (let i = 0; i < missing.length; i += 10) {
-      chunks.push(missing.slice(i, i + 10));
-    }
+    const validIds = partyIds.filter((id) => id);
+    if (validIds.length === 0) return;
     await Promise.all(
-      chunks.map(async (chunk) => {
+      validIds.map(async (id) => {
         const snap = await getDocs(
           query(
             getCompanyCollection(companyId, DB_NAMES.PARTIES),
-            where(documentId(), 'in', chunk),
+            where(documentId(), 'in', [id]),
           ),
         );
         snap.docs.forEach((d) => {
