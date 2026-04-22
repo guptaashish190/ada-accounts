@@ -16,7 +16,6 @@ import {
   Label,
 } from '@fluentui/react-components';
 import {
-  Location24Regular,
   Edit16Regular,
   Delete16Regular,
   Dismiss16Regular,
@@ -44,7 +43,6 @@ import {
 import { firebaseDB } from '../../firebaseInit';
 import globalUtils, { useDebounce } from '../../services/globalUtils';
 import constants from '../../constants';
-import LocationDialog from './locationDialog';
 import './style.css';
 
 const MR_JOB_ID = constants.firebaseIds.JOBS.MR;
@@ -57,6 +55,31 @@ const formatTime = (ms) => {
     minute: '2-digit',
     hour12: true,
   });
+};
+
+const haversineKm = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const computeTotalKm = (points) => {
+  if (!points || points.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    const p1 = points[i - 1];
+    const p2 = points[i];
+    if (!p1 || !p2 || !p1.lat || !p1.lng || !p2.lat || !p2.lng) continue;
+    total += haversineKm(p1.lat, p1.lng, p2.lat, p2.lng);
+  }
+  return total;
 };
 
 function getSelectedMrLabel(mrUsers, uid) {
@@ -385,10 +408,6 @@ function ManagerDashboard() {
     pipelineCount: 0,
   });
 
-  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
-  const [locationUserId, setLocationUserId] = useState(null);
-  const [locationUserName, setLocationUserName] = useState('');
-
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [assignRouteId, setAssignRouteId] = useState(null);
   const [assignRouteName, setAssignRouteName] = useState('');
@@ -407,6 +426,7 @@ function ManagerDashboard() {
   const [ordersDocs, setOrdersDocs] = useState(null);
   const [attendanceDocs, setAttendanceDocs] = useState(null);
   const [supplyReportsDocs, setSupplyReportsDocs] = useState(null);
+  const [locationDocs, setLocationDocs] = useState(null);
 
   const [supplyRows, setSupplyRows] = useState([]);
 
@@ -487,6 +507,7 @@ function ManagerDashboard() {
     setOrdersDocs(null);
     setAttendanceDocs(null);
     setSupplyReportsDocs(null);
+    setLocationDocs(null);
 
     const unsubRoutes = onSnapshot(
       getCompanyCollection(currentCompanyId, DB_NAMES.MR_ROUTES),
@@ -530,12 +551,21 @@ function ManagerDashboard() {
       (snap) => setSupplyReportsDocs(snap.docs),
     );
 
+    const unsubLocation = onSnapshot(
+      query(
+        getCompanyCollection(currentCompanyId, DB_NAMES.LOCATION_TRACKING),
+        where('date', '==', selectedDate),
+      ),
+      (snap) => setLocationDocs(snap.docs),
+    );
+
     return () => {
       unsubRoutes();
       unsubRegister();
       unsubOrders();
       unsubAttendance();
       unsubSupplyReports();
+      unsubLocation();
     };
   }, [currentCompanyId, selectedDate]);
 
@@ -547,6 +577,7 @@ function ManagerDashboard() {
       !ordersDocs ||
       !attendanceDocs ||
       !supplyReportsDocs ||
+      !locationDocs ||
       !allUsers
     ) {
       setLoading(true);
@@ -593,6 +624,15 @@ function ManagerDashboard() {
       if (data.employeeId) onlineMrUids.add(data.employeeId);
     });
 
+    // Distance travelled per user from location tracking
+    const distanceByUser = {};
+    locationDocs.forEach((d) => {
+      const data = d.data();
+      const uid = data.userId || '';
+      if (!uid) return;
+      distanceByUser[uid] = computeTotalKm(data.points || []);
+    });
+
     // Build a map: routeId -> MR user (one MR per route)
     const routeToMr = {};
     mrUsers.forEach((mr) => {
@@ -628,6 +668,8 @@ function ManagerDashboard() {
         totalSales += salesTotal;
         totalVisits += visitsDone;
 
+        const distanceKm = mrUid ? distanceByUser[mrUid] || 0 : 0;
+
         return {
           routeId,
           routeName: route.name,
@@ -638,6 +680,7 @@ function ManagerDashboard() {
           salesTotal,
           visitsDone,
           plannedParties: route.todayParties.length,
+          distanceKm,
         };
       });
 
@@ -711,6 +754,7 @@ function ManagerDashboard() {
         totalSRs,
         completedSRs,
         dispatchTime,
+        distanceKm: distanceByUser[uid] || 0,
       };
     };
 
@@ -732,6 +776,7 @@ function ManagerDashboard() {
     ordersDocs,
     attendanceDocs,
     supplyReportsDocs,
+    locationDocs,
     allUsers,
     mrUsers,
     supplyUsers,
@@ -750,14 +795,6 @@ function ManagerDashboard() {
         selectedDate,
       },
     });
-  };
-
-  const handleShowLocation = (e, row) => {
-    e.stopPropagation();
-    if (!row.mrUid || !row.isOnline) return;
-    setLocationUserId(row.mrUid);
-    setLocationUserName(row.mrName);
-    setLocationDialogOpen(true);
   };
 
   const handleOpenAssignDialog = (e, row) => {
@@ -803,14 +840,6 @@ function ManagerDashboard() {
     e.stopPropagation();
     setEditOrder(order);
     setEditDialogOpen(true);
-  };
-
-  const handleShowSupplyLocation = (e, row) => {
-    e.stopPropagation();
-    if (!row.uid || !row.isOnline) return;
-    setLocationUserId(row.uid);
-    setLocationUserName(row.name);
-    setLocationDialogOpen(true);
   };
 
   const handleActiveSRClick = (e, row) => {
@@ -887,7 +916,7 @@ function ManagerDashboard() {
                 <th>Orders</th>
                 <th>Sales</th>
                 <th>Visits / Planned</th>
-                <th>Location</th>
+                <th>Distance</th>
               </tr>
             </thead>
             <tbody>
@@ -932,13 +961,9 @@ function ManagerDashboard() {
                     {row.visitsDone} / {row.plannedParties}
                   </td>
                   <td>
-                    <Button
-                      appearance="subtle"
-                      icon={<Location24Regular />}
-                      size="small"
-                      disabled={!row.mrUid || !row.isOnline}
-                      onClick={(e) => handleShowLocation(e, row)}
-                    />
+                    {row.mrUid && row.distanceKm > 0
+                      ? `${row.distanceKm.toFixed(1)} km`
+                      : '—'}
                   </td>
                 </tr>
               ))}
@@ -964,7 +989,7 @@ function ManagerDashboard() {
                 <th>Total SRs</th>
                 <th>Completed</th>
                 <th>Dispatch Time</th>
-                <th>Location</th>
+                <th>Distance</th>
               </tr>
             </thead>
             <tbody>
@@ -997,13 +1022,9 @@ function ManagerDashboard() {
                   <td>{row.completedSRs}</td>
                   <td>{formatTime(row.dispatchTime)}</td>
                   <td>
-                    <Button
-                      appearance="subtle"
-                      icon={<Location24Regular />}
-                      size="small"
-                      disabled={!row.isOnline}
-                      onClick={(e) => handleShowSupplyLocation(e, row)}
-                    />
+                    {row.distanceKm > 0
+                      ? `${row.distanceKm.toFixed(1)} km`
+                      : '—'}
                   </td>
                 </tr>
               ))}
@@ -1062,18 +1083,6 @@ function ManagerDashboard() {
           </table>
         )}
       </div>
-
-      {/* Location Dialog */}
-      {locationDialogOpen && (
-        <LocationDialog
-          open={locationDialogOpen}
-          onClose={() => setLocationDialogOpen(false)}
-          userId={locationUserId}
-          userName={locationUserName}
-          companyId={currentCompanyId}
-          selectedDate={selectedDate}
-        />
-      )}
 
       {/* Assign MR Dialog */}
       <AssignMrDialog
