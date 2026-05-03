@@ -202,7 +202,7 @@ export default function DaySupplyReportPrint() {
               {unSuppliedOrders.length === 0 ? 'No ' : ''}Unsupplied Bills
             </h2>
             {unSuppliedOrders.length !== 0 ? (
-              <table>
+              <table className="app-table">
                 <thead className="supply-report-row">
                   <th>
                     <Text>Party Name</Text>
@@ -266,7 +266,7 @@ function SupplyReportRow({
   const { allUsers } = useAuthUser();
 
   return (
-    <table>
+    <table className="app-table">
       <thead className="supply-report-row">
         <th style={{ width: '25vw' }}>
           <Text className="sr-id">

@@ -178,31 +178,7 @@
   overflow-x: auto;
 }
 
-.bills-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.bills-table th {
-  text-align: left;
-  padding: 8px 12px;
-  background-color: #323130;
-  color: #ffffff;
-  font-weight: 600;
-  border-bottom: none;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.bills-table td {
-  padding: 6px 12px;
-  border-bottom: 1px solid #edebe9;
-}
-
-.bills-table tbody tr:hover {
-  background-color: #faf9f8;
-}
+/* Bills table uses .app-table; keep only cashier-specific modifiers below. */
 
 .reschedule-cell {
   display: flex;

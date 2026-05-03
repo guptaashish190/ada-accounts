@@ -430,29 +430,32 @@ function ManagerDashboard() {
 
   const [supplyRows, setSupplyRows] = useState([]);
 
-  const mrUsers = useMemo(
+  // Only include users belonging to the currently selected company.
+  const companyUsers = useMemo(
     () =>
       (allUsers || []).filter(
-        (u) => u.jobs && u.jobs.includes(MR_JOB_ID) && !u.isDeactivated,
+        (u) => u.companyId === currentCompanyId && !u.isDeactivated,
       ),
-    [allUsers],
+    [allUsers, currentCompanyId],
+  );
+
+  const mrUsers = useMemo(
+    () => companyUsers.filter((u) => u.jobs && u.jobs.includes(MR_JOB_ID)),
+    [companyUsers],
   );
 
   const supplyUsers = useMemo(
-    () =>
-      (allUsers || []).filter(
-        (u) => u.jobs && u.jobs.includes(SUPPLY_JOB_ID) && !u.isDeactivated,
-      ),
-    [allUsers],
+    () => companyUsers.filter((u) => u.jobs && u.jobs.includes(SUPPLY_JOB_ID)),
+    [companyUsers],
   );
 
   const userMap = useMemo(() => {
     const map = {};
-    (allUsers || []).forEach((u) => {
+    companyUsers.forEach((u) => {
       map[u.uid] = u.username || u.email || u.uid;
     });
     return map;
-  }, [allUsers]);
+  }, [companyUsers]);
 
   const fetchPartyNames = async (partyIds) => {
     const missing = partyIds.filter(
@@ -536,8 +539,6 @@ function ManagerDashboard() {
       query(
         getCompanyCollection(currentCompanyId, DB_NAMES.ATTENDANCE),
         where('isActive', '==', true),
-        where('timeIn', '>=', startMs),
-        where('timeIn', '<', endMs),
       ),
       (snap) => setAttendanceDocs(snap.docs),
     );
@@ -585,13 +586,13 @@ function ManagerDashboard() {
     }
 
     const dayIndex = getWeekdayIndex(selectedDate);
-
     // Build route map: routeId -> { name, todayParties }
     const routeMap = {};
     routesDocs.forEach((d) => {
       const data = d.data();
       const routeArray = data.route || [];
       const todayRoute = routeArray[dayIndex];
+      console.log("todayRoute: ", todayRoute);
       const todayParties =
         todayRoute && todayRoute.parties ? todayRoute.parties : [];
       routeMap[d.id] = { name: data.name || d.id, todayParties };
@@ -617,11 +618,12 @@ function ManagerDashboard() {
       if (data.flowCompleted === false) pipelineCount++;
     });
 
-    // Online MR UIDs from attendance
-    const onlineMrUids = new Set();
+    // Currently-active (online) employee UIDs from attendance. Used by both
+    // the MR and Supply Performance tables.
+    const onlineEmployeeUids = new Set();
     attendanceDocs.forEach((d) => {
       const data = d.data();
-      if (data.employeeId) onlineMrUids.add(data.employeeId);
+      if (data.employeeId) onlineEmployeeUids.add(data.employeeId);
     });
 
     // Distance travelled per user from location tracking
@@ -652,10 +654,14 @@ function ManagerDashboard() {
         const mr = routeToMr[routeId] || null;
         const mrUid = mr ? mr.uid : null;
         const mrName = mr ? mr.username || mr.email || mr.uid : null;
-        const isOnline = mrUid ? onlineMrUids.has(mrUid) : false;
+        const isOnline = mrUid ? onlineEmployeeUids.has(mrUid) : false;
 
         const entries = mrUid ? registerByUser[mrUid] || [] : [];
-        const visitsDone = entries.length;
+        // Count distinct parties visited — multiple orders for the same party
+        // in a single day count as one visit.
+        const visitsDone = new Set(
+          entries.map((e) => e.partyId).filter(Boolean),
+        ).size;
 
         const mrOrders = mrUid ? ordersByUser[mrUid] || [] : [];
         const orderCount = mrOrders.length;
@@ -730,15 +736,26 @@ function ManagerDashboard() {
       ...Object.keys(srBySupplyman).filter(Boolean),
     ]);
 
+    const SR_STATUS = constants.firebase.supplyReportStatus;
     const buildSupplyRow = (uid) => {
-      const user = (allUsers || []).find((u) => u.uid === uid);
+      const user = companyUsers.find((u) => u.uid === uid);
       const name = user ? user.username || user.email || uid : uid;
-      const isOnline = onlineMrUids.has(uid);
+      const isOnline = onlineEmployeeUids.has(uid);
       const reports = srBySupplyman[uid] || [];
       const totalSRs = reports.length;
-      const activeSR = reports.find((r) => r.status === 'Dispatched') || null;
+      // "Active" = anything that isn't yet delivered / completed / cancelled.
+      // This covers in-flight SRs regardless of whether they've been dispatched
+      // or are still waiting to be verified (status: TOACCOUNTS).
+      const activeSR =
+        reports.find(
+          (r) =>
+            r.status !== SR_STATUS.DELIVERED &&
+            r.status !== SR_STATUS.COMPLETED &&
+            r.status !== SR_STATUS.CANCELLED,
+        ) || null;
       const completedSRs = reports.filter(
-        (r) => r.status === 'Completed' || r.status === 'Delivered',
+        (r) =>
+          r.status === SR_STATUS.COMPLETED || r.status === SR_STATUS.DELIVERED,
       ).length;
       const dispatchTime = activeSR ? activeSR.dispatchTimestamp : null;
       const activeBillCount = activeSR ? (activeSR.orders || []).length : 0;
@@ -907,7 +924,7 @@ function ManagerDashboard() {
             <Text>No routes scheduled today</Text>
           </div>
         ) : (
-          <table className="mr-performance-table">
+          <table className="app-table">
             <thead>
               <tr>
                 <th>Route Name</th>
@@ -980,7 +997,7 @@ function ManagerDashboard() {
             <Text>No supplymen found</Text>
           </div>
         ) : (
-          <table className="mr-performance-table">
+          <table className="app-table">
             <thead>
               <tr>
                 <th>Supplyman</th>
@@ -1041,7 +1058,7 @@ function ManagerDashboard() {
             <Text>No orders today</Text>
           </div>
         ) : (
-          <table className="mr-performance-table">
+          <table className="app-table">
             <thead>
               <tr>
                 <th>Party Name</th>

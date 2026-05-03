@@ -337,7 +337,10 @@ export default function ReceiveSRScreen() {
                 <div className="title-sr">
                   <span className="party-name">{bill.party?.name}</span>
                   <span className="payment-terms">
-                    Payment: {bill.party?.paymentTerms || '-'}
+                    Payment:{' '}
+                    {bill.party?.creditDays != null
+                      ? `${bill.party.creditDays} days credit`
+                      : bill.party?.paymentTerms || '-'}
                   </span>
                 </div>
 

@@ -1,10 +1,9 @@
 /* eslint-disable react/jsx-no-constructed-context-values */
 import { createContext, useContext, useEffect, useState } from 'react';
-import { Spinner } from '@fluentui/react-components';
-import { collection, onSnapshot } from 'firebase/firestore';
-import globalUtils from '../services/globalUtils';
-import firebaseApp, { firebaseDB } from '../firebaseInit';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { firebaseDB } from '../firebaseInit';
 import Loader from '../common/loader';
+import { useCompany } from './companyContext';
 
 const Context = createContext('');
 
@@ -15,32 +14,30 @@ export const useAuthUser = () => {
 export default function AllUsersContext({ children }) {
   const [loading, setLoading] = useState(true);
   const [allUsers, setAllUsers] = useState();
+  const { currentCompanyId } = useCompany();
 
   useEffect(() => {
-    // Create a reference to the "users" collection
+    setLoading(true);
     const usersCollection = collection(firebaseDB, 'users');
+    const q = query(
+      usersCollection,
+      where('companyId', '==', currentCompanyId),
+    );
 
-    // Use onSnapshot to listen for changes in the collection
-    const unsubscribe = onSnapshot(usersCollection, (querySnapshot) => {
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const userList = [];
-
-      // Loop through the documents in the collection
       querySnapshot.forEach((doc) => {
-        // Extract the data for each user and include the document ID
         const userData = { ...doc.data(), id: doc.id };
         userList.push(userData);
       });
-
-      // Update the state with the list of users
       setAllUsers(userList);
       setLoading(false);
     });
 
-    // Clean up the listener when the component unmounts
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [currentCompanyId]);
 
   if (loading) {
     return <Loader />;

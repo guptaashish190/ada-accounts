@@ -37,60 +37,24 @@
   width: 320px;
 }
 
+/* Table uses .app-table; wrapper keeps a flex height so the table scrolls. */
 .products-table-wrapper {
   flex: 1;
   overflow-y: auto;
-  border: 1px solid var(--colorNeutralStroke1);
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
 }
 
-.products-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.products-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
-
-.products-table th {
-  background: var(--colorNeutralBackground3);
-  padding: 10px 14px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  color: var(--colorNeutralForeground2);
-  border-bottom: 1px solid var(--colorNeutralStroke1);
-  white-space: nowrap;
-}
-
-.products-table td {
-  padding: 9px 14px;
-  border-bottom: 1px solid var(--colorNeutralStroke2);
-  color: var(--colorNeutralForeground1);
-}
-
-.products-table tbody tr:hover {
-  background: var(--colorNeutralBackground1Hover);
+.products-table-wrapper .app-table tbody tr {
   cursor: pointer;
 }
 
-.products-table .col-actions {
+.app-table .col-actions {
   width: 100px;
   text-align: center;
 }
 
-.products-table .col-mrp {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.products-table .col-active {
+.app-table .col-active {
   text-align: center;
   width: 80px;
 }
@@ -189,32 +153,9 @@
 .import-preview-wrapper {
   max-height: 350px;
   overflow-y: auto;
-  border: 1px solid var(--colorNeutralStroke1);
+  border: 1px solid #e2e8f0;
   border-radius: 6px;
   margin-top: 12px;
-}
-
-.import-preview-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.import-preview-table th {
-  background: var(--colorNeutralBackground3);
-  padding: 8px 10px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  position: sticky;
-  top: 0;
-  border-bottom: 1px solid var(--colorNeutralStroke1);
-}
-
-.import-preview-table td {
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--colorNeutralStroke2);
 }
 
 .import-summary {

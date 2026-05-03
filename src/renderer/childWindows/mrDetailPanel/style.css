@@ -138,6 +138,52 @@
   margin-bottom: 28px;
 }
 
+/* Visit selfie thumbnail on visited-card */
+.visited-card__photo {
+  width: 100%;
+  height: 120px;
+  border-radius: 6px;
+  object-fit: cover;
+  cursor: pointer;
+  display: block;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.visited-card__photo--empty {
+  width: 100%;
+  height: 56px;
+  border-radius: 6px;
+  border: 1px dashed #c8c6c4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #a19f9d;
+  margin-bottom: 10px;
+  background: #faf9f8;
+}
+
+/* Full-screen lightbox */
+.visited-photo-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  cursor: zoom-out;
+}
+
+.visited-photo-lightbox img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
 .visited-section h2,
 .pending-section h2 {
   font-size: 16px;

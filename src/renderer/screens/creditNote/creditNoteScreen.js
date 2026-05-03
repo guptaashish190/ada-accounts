@@ -52,7 +52,7 @@ export default function CreditNoteScreen() {
     <center>
       <h3>Credit Notes</h3>
 
-      <table>
+      <table className="app-table">
         <thead>
           <tr>
             <th>CN No.</th>

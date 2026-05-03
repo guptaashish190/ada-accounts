@@ -239,7 +239,7 @@ export default function ViewBundleScreen() {
               </Button>
             ) : null}
             <h3 style={{ color: 'grey' }}>All Bills</h3>
-            <table>
+            <table className="app-table">
               <thead>
                 <tr>
                   <th>BILL NO.</th>
@@ -296,7 +296,7 @@ function BillRow({ data, index, orderDetail }) {
   };
 
   return (
-    <tr className="vsrc-table-row">
+    <tr >
       <td>
         <b>{data.billNumber?.toUpperCase()}</b>
       </td>
@@ -335,8 +335,8 @@ function BillRow({ data, index, orderDetail }) {
 
 function OtherAdjustedBills({ otherAdjustedBills }) {
   return (
-    <table size="extra-small" className="vsrc-table">
-      <thead className="table-header-container">
+    <table size="extra-small" className="app-table">
+      <thead >
         <tr>
           <th>BILL NO.</th>
           <th>PARTY</th>
@@ -404,7 +404,7 @@ function OtherAdjustedBillsRow({ data, index }) {
 
   if (loading) {
     return (
-      <tr className="vsrc-table-row">
+      <tr >
         <td>
           <Spinner />
         </td>
@@ -416,7 +416,7 @@ function OtherAdjustedBillsRow({ data, index }) {
   }
 
   return (
-    <TableRow className="vsrc-table-row">
+    <TableRow >
       <td>
         <b>{order.billNumber?.toUpperCase()}</b>
       </td>

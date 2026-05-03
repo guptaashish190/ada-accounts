@@ -156,12 +156,41 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       showToast(dispatchToast, 'Please enter correct bill numbers', 'error');
       return;
     }
+
+    const billNumbers = modifiedBills.map((bi) => bi.billNumber).filter(Boolean);
+    const uniqueBillNumbers = new Set(billNumbers);
+    if (uniqueBillNumbers.size !== billNumbers.length) {
+      showToast(dispatchToast, 'Duplicate bill numbers entered', 'error');
+      return;
+    } 
+
     if (!selectedSupplyman) {
       showToast(dispatchToast, 'Please select a supplyman', 'error');
       return;
     }
     try {
-      setLoading(true);
+
+      const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
+      const existingBillsQuery = query(
+        ordersCollection,
+        where('billNumber', 'in', billNumbers),
+      );
+      const existingBillsSnapshot = await getDocs(existingBillsQuery);
+      const currentOrderIds = new Set(modifiedBills.map((b) => b.id));
+      const conflictingBills = existingBillsSnapshot.docs.filter(
+        (d) => !currentOrderIds.has(d.id),
+      );
+      if (conflictingBills.length > 0) {
+        const conflictNums = conflictingBills
+          .map((d) => d.data().billNumber)
+          .join(', ');
+        showToast(
+          dispatchToast,
+          `Bill number(s) already exists: ${conflictNums}`,
+          'error',
+        );
+        return;
+      }
       const newSrNumber2 = await getNewSupplyReportNumber();
 
       let reportDocRef;
@@ -360,6 +389,9 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
                       disabled={!editable}
                       user={selectedSupplyman}
                       setUser={setSelectedSupplyman}
+                      filter={(u) =>
+                        u.jobs?.includes(constants.firebaseIds.JOBS.SUPPLY)
+                      }
                     />
                   </div>
 

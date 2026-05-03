@@ -1,4 +1,1 @@
-.assign-bills-confirm-table * {
-  font-size: 0.8rem;
-  overflow: hidden;
-}
+/* Assign-bills confirm dialog uses .app-table compact. */

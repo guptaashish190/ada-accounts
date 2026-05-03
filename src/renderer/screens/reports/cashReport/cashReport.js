@@ -121,7 +121,7 @@ export default function CashReport() {
           <div>No Supply Reports found</div>
         ) : null}
         <h3>Total Cash Collection - {globalUtils.getCurrencyFormat(total)}</h3>
-        <table>
+        <table className="app-table">
           <thead className="supply-report-row">
             <th>
               <Text className="sr-id">UPIs</Text>
@@ -148,7 +148,7 @@ export default function CashReport() {
           )}
         </h3>
 
-        <table>
+        <table className="app-table">
           <thead className="supply-report-row">
             <th>
               <Text className="sr-id">Cheques</Text>
@@ -260,7 +260,7 @@ function CashReportRow({ data, index }) {
 
   const { allUsers } = useAuthUser();
   return (
-    <table>
+    <table className="app-table">
       <thead className="supply-report-row">
         <th>
           <Text className="sr-id">{data.cashReceiptNumber}</Text>

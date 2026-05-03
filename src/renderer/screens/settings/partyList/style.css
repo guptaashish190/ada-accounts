@@ -1,0 +1,87 @@
+.party-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 8px 8px;
+}
+
+/* Import Dialog */
+.import-dialog-content {
+  min-width: 640px;
+}
+
+.import-drop-zone {
+  border: 2px dashed var(--colorNeutralStroke1);
+  border-radius: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.import-drop-zone:hover {
+  border-color: var(--colorBrandStroke1);
+  background: var(--colorNeutralBackground1Hover);
+}
+
+.import-preview-wrapper {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.import-summary {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--colorNeutralForeground2);
+}
+
+/* Expected columns callout */
+.import-format-section {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--colorNeutralBackground2);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 6px;
+}
+
+.import-format-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.import-format-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.import-format-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.import-format-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: var(--colorNeutralBackground3);
+  color: var(--colorNeutralForeground2);
+  border: 1px solid var(--colorNeutralStroke2);
+}
+
+.import-format-chip.required {
+  background: var(--colorBrandBackground2);
+  color: var(--colorBrandForeground1);
+  border-color: var(--colorBrandStroke2);
+}

@@ -285,9 +285,9 @@ export default function CreatePaymentReceiptDialog({
           ) : null}
           <VerticalSpace1 />
 
-          <table size="extra-small" className="vsrc-table">
+          <table size="extra-small" className="app-table">
             <thead>
-              <tr style={{ width: '100%' }} className="table-header-container">
+              <tr style={{ width: '100%' }} >
                 <th>Party</th>
                 <th>Area</th>
                 <th>File</th>
@@ -344,7 +344,7 @@ export default function CreatePaymentReceiptDialog({
 
 function PaymentReceiptRow({ pr, setAmount, amount, editable, onDelete }) {
   return (
-    <tr className="vsrc-table-row" key={`pri-${pr.party?.id}`}>
+    <tr  key={`pri-${pr.party?.id}`}>
       <td>{pr.party?.name}</td> <td>{pr.party?.area || '--'}</td>
       <td>{pr.party?.fileNumber || '--'}</td>
       <td>

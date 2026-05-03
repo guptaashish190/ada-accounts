@@ -398,7 +398,7 @@ export default function ViewSupplyReportScreen() {
         )}
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>New Bills</h3>
-        <table>
+        <table className="app-table">
           <thead>
             <tr>
               <th>BILL NO.</th>
@@ -434,7 +434,7 @@ export default function ViewSupplyReportScreen() {
         </table>
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>Old Bills</h3>
-        <table>
+        <table className="app-table">
           <thead>
             <tr>
               <th>BILL NO.</th>
@@ -486,7 +486,7 @@ export default function ViewSupplyReportScreen() {
 
 function OtherAdjustedBills({ otherAdjustedBills }) {
   return (
-    <table size="extra-small">
+    <table size="extra-small" className="app-table">
       <thead>
         <tr>
           <th>BILL NO.</th>
@@ -629,8 +629,8 @@ function TableCustomCell({ children }) {
 
 function ReturnedBillsTable({ returnedBills }) {
   return (
-    <table size="extra-small" className="vsrc-table">
-      <tr className="table-header-container">
+    <table size="extra-small" className="app-table">
+      <tr >
         <th>BILL NO.</th>
         <th>PARTY</th>
         <th>AMOUNT</th>
@@ -644,7 +644,7 @@ function ReturnedBillsTable({ returnedBills }) {
 }
 function ReturnedBillRow({ data, index }) {
   return (
-    <tr className="vsrc-table-row">
+    <tr >
       <TableCustomCell>
         <b>{data.billNumber?.toUpperCase()}</b>
       </TableCustomCell>

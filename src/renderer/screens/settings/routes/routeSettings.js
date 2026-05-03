@@ -1,5 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import { getDocs, updateDoc } from 'firebase/firestore';
+import { addDoc, getDocs, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Button,
@@ -11,8 +11,16 @@ import {
   Badge,
   Combobox,
   Option,
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Input,
+  Label,
 } from '@fluentui/react-components';
-import { DismissRegular } from '@fluentui/react-icons';
+import { AddRegular, DismissRegular } from '@fluentui/react-icons';
 import './style.css';
 import { useSettingsContext } from '../../../contexts/settingsContext';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
@@ -23,12 +31,27 @@ import {
   DB_NAMES,
 } from '../../../services/firestoreHelpers';
 
+const DAYS_OF_WEEK = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+const EMPTY_WEEK = DAYS_OF_WEEK.map((day) => ({ day, parties: [], fileNumber: '' }));
+
 export default function RouteSettings() {
   const [routes, setRoutes] = useState([]);
   const [parties, setParties] = useState({});
   const [loading, setLoading] = useState(true);
   const [partiesLoading, setPartiesLoading] = useState(true);
   const [routesLoading, setRoutesLoading] = useState(true);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [newRouteName, setNewRouteName] = useState('');
+  const [creating, setCreating] = useState(false);
 
   const { currentCompanyId } = useCompany();
 
@@ -101,9 +124,9 @@ export default function RouteSettings() {
     if (!route) return;
 
     const updatedRoute = route.route.map((day, i) => {
-      if (i !== dayIndex) return day;
-      if (day.parties?.includes(partyId)) return day;
-      return { ...day, parties: [...(day.parties || []), partyId] };
+      if (i !== dayIndex) return { ...day, day: DAYS_OF_WEEK[i] };
+      if (day.parties?.includes(partyId)) return { ...day, day: DAYS_OF_WEEK[i] };
+      return { ...day, day: DAYS_OF_WEEK[i], parties: [...(day.parties || []), partyId] };
     });
 
     await updateRouteInFirestore(routeId, updatedRoute);
@@ -116,15 +139,48 @@ export default function RouteSettings() {
     const route = routes.find((r) => r.id === routeId);
     if (!route) return;
 
-    const updatedRoute = route.route.map((day, i) => {
-      if (i !== dayIndex) return day;
-      return { ...day, parties: (day.parties || []).filter((p) => p !== partyId) };
-    });
+    const updatedRoute = route.route.map((day, i) => ({
+      ...day,
+      day: DAYS_OF_WEEK[i],
+      parties: i === dayIndex
+        ? (day.parties || []).filter((p) => p !== partyId)
+        : (day.parties || []),
+    }));
 
     await updateRouteInFirestore(routeId, updatedRoute);
     setRoutes((prev) =>
       prev.map((r) => (r.id === routeId ? { ...r, route: updatedRoute } : r)),
     );
+  };
+
+  const handleCreateRoute = async () => {
+    const name = newRouteName.trim();
+    if (!name || !currentCompanyId) return;
+    setCreating(true);
+    try {
+      const routesCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.MR_ROUTES,
+      );
+      const newRoute = {
+        name,
+        route: EMPTY_WEEK.map((d) => ({ ...d, parties: [] })),
+      };
+      const created = await addDoc(routesCollection, newRoute);
+      setRoutes((prev) => [...prev, { id: created.id, ...newRoute }]);
+      setNewRouteName('');
+      setAddDialogOpen(false);
+    } catch (error) {
+      console.error('Error creating route:', error);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCloseAddDialog = () => {
+    if (creating) return;
+    setNewRouteName('');
+    setAddDialogOpen(false);
   };
 
   if (loading) {
@@ -144,6 +200,16 @@ export default function RouteSettings() {
   return (
     <center>
       <h3>Route Settings</h3>
+      <div className="route-settings-toolbar">
+        <Button
+          appearance="primary"
+          icon={<AddRegular />}
+          onClick={() => setAddDialogOpen(true)}
+          disabled={!currentCompanyId}
+        >
+          Add Route
+        </Button>
+      </div>
       <div className="route-container">
         {routes.length === 0 ? (
           <div className="no-data-container">
@@ -169,6 +235,59 @@ export default function RouteSettings() {
           ))
         )}
       </div>
+
+      <Dialog
+        open={addDialogOpen}
+        onOpenChange={(_, data) => {
+          if (!data.open) handleCloseAddDialog();
+        }}
+      >
+        <DialogSurface style={{ maxWidth: 420 }}>
+          <DialogBody>
+            <DialogTitle>Add Route</DialogTitle>
+            <DialogContent>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Label htmlFor="new-route-name" required>
+                  Route Name
+                </Label>
+                <Input
+                  id="new-route-name"
+                  value={newRouteName}
+                  placeholder="e.g. North Route"
+                  onChange={(e) => setNewRouteName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newRouteName.trim()) {
+                      handleCreateRoute();
+                    }
+                  }}
+                  autoFocus
+                  disabled={creating}
+                />
+                <Text size={200} style={{ color: '#666' }}>
+                  A new route is created with 7 empty days (Monday–Sunday). You
+                  can add parties to each day after creating it.
+                </Text>
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                appearance="secondary"
+                onClick={handleCloseAddDialog}
+                disabled={creating}
+              >
+                Cancel
+              </Button>
+              <Button
+                appearance="primary"
+                onClick={handleCreateRoute}
+                disabled={creating || !newRouteName.trim()}
+              >
+                {creating ? 'Creating...' : 'Create'}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </center>
   );
 }
@@ -191,15 +310,7 @@ function RouteComponent({
     }));
   };
 
-  const daysOfWeek = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday',
-  ];
+  const daysOfWeek = DAYS_OF_WEEK;
 
   return (
     <Card className="route-card">

@@ -93,7 +93,7 @@ export default function PaymentReceipts() {
           <Button onClick={() => fetchCashReceipts()}>Get</Button>
         </div>
         <VerticalSpace2 />
-        <table>
+        <table className="app-table">
           <thead>
             <tr>
               <th>Receipt</th>

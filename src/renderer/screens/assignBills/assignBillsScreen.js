@@ -365,14 +365,14 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
           <DialogBody>
             <DialogContent>
               <VerticalSpace1 />
-              <table className="assign-bills-confirm-table">
+              <table className="app-table compact">
                 <thead>
                   <tr>
-                    <td>Bill Number</td>
-                    <td>Date</td>
-                    <td>Party Name</td>
-                    <td>Amount</td>
-                    <td>Balance</td>
+                    <th>Bill Number</th>
+                    <th>Date</th>
+                    <th>Party Name</th>
+                    <th>Amount</th>
+                    <th>Balance</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -183,15 +183,15 @@ export default function App({ routeProps, startRoute, printData }) {
       <AutoUpdaterWrapper>
         <LoginWrapper>
           <CalculatorWrapper>
-            <AllUsersContext>
-              <UserContext>
-                <CompanyProvider>
+            <UserContext>
+              <CompanyProvider>
+                <AllUsersContext>
                   <SettingsContext>
                     <AppContent />
                   </SettingsContext>
-                </CompanyProvider>
-              </UserContext>
-            </AllUsersContext>
+                </AllUsersContext>
+              </CompanyProvider>
+            </UserContext>
           </CalculatorWrapper>
         </LoginWrapper>
       </AutoUpdaterWrapper>

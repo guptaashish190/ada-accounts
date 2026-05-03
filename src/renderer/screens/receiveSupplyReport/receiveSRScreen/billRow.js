@@ -56,9 +56,21 @@ export default function BillRow({
   const [cheque, setCheque] = useState('');
   const [upi, setUpi] = useState('');
   const [otherPayment, setOtherPayment] = useState('');
-  const [scheduleDate, setScheduleDate] = useState(
-    data.schedulePaymentDate ? new Date(data.schedulePaymentDate) : null,
-  );
+  const [scheduleDate, setScheduleDate] = useState(() => {
+    // Prefer an already-persisted schedule if one exists.
+    if (data.schedulePaymentDate) {
+      return new Date(data.schedulePaymentDate);
+    }
+    // Otherwise preset to (today + party's credit days) when credit days are
+    // configured on the party, so accounts staff don't have to compute it.
+    const creditDays = data.party?.creditDays;
+    if (typeof creditDays === 'number' && creditDays > 0) {
+      const d = new Date();
+      d.setDate(d.getDate() + creditDays);
+      return d;
+    }
+    return null;
+  });
   const [notes, setNotes] = useState();
 
   const navigate = useNavigate();

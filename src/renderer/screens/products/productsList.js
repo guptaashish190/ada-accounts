@@ -329,14 +329,14 @@ export default function ProductsListScreen() {
             </p>
           </div>
         ) : (
-          <table className="products-table">
+          <table className="app-table">
             <thead>
               <tr>
                 <th style={{ width: 40 }}>#</th>
                 <th>Name</th>
                 <th>Company</th>
                 <th>Pack Size</th>
-                <th className="col-mrp">MRP</th>
+                <th className="num">MRP</th>
                 <th>Composition</th>
                 <th className="col-active">Status</th>
                 <th className="col-actions">Actions</th>
@@ -356,7 +356,7 @@ export default function ProductsListScreen() {
                   <td>{p.name || p.Name || '—'}</td>
                   <td>{p.company || p.Company || p.brand || '—'}</td>
                   <td>{p.packSize || p.Pack || p.pack || '—'}</td>
-                  <td className="col-mrp">
+                  <td className="num">
                     {(p.mrp || p.MRP || 0).toLocaleString('en-IN', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,

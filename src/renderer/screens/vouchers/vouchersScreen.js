@@ -106,7 +106,7 @@ export default function VoucherScreen() {
           <Button onClick={() => fetchVouchers()}>Get</Button>
         </div>
         <VerticalSpace2 />
-        <table>
+        <table className="app-table">
           <thead>
             <tr>
               <th>Voucher</th>

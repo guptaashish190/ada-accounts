@@ -113,7 +113,7 @@
   color: #c50f1f;
 }
 
-/* MR Performance Table */
+/* MR Performance Section (table itself uses .app-table) */
 .mr-table-section {
   margin-bottom: 28px;
 }
@@ -124,45 +124,13 @@
   margin: 0 0 16px 0;
 }
 
-.mr-performance-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.mr-performance-table thead th {
-  text-align: left;
-  padding: 12px 16px;
-  background-color: #323130;
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  border-bottom: none;
-  white-space: nowrap;
-}
-
-.mr-performance-table tbody tr {
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.mr-performance-table tbody tr:hover {
-  background-color: #f0f6ff;
-}
-
-.mr-performance-table tbody tr.row-online {
+/* Online-MR row highlight (modifier on .app-table tbody tr) */
+.app-table tbody tr.row-online {
   background-color: #f0faf0;
 }
 
-.mr-performance-table tbody tr.row-online:hover {
+.app-table tbody tr.row-online:hover {
   background-color: #dff6dd;
-}
-
-.mr-performance-table tbody td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #edebe9;
 }
 
 .assigned-mr-cell {

@@ -16,42 +16,140 @@ body {
   font-family: Roboto;
 }
 
-/* Modern Table Styles */
+/* ============================================================
+ * App Table — canonical table design for the whole desktop app
+ * Apply `.app-table` to every <table>. Wrap in `.app-table-wrapper`
+ * for scrolling + sticky header. Divs-based listings can use the
+ * same palette via .modern-table-* below.
+ * ============================================================ */
+
+.app-table-wrapper {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.app-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  color: #1f2937;
+  background: #ffffff;
+}
+
+.app-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f1f5f9;
+  color: #475569;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.app-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #eef2f7;
+  vertical-align: middle;
+}
+
+.app-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.app-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Zebra rows (opt-in) */
+.app-table.zebra tbody tr:nth-child(even) {
+  background-color: #fbfcfe;
+}
+
+.app-table.zebra tbody tr:nth-child(even):hover {
+  background-color: #f1f5f9;
+}
+
+/* Density modifiers */
+.app-table.compact thead th,
+.app-table.compact tbody td {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.app-table.comfortable thead th,
+.app-table.comfortable tbody td {
+  padding: 14px 18px;
+  font-size: 14px;
+}
+
+/* Row modifiers */
+.app-table tbody tr.clickable {
+  cursor: pointer;
+}
+
+.app-table tbody tr.muted td {
+  color: #64748b;
+}
+
+/* Column alignment helpers */
+.app-table td.num,
+.app-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-table td.center,
+.app-table th.center {
+  text-align: center;
+}
+
+.app-table .cell-muted {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+/* Modern Table (div-based listings using CSS grid) — shares the
+ * same palette as .app-table so the two read as one system. */
 .modern-table {
-  background: #f8fafc;
+  background: #ffffff;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .modern-table-header {
   display: grid;
   background: #f1f5f9;
-  padding: 12px 16px;
+  padding: 10px 14px;
   font-size: 12px;
   font-weight: 600;
   color: #475569;
+  letter-spacing: 0.3px;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .modern-table-row {
   display: grid;
-  padding: 12px 16px;
+  padding: 10px 14px;
   font-size: 13px;
-  border-bottom: 1px solid #e2e8f0;
-  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #eef2f7;
+  transition: background-color 0.15s ease;
+}
+
+.modern-table-row:last-child {
+  border-bottom: none;
 }
 
 .modern-table-row:hover {
-  background-color: #f1f5f9;
-}
-
-.modern-table-row:nth-child(even) {
-  background-color: #ffffff;
-}
-
-.modern-table-row:nth-child(odd) {
   background-color: #f8fafc;
 }
 
@@ -64,49 +162,17 @@ body {
 .modern-table-cell.amount {
   text-align: right;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 .modern-table-cell.balance {
   text-align: right;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .modern-table-cell.date {
   color: #6b7280;
-}
-
-
-/* Legacy table styles for backward compatibility */
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-table thead {
-  background-color: #698fffc6;
-  color: white;
-}
-
-table tr:not(:nth-child(1)) {
-  background-color: white;
-}
-
-table tr:not(:nth-child(1)):hover {
-  background-color: #a6bcff1f;
-}
-
-table * {
-  font-size: 13px;
-  max-width: 100%;
-  text-wrap: nowrap;
-}
-
-table th {
-  border: 1px solid #47313136;
-}
-
-table td {
-  border: 1px solid #547fff36;
 }
 
 .filter-input {

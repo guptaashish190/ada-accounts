@@ -159,7 +159,7 @@ function VoucherRow({ data, index, header }) {
   const navigate = useNavigate();
 
   return (
-    <table>
+    <table className="app-table">
       <thead className="supply-report-row">
         <th colSpan="5">
           <Text className="sr-id">{header}</Text>

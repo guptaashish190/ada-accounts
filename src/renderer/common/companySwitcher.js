@@ -42,10 +42,8 @@ export default function CompanySwitcher() {
 
   // Guard against null/undefined companies
   const safeCompanies = Array.isArray(companies) ? companies : [];
-
-  // Don't render if user can't switch companies
+  
   if (!canSwitchCompany || safeCompanies.length <= 1) {
-    // Show current company name as static text
     const currentCompany = safeCompanies.find((c) => c.id === currentCompanyId);
     if (currentCompany) {
       return (

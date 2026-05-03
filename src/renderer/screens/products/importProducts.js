@@ -294,7 +294,7 @@ export default function ImportProducts({ open, onClose, onImported }) {
                       Preview (first {previewProducts.length} rows):
                     </Label>
                     <div className="import-preview-wrapper">
-                      <table className="import-preview-table">
+                      <table className="app-table compact">
                         <thead>
                           <tr>
                             <th>Name</th>

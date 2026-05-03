@@ -321,15 +321,17 @@ function CashierDashboard() {
         DB_NAMES.ORDERS,
         orderId,
       );
+      const now = Date.now();
       const updateData = {
         schedulePaymentDate: newDate.getTime(),
+        lastRescheduledAt: now,
       };
       if (oldDate) {
         updateData.rescheduleHistory = arrayUnion({
           from: oldDate,
           to: newDate.getTime(),
           by: firebaseAuth.currentUser?.uid || 'unknown',
-          at: Date.now(),
+          at: now,
         });
       }
       await updateDoc(orderRef, updateData);
@@ -540,7 +542,7 @@ function PartyCard({
 
       {expanded && (
         <div className="bill-breakdown">
-          <table className="bills-table">
+          <table className="app-table">
             <thead>
               <tr>
                 <th>Bill No.</th>
@@ -593,6 +595,15 @@ function BillRow({
 
   const handleSave = async () => {
     if (!rescheduleDate) return;
+
+    const existingDate = order.schedulePaymentDate
+      ? new Date(order.schedulePaymentDate)
+      : null;
+    if (existingDate && rescheduleDate.toDateString() === existingDate.toDateString()) {
+      setRescheduleDate(null);
+      return;
+    }
+
     setSaving(true);
     await onReschedule(order.id, rescheduleDate, order.schedulePaymentDate);
     setRescheduleDate(null);

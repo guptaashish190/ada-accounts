@@ -95,6 +95,7 @@ function MrDetailPanel({ data }) {
   const [partyNames, setPartyNames] = useState({});
   const [partyData, setPartyData] = useState({});
   const [locationPoints, setLocationPoints] = useState([]);
+  const [lightboxUrl, setLightboxUrl] = useState(null);
 
   const partyNamesCacheRef = useRef({});
   const partyDataCacheRef = useRef({});
@@ -295,6 +296,19 @@ function MrDetailPanel({ data }) {
       const matchedOrder = e.orderId
         ? orders.find((o) => o.id === e.orderId || o.orderId === e.orderId)
         : null;
+
+      // Derive photo URL: order selfie takes priority, then register visitImage.
+      const photoUrl = (() => {
+        if (
+          matchedOrder &&
+          Array.isArray(matchedOrder.mrImages) &&
+          matchedOrder.mrImages.length > 0
+        ) {
+          return matchedOrder.mrImages[0];
+        }
+        return e.visitImage || '';
+      })();
+
       return {
         partyId: e.partyId,
         partyName: partyNames[e.partyId] || e.partyId,
@@ -309,6 +323,7 @@ function MrDetailPanel({ data }) {
         orderStatus: matchedOrder
           ? matchedOrder.orderStatus || ''
           : '',
+        photoUrl,
       };
     });
 
@@ -476,37 +491,67 @@ function MrDetailPanel({ data }) {
           <div className="no-data-message">No parties visited yet</div>
         ) : (
           <div className="visited-cards">
-            {visitedParties.map((vp, i) => (
-              <div
-                key={`${vp.partyId}-${i}`}
-                className={`visited-card ${
-                  vp.status === 'Order' ? 'order-placed' : 'no-order'
-                }`}
-              >
-                <div className="party-name">{vp.partyName}</div>
-                {vp.partyPhone && (
-                  <div className="party-phone">{vp.partyPhone}</div>
-                )}
-                {vp.status === 'Order' ? (
-                  <>
-                    <div className="visit-outcome order">
-                      Order: {globalUtils.getCurrencyFormat(vp.orderAmount)}
+            {visitedParties.map((vp, i) => {
+              const photoPlaceholder =
+                vp.status !== 'Order' && vp.reason === "DIDN'T REACH"
+                  ? "Didn't reach"
+                  : 'No photo';
+              return (
+                <div
+                  key={`${vp.partyId}-${i}`}
+                  className={`visited-card ${
+                    vp.status === 'Order' ? 'order-placed' : 'no-order'
+                  }`}
+                >
+                  {/* Visit selfie thumbnail */}
+                  {vp.photoUrl ? (
+                    <img
+                      className="visited-card__photo"
+                      src={vp.photoUrl}
+                      alt="Visit selfie"
+                      onClick={() => setLightboxUrl(vp.photoUrl)}
+                    />
+                  ) : (
+                    <div className="visited-card__photo visited-card__photo--empty">
+                      {photoPlaceholder}
                     </div>
-                    {vp.orderStatus && (
-                      <div className="order-status-badge">{vp.orderStatus}</div>
-                    )}
-                  </>
-                ) : (
-                  <div className="visit-outcome no-order">
-                    No Order{vp.reason ? ` (${vp.reason})` : ''}
-                  </div>
-                )}
-                <div className="visit-time">{formatTime(vp.timestamp)}</div>
-              </div>
-            ))}
+                  )}
+
+                  <div className="party-name">{vp.partyName}</div>
+                  {vp.partyPhone && (
+                    <div className="party-phone">{vp.partyPhone}</div>
+                  )}
+                  {vp.status === 'Order' ? (
+                    <>
+                      <div className="visit-outcome order">
+                        Order: {globalUtils.getCurrencyFormat(vp.orderAmount)}
+                      </div>
+                      {vp.orderStatus && (
+                        <div className="order-status-badge">{vp.orderStatus}</div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="visit-outcome no-order">
+                      No Order{vp.reason ? ` (${vp.reason})` : ''}
+                    </div>
+                  )}
+                  <div className="visit-time">{formatTime(vp.timestamp)}</div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* Selfie lightbox */}
+      {lightboxUrl && (
+        <div
+          className="visited-photo-lightbox"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <img src={lightboxUrl} alt="Visit selfie full" />
+        </div>
+      )}
 
       {/* Pending Parties */}
       <div className="pending-section">

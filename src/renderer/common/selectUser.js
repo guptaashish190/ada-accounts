@@ -1,17 +1,18 @@
 import { Dropdown, Image, Option } from '@fluentui/react-components';
 import { useAuthUser } from '../contexts/allUsersContext';
 
+
 export default function SelectUserDropdown({
   user,
   setUser,
   disabled,
   placeholder,
+  filter,
 }) {
   const { allUsers } = useAuthUser();
   if (!allUsers) {
     return <div>Error loading all users</div>;
   }
-  console.log(allUsers);
   return (
     <Dropdown
       disabled={disabled}
@@ -25,6 +26,7 @@ export default function SelectUserDropdown({
     >
       {allUsers
         .filter((x) => !x.isDeactivated)
+        .filter((x) => (filter ? filter(x) : true))
         .map((option) => (
           <Option value={option} key={option.id}>
             <Image

@@ -166,7 +166,7 @@ export default function UpiScreen() {
             </Button>
           </div>
           <VerticalSpace1 />
-          <table>
+          <table className="app-table">
             <thead>
               <tr>
                 <th>Date</th>

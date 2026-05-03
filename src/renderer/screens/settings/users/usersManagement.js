@@ -62,7 +62,10 @@ import { showToast } from '../../../common/toaster';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import { useCompany } from '../../../contexts/companyContext';
 import { useAuthUser } from '../../../contexts/allUsersContext';
+import constants from '../../../constants';
 import './style.css';
+
+const MR_JOB_ID = constants.firebaseIds.JOBS.MR;
 
 export default function UsersManagementScreen() {
   const [users, setUsers] = useState([]);
@@ -106,8 +109,8 @@ export default function UsersManagementScreen() {
       });
       setUsers(usersList);
 
-      // Fetch jobs (company-scoped)
-      const jobsRef = getCompanyCollection(currentCompanyId, DB_NAMES.JOBS);
+      // Jobs are shared across all companies — read from root /jobs collection.
+      const jobsRef = collection(firebaseDB, DB_NAMES.JOBS);
       const jobsSnapshot = await getDocs(jobsRef);
       const jobsList = [];
       jobsSnapshot.forEach((docSnap) => {
@@ -187,6 +190,7 @@ export default function UsersManagementScreen() {
       await setDoc(userRef, {
         uid,
         username: userData.username,
+        displayName: userData.displayName || userData.username,
         email: email,
         profilePicture: '',
         isManager: userData.isManager || false,
@@ -225,6 +229,7 @@ export default function UsersManagementScreen() {
         jobs: userData.jobs || [],
         companyId: userData.companyId,
         canSwitchCompany: userData.canSwitchCompany || false,
+        assignedRoute: userData.assignedRoute || '',
       });
 
       showToast(dispatchToast, 'User updated successfully', 'success');
@@ -499,6 +504,7 @@ function CreateUserDialog({
   currentCompanyId,
 }) {
   const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [companyId, setCompanyId] = useState(currentCompanyId || '');
   const [selectedJobs, setSelectedJobs] = useState([]);
@@ -520,6 +526,7 @@ function CreateUserDialog({
     setSaving(true);
     const success = await onSave({
       username: username.trim(),
+      displayName: displayName.trim(),
       password: password.trim(),
       companyId,
       jobs: selectedJobs,
@@ -529,6 +536,7 @@ function CreateUserDialog({
 
     if (success) {
       setUsername('');
+      setDisplayName('');
       setPassword('');
       setCompanyId(currentCompanyId || '');
       setSelectedJobs([]);
@@ -541,6 +549,7 @@ function CreateUserDialog({
 
   const handleCancel = () => {
     setUsername('');
+    setDisplayName('');
     setPassword('');
     setCompanyId(currentCompanyId || '');
     setSelectedJobs([]);
@@ -572,8 +581,20 @@ function CreateUserDialog({
                   id="create-username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username (email will be username@gmail.com)"
+                  placeholder="Enter username"
                   required
+                />
+              </div>
+
+              <div className="form-field">
+                <Label htmlFor="create-display-name">
+                  Display Name
+                </Label>
+                <Input
+                  id="create-display-name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Enter display name (shown in app)"
                 />
               </div>
 
@@ -696,7 +717,12 @@ function EditUserDialog({
   const [isManager, setIsManager] = useState(user?.isManager || false);
   const [canSwitchCompany, setCanSwitchCompany] =
     useState(user?.canSwitchCompany || false);
+  const [assignedRoute, setAssignedRoute] = useState(user?.assignedRoute || '');
+  const [routes, setRoutes] = useState([]);
+  const [routesLoading, setRoutesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const isMR = selectedJobs.includes(MR_JOB_ID);
 
   useEffect(() => {
     if (user) {
@@ -706,8 +732,60 @@ function EditUserDialog({
       setSelectedJobs(user.jobs || []);
       setIsManager(user.isManager || false);
       setCanSwitchCompany(user.canSwitchCompany || false);
+      setAssignedRoute(user.assignedRoute || '');
     }
   }, [user, open]);
+
+  // Fetch routes for the user's currently-selected company whenever it changes
+  // and the MR job is selected. Routes live under companies/{companyId}/mr_routes.
+  useEffect(() => {
+    let cancelled = false;
+    const loadRoutes = async () => {
+      if (!open || !isMR || !companyId) {
+        setRoutes([]);
+        return;
+      }
+      try {
+        setRoutesLoading(true);
+        const routesRef = getCompanyCollection(companyId, DB_NAMES.MR_ROUTES);
+        const snapshot = await getDocs(routesRef);
+        if (cancelled) return;
+        const list = [];
+        snapshot.forEach((docSnap) => {
+          list.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        setRoutes(list);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error fetching routes:', err);
+          setRoutes([]);
+        }
+      } finally {
+        if (!cancelled) setRoutesLoading(false);
+      }
+    };
+    loadRoutes();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isMR, companyId]);
+
+  // Clear assignedRoute if MR is deselected or company is changed away from
+  // the one the route belongs to.
+  useEffect(() => {
+    if (!isMR) {
+      setAssignedRoute('');
+      return;
+    }
+    if (
+      assignedRoute &&
+      routes.length > 0 &&
+      !routes.some((r) => r.id === assignedRoute)
+    ) {
+      setAssignedRoute('');
+    }
+  }, [isMR, routes, assignedRoute]);
 
   const handleSave = async () => {
     if (!username.trim()) {
@@ -725,6 +803,7 @@ function EditUserDialog({
       jobs: selectedJobs,
       isManager,
       canSwitchCompany,
+      assignedRoute: isMR ? assignedRoute : '',
     });
 
     if (success) {
@@ -740,6 +819,7 @@ function EditUserDialog({
     setSelectedJobs(user?.jobs || []);
     setIsManager(user?.isManager || false);
     setCanSwitchCompany(user?.canSwitchCompany || false);
+    setAssignedRoute(user?.assignedRoute || '');
     onOpenChange(false);
   };
 
@@ -820,6 +900,40 @@ function EditUserDialog({
                   )}
                 </div>
               </div>
+
+              {isMR && (
+                <div className="form-field">
+                  <Label htmlFor="edit-assigned-route">Assigned Route</Label>
+                  <Dropdown
+                    id="edit-assigned-route"
+                    value={
+                      assignedRoute
+                        ? routes.find((r) => r.id === assignedRoute)?.name ||
+                          assignedRoute
+                        : ''
+                    }
+                    selectedOptions={assignedRoute ? [assignedRoute] : []}
+                    onOptionSelect={(e, data) =>
+                      setAssignedRoute(data.optionValue || '')
+                    }
+                    placeholder={
+                      routesLoading
+                        ? 'Loading routes...'
+                        : routes.length === 0
+                          ? 'No routes available for this company'
+                          : 'Select a route'
+                    }
+                    disabled={routesLoading || !companyId}
+                  >
+                    <Option value="">None</Option>
+                    {routes.map((route) => (
+                      <Option key={route.id} value={route.id}>
+                        {route.name || route.id}
+                      </Option>
+                    ))}
+                  </Dropdown>
+                </div>
+              )}
 
               <div className="form-field">
                 <div className="switch-container">

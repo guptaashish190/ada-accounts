@@ -1,6 +1,7 @@
 import { getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
+  Button,
   Card,
   Spinner,
   Combobox,
@@ -8,6 +9,7 @@ import {
   Input,
   Text,
 } from '@fluentui/react-components';
+import { ArrowUpload24Regular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
 import PartySelector from '../../../common/partySelector';
@@ -18,6 +20,7 @@ import {
   getCompanyCollection,
   DB_NAMES,
 } from '../../../services/firestoreHelpers';
+import ImportParties from './importParties';
 
 export default function PartyListScreen({
   onPartySelected,
@@ -26,38 +29,54 @@ export default function PartyListScreen({
 }) {
   const [partyDetails, setPartyDetails] = useState([]);
   const [queryPartyName, setQueryPartyName] = useState('');
+  const [importOpen, setImportOpen] = useState(false);
   const debouncedValue = useDebounce(queryPartyName, 500);
   const navigate = useNavigate();
 
   // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
 
+  // Initial load: fetch first 50 parties when the screen mounts or company changes.
   useEffect(() => {
-    if (!debouncedValue || debouncedValue.length < 3) return;
-    const fetchParties = async () => {
-      // Define a reference to the company-scoped "parties" collection
-      const partiesRef = getCompanyCollection(
-        currentCompanyId,
-        DB_NAMES.PARTIES,
-      );
+    if (!currentCompanyId) return;
+    const fetchInitial = async () => {
+      const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
+      try {
+        const snapshot = await getDocs(query(partiesRef, limit(50)));
+        setPartyDetails(snapshot.docs.map((doc) => doc.data()));
+      } catch (error) {
+        console.error('Error fetching initial parties:', error);
+      }
+    };
+    fetchInitial();
+  }, [currentCompanyId]);
 
-      // Create a query with a "name" field filter
+  // Search: filter by name when 3+ characters are typed; revert to initial 50 when cleared.
+  useEffect(() => {
+    if (!currentCompanyId) return;
+    if (!debouncedValue || debouncedValue.length < 3) {
+      if (!debouncedValue) {
+        const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
+        getDocs(query(partiesRef, limit(50))).then((snap) =>
+          setPartyDetails(snap.docs.map((doc) => doc.data()))
+        );
+      }
+      return;
+    }
+    const fetchParties = async () => {
+      const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
       const q = query(
         partiesRef,
         where('name', '>=', debouncedValue.toUpperCase()),
         limit(10),
       );
-
       try {
         const querySnapshot = await getDocs(q);
-        const partyData = querySnapshot.docs.map((doc) => doc.data());
-        setPartyDetails(partyData);
-        console.log(partyData);
+        setPartyDetails(querySnapshot.docs.map((doc) => doc.data()));
       } catch (error) {
         console.error('Error fetching parties:', error);
       }
     };
-
     fetchParties();
   }, [debouncedValue, currentCompanyId]);
 
@@ -65,7 +84,17 @@ export default function PartyListScreen({
 
   return (
     <center className="settings-party-list-container">
-      <h3>Party Details</h3>
+      <div className="party-list-header">
+        <h3 style={{ margin: 0 }}>Party Details</h3>
+        <Button
+          icon={<ArrowUpload24Regular />}
+          appearance="primary"
+          onClick={() => setImportOpen(true)}
+          disabled={!currentCompanyId}
+        >
+          Import from Excel / CSV
+        </Button>
+      </div>
 
       <Input
         className="filter-input"
@@ -77,7 +106,15 @@ export default function PartyListScreen({
         style={descriptive ? { width: '100%' } : {}}
       />
       <VerticalSpace1 />
-      <table>
+      <ImportParties
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => {
+          // Retrigger search so newly imported matches show up.
+          setQueryPartyName((q) => q);
+        }}
+      />
+      <table className="app-table">
         <thead>
           <tr>
             <th>Name</th>
