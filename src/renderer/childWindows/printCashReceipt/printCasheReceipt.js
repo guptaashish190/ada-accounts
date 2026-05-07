@@ -4,9 +4,24 @@ import globalUtils from '../../services/globalUtils';
 import './style.css';
 
 export default function PrintCashReceipt({ data }) {
+  const companyName = data.company?.name || 'Company';
+  const companyAddress = data.company?.address || '';
+  const companyLogoUrl = data.company?.logoUrl || '';
+
   return (
     <center>
       <div className="print-area">
+        {companyLogoUrl ? (
+          <img
+            src={companyLogoUrl}
+            alt="Company logo"
+            style={{ width: 80, maxHeight: 80, objectFit: 'contain' }}
+          />
+        ) : null}
+        <h3 style={{ marginBottom: 4 }}>{companyName}</h3>
+        {companyAddress ? (
+          <p style={{ marginTop: 0, whiteSpace: 'pre-line' }}>{companyAddress}</p>
+        ) : null}
         <h4>
           <u>Cash Receipt: {data.receiptNumber}</u>
         </h4>

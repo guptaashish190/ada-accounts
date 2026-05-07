@@ -3,6 +3,7 @@ import globalUtils from '../../services/globalUtils';
 
 export default (data) => {
   const commands = [];
+  const createdBy = data?.createdBy || 'Unknown';
   commands.push({
     type: 'text',
     value: `Cash Receipt`,
@@ -83,7 +84,7 @@ export default (data) => {
   });
   commands.push({
     type: 'text',
-    value: `Created By: ${data.createdBy}`,
+    value: `Created By: ${createdBy}`,
     style: {
       marginTop: '10px',
       fontSize: '10px',

@@ -21,8 +21,10 @@ import {
   DialogTitle,
   DialogTrigger,
   Input,
+  Image,
   Label,
   Spinner,
+  Textarea,
   Table,
   TableBody,
   TableCell,
@@ -40,7 +42,8 @@ import {
   Edit24Regular,
 } from '@fluentui/react-icons';
 import { doc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
-import { firebaseDB } from '../../../firebaseInit';
+import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { firebaseDB, firebaseStorage } from '../../../firebaseInit';
 import { getCompaniesCollection } from '../../../services/firestoreHelpers';
 import { showToast } from '../../../common/toaster';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
@@ -86,6 +89,16 @@ export default function CompaniesManagementScreen() {
     }
   };
 
+  const uploadCompanyLogo = async (logoFile, companyId) => {
+    if (!logoFile) return '';
+
+    const extension = logoFile.name?.split('.').pop()?.toLowerCase() || 'png';
+    const filePath = `companies/${companyId}/logo-${Date.now()}.${extension}`;
+    const logoStorageRef = storageRef(firebaseStorage, filePath);
+    const uploadSnapshot = await uploadBytes(logoStorageRef, logoFile);
+    return getDownloadURL(uploadSnapshot.ref);
+  };
+
   const handleCreateCompany = async (companyData) => {
     try {
       // Generate company ID from name (lowercase, replace spaces with hyphens)
@@ -110,9 +123,15 @@ export default function CompaniesManagementScreen() {
         return false;
       }
 
+      const logoUrl = companyData.logoFile
+        ? await uploadCompanyLogo(companyData.logoFile, companyId)
+        : '';
+
       await setDoc(companyRef, {
         name: companyData.name,
         shortCode: companyData.shortCode || '',
+        logoUrl,
+        address: companyData.address || '',
         isActive: companyData.isActive !== false,
         createdAt: new Date().toISOString(),
       });
@@ -130,9 +149,16 @@ export default function CompaniesManagementScreen() {
   const handleUpdateCompany = async (companyId, companyData) => {
     try {
       const companyRef = doc(firebaseDB, 'companies', companyId);
+      let logoUrl = companyData.logoUrl || '';
+      if (companyData.logoFile) {
+        logoUrl = await uploadCompanyLogo(companyData.logoFile, companyId);
+      }
+
       await updateDoc(companyRef, {
         name: companyData.name,
         shortCode: companyData.shortCode || '',
+        logoUrl,
+        address: companyData.address || '',
         isActive: companyData.isActive !== false,
         updatedAt: new Date().toISOString(),
       });
@@ -279,8 +305,9 @@ export default function CompaniesManagementScreen() {
               }
             }}
             company={selectedCompany}
-            onSave={(data) => {
-              handleUpdateCompany(selectedCompany.id, data);
+            onSave={async (data) => {
+              const success = await handleUpdateCompany(selectedCompany.id, data);
+              if (!success) return;
               setEditDialogOpen(false);
               setSelectedCompany(null);
             }}
@@ -297,6 +324,9 @@ export default function CompaniesManagementScreen() {
 function CreateCompanyDialog({ open, onOpenChange, onSave }) {
   const [name, setName] = useState('');
   const [shortCode, setShortCode] = useState('');
+  const [address, setAddress] = useState('');
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -309,12 +339,17 @@ function CreateCompanyDialog({ open, onOpenChange, onSave }) {
     const success = await onSave({
       name: name.trim(),
       shortCode: shortCode.trim(),
+      address: address.trim(),
+      logoFile,
       isActive,
     });
 
     if (success) {
       setName('');
       setShortCode('');
+      setAddress('');
+      setLogoFile(null);
+      setLogoPreviewUrl('');
       setIsActive(true);
       onOpenChange(false);
     }
@@ -324,6 +359,9 @@ function CreateCompanyDialog({ open, onOpenChange, onSave }) {
   const handleCancel = () => {
     setName('');
     setShortCode('');
+    setAddress('');
+    setLogoFile(null);
+    setLogoPreviewUrl('');
     setIsActive(true);
     onOpenChange(false);
   };
@@ -357,6 +395,39 @@ function CreateCompanyDialog({ open, onOpenChange, onSave }) {
                   placeholder="e.g., ADA"
                   maxLength={10}
                 />
+              </div>
+              <VerticalSpace1 />
+              <div className="form-field">
+                <Label htmlFor="company-address">Address (Optional)</Label>
+                <Textarea
+                  id="company-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter company address"
+                  resize="vertical"
+                />
+              </div>
+              <VerticalSpace1 />
+              <div className="form-field">
+                <Label htmlFor="company-logo">Company Logo (Optional)</Label>
+                <Input
+                  id="company-logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setLogoFile(file);
+                    setLogoPreviewUrl(URL.createObjectURL(file));
+                  }}
+                />
+                {logoPreviewUrl ? (
+                  <Image
+                    src={logoPreviewUrl}
+                    alt="Company logo preview"
+                    style={{ maxWidth: 120, maxHeight: 120, objectFit: 'contain' }}
+                  />
+                ) : null}
               </div>
               <VerticalSpace1 />
               <div className="form-field">
@@ -399,6 +470,9 @@ function CreateCompanyDialog({ open, onOpenChange, onSave }) {
 function EditCompanyDialog({ open, onOpenChange, company, onSave }) {
   const [name, setName] = useState(company?.name || '');
   const [shortCode, setShortCode] = useState(company?.shortCode || '');
+  const [address, setAddress] = useState(company?.address || '');
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState(company?.logoUrl || '');
   const [isActive, setIsActive] = useState(company?.isActive !== false);
   const [saving, setSaving] = useState(false);
 
@@ -406,6 +480,9 @@ function EditCompanyDialog({ open, onOpenChange, company, onSave }) {
     if (company) {
       setName(company.name || '');
       setShortCode(company.shortCode || '');
+      setAddress(company.address || '');
+      setLogoFile(null);
+      setLogoPreviewUrl(company.logoUrl || '');
       setIsActive(company.isActive !== false);
     }
   }, [company]);
@@ -419,6 +496,9 @@ function EditCompanyDialog({ open, onOpenChange, company, onSave }) {
     await onSave({
       name: name.trim(),
       shortCode: shortCode.trim(),
+      address: address.trim(),
+      logoUrl: company.logoUrl || '',
+      logoFile,
       isActive,
     });
     setSaving(false);
@@ -428,6 +508,9 @@ function EditCompanyDialog({ open, onOpenChange, company, onSave }) {
     if (company) {
       setName(company.name || '');
       setShortCode(company.shortCode || '');
+      setAddress(company.address || '');
+      setLogoFile(null);
+      setLogoPreviewUrl(company.logoUrl || '');
       setIsActive(company.isActive !== false);
     }
     if (typeof onOpenChange === 'function') {
@@ -468,6 +551,39 @@ function EditCompanyDialog({ open, onOpenChange, company, onSave }) {
                   placeholder="e.g., ADA"
                   maxLength={10}
                 />
+              </div>
+              <VerticalSpace1 />
+              <div className="form-field">
+                <Label htmlFor="edit-company-address">Address (Optional)</Label>
+                <Textarea
+                  id="edit-company-address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter company address"
+                  resize="vertical"
+                />
+              </div>
+              <VerticalSpace1 />
+              <div className="form-field">
+                <Label htmlFor="edit-company-logo">Company Logo (Optional)</Label>
+                <Input
+                  id="edit-company-logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setLogoFile(file);
+                    setLogoPreviewUrl(URL.createObjectURL(file));
+                  }}
+                />
+                {logoPreviewUrl ? (
+                  <Image
+                    src={logoPreviewUrl}
+                    alt="Company logo preview"
+                    style={{ maxWidth: 120, maxHeight: 120, objectFit: 'contain' }}
+                  />
+                ) : null}
               </div>
               <VerticalSpace1 />
               <div className="form-field">

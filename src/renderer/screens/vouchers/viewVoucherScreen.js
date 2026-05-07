@@ -1,8 +1,11 @@
 import { Button, Divider, Image } from '@fluentui/react-components';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import numWords from 'num-words';
+import { doc, getDoc } from 'firebase/firestore';
 import { useAuthUser } from '../../contexts/allUsersContext';
+import { useCompany } from '../../contexts/companyContext';
+import { firebaseDB } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
 import Logo from '../../assets/images/logo.png';
 
@@ -10,6 +13,8 @@ export default function ViewVoucherScreen() {
   const { state } = useLocation();
   const { voucherData } = state;
   const { allUsers } = useAuthUser();
+  const { currentCompanyId } = useCompany();
+  const [companyDetails, setCompanyDetails] = useState(null);
 
   useEffect(() => {
     document.getElementsByTagName('html')[0].style.overflow = 'hidden';
@@ -19,23 +24,41 @@ export default function ViewVoucherScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      if (!currentCompanyId) return;
+      try {
+        const companyDocRef = doc(firebaseDB, 'companies', currentCompanyId);
+        const companyDocSnap = await getDoc(companyDocRef);
+        if (companyDocSnap.exists()) {
+          setCompanyDetails(companyDocSnap.data());
+        }
+      } catch (error) {
+        console.error('Error fetching company details:', error);
+      }
+    };
+
+    fetchCompanyDetails();
+  }, [currentCompanyId]);
+
+  const companyName = companyDetails?.name || 'Ashish Drug Agencies';
+  const companyAddress = companyDetails?.address
+    || `D-45,46 DSIIDC Complex, Kalyan Puri, New Delhi, 110091
+Ph.01121203409, 9971076796,8448291560, 8448291557,
+ashishdrugagencies@gmail.com`;
+  const companyLogo = companyDetails?.logoUrl || Logo;
+
   return (
     <div className="view-voucher-container">
       <div className="voucher-border">
-        <Image style={{ position: 'absolute' }} width={100} src={Logo} />
+        <Image style={{ position: 'absolute' }} width={100} src={companyLogo} />
         <center>
           <p className="created-by">
             Voucher Created By:{' '}
-            {allUsers.find((x) => x.uid === voucherData.requesterId).username}
+            {allUsers.find((x) => x.uid === voucherData.requesterId)?.username || '--'}
           </p>
-          <h1>Ashish Drug Agencies</h1>
-          <p>
-            D-45,46 DSIIDC Complex, Kalyan Puri, New Delhi, 110091
-            <br />
-            Ph.01121203409, 9971076796,8448291560, 8448291557,
-            ashishdrugagencies@gmail.com
-            <br />
-          </p>
+          <h1>{companyName}</h1>
+          <p style={{ whiteSpace: 'pre-line' }}>{companyAddress}</p>
 
           <Divider />
           <h2>Expense Voucher: {voucherData.receiptNumber}</h2>
@@ -49,7 +72,7 @@ export default function ViewVoucherScreen() {
           <div className="voucher-detail-row">
             <div className="voucher-key">Name of the receiver:</div>
             <div className="voucher-value">
-              {allUsers.find((x) => x.uid === voucherData.employeeId).username}
+              {allUsers.find((x) => x.uid === voucherData.employeeId)?.username || '--'}
             </div>
           </div>
           <div className="voucher-detail-row">

@@ -27,7 +27,7 @@ import {
   Dropdown,
   Option,
 } from '@fluentui/react-components';
-import { Timestamp, addDoc, runTransaction } from 'firebase/firestore';
+import { Timestamp, addDoc, doc, getDoc, runTransaction } from 'firebase/firestore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { firebaseAuth, firebaseDB } from '../../../firebaseInit';
 import { useCompany } from '../../../contexts/companyContext';
@@ -60,8 +60,47 @@ export default function CreatePaymentReceiptDialog({
   const { dispatchToast } = useToastController(toasterId);
   const [currentReceiptNumber, setCurrentReceiptNumber] = useState();
   const [paymentFrom, setPaymentFrom] = useState();
+  const [companyDetails, setCompanyDetails] = useState(null);
   const { allUsers } = useAuthUser();
   const { currentCompanyId } = useCompany();
+
+  const resolveUserLabel = (uid, fallbackValue) => {
+    if (fallbackValue && String(fallbackValue).trim().length > 0) {
+      return fallbackValue;
+    }
+    const username = allUsers?.find((x) => x.uid === uid)?.username;
+    if (username) return username;
+    if (firebaseAuth.currentUser?.uid === uid) {
+      return (
+        firebaseAuth.currentUser?.displayName
+        || firebaseAuth.currentUser?.uid
+      );
+    }
+    return uid || 'Unknown';
+  };
+
+  const resolveUsernameForPersist = async (uid, fallbackValue) => {
+    if (!uid) return 'Unknown';
+    if (fallbackValue && String(fallbackValue).trim().length > 0) {
+      return fallbackValue;
+    }
+
+    const cachedUsername = allUsers?.find((x) => x.uid === uid)?.username;
+    if (cachedUsername) return cachedUsername;
+
+    try {
+      const userRef = doc(firebaseDB, 'users', uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const username = userSnap.data()?.username;
+        if (username) return username;
+      }
+    } catch (error) {
+      console.error('Error resolving username:', error);
+    }
+
+    return resolveUserLabel(uid, fallbackValue);
+  };
 
   const getTotal = () => {
     return (
@@ -89,6 +128,13 @@ export default function CreatePaymentReceiptDialog({
           partyId: pri1.partyId,
         };
       });
+      const createdByName = await resolveUsernameForPersist(
+        firebaseAuth.currentUser.uid,
+      );
+      const paymentFromName = await resolveUsernameForPersist(
+        paymentFrom.uid,
+        paymentFrom.username,
+      );
 
       await runTransaction(firebaseDB, async (transaction) => {
         const cashReceiptsCollectionRef = getCompanyCollection(
@@ -106,7 +152,9 @@ export default function CreatePaymentReceiptDialog({
           prItems: updatedPrItems,
           timestamp: Timestamp.now().toMillis(),
           createdByUserId: firebaseAuth.currentUser.uid,
+          createdByName,
           paymentFromUserId: paymentFrom.uid,
+          paymentFromName,
           parties: updatedPrItems.map((x) => x.partyId),
         });
 
@@ -122,7 +170,7 @@ export default function CreatePaymentReceiptDialog({
 
       setLoading(false);
       showToast(dispatchToast, 'Created Payment Receipt', 'success');
-      onPrint();
+      await onPrint();
       navigate('/paymentReceipts');
     } catch (error) {
       showToast(dispatchToast, 'Error Creating Receipt', 'error');
@@ -153,28 +201,44 @@ export default function CreatePaymentReceiptDialog({
     }
   };
 
-  const onPrint = () => {
+  const onPrint = async () => {
+    const company = companyDetails
+      ? {
+          name: companyDetails.name || '',
+          address: companyDetails.address || '',
+          logoUrl: companyDetails.logoUrl || '',
+        }
+      : undefined;
+    const createdByForPrint = state?.view
+      ? await resolveUsernameForPersist(state?.createdByUserId, state?.createdByName)
+      : await resolveUsernameForPersist(firebaseAuth.currentUser.uid);
+    const userForPrint = state?.view
+      ? await resolveUsernameForPersist(
+          state?.paymentFromUserId,
+          state?.paymentFromName,
+        )
+      : await resolveUsernameForPersist(paymentFrom?.uid, paymentFrom?.username);
+
     let printDataNew = [];
     if (state?.view) {
       printDataNew = {
         time: globalUtils.getTimeFormat(state?.timestamp),
-        createdBy: allUsers.find((x) => x.uid === state?.createdByUserId)
-          ?.username,
-        user: allUsers.find((x) => x.uid === state?.paymentFromUserId)
-          ?.username,
+        createdBy: createdByForPrint,
+        user: userForPrint,
         items: prItems,
         total: getTotal(),
         receiptNumber: state?.cashReceiptNumber,
+        company,
       };
     } else {
       printDataNew = {
         time: globalUtils.getTimeFormat(new Date()),
-        createdBy: allUsers.find((x) => x.uid === firebaseAuth.currentUser.uid)
-          ?.username,
-        user: paymentFrom?.username,
+        createdBy: createdByForPrint,
+        user: userForPrint,
         items: prItems,
         receiptNumber: currentReceiptNumber,
         total: getTotal(),
+        company,
       };
     }
     window.electron.ipcRenderer.sendMessage(
@@ -191,6 +255,22 @@ export default function CreatePaymentReceiptDialog({
       setPaymentFrom(supoplyman);
     }
   }, []);
+
+  useEffect(() => {
+    const fetchCompanyDetails = async () => {
+      if (!currentCompanyId) return;
+      try {
+        const companyRef = doc(firebaseDB, 'companies', currentCompanyId);
+        const companySnap = await getDoc(companyRef);
+        if (companySnap.exists()) {
+          setCompanyDetails(companySnap.data());
+        }
+      } catch (error) {
+        console.error('Error fetching company details for printing:', error);
+      }
+    };
+    fetchCompanyDetails();
+  }, [currentCompanyId]);
 
   if (loading) {
     return <Spinner />;
@@ -217,19 +297,13 @@ export default function CreatePaymentReceiptDialog({
               <div className="vsrc-detail-items">
                 <div className="label">Created By: </div>
                 <div className="value">
-                  {
-                    allUsers.find((x) => x.uid === state?.createdByUserId)
-                      ?.username
-                  }
+                  {resolveUserLabel(state?.createdByUserId, state?.createdByName)}
                 </div>
               </div>
               <div className="vsrc-detail-items">
                 <div className="label">Username: </div>
                 <div className="value">
-                  {
-                    allUsers.find((x) => x.uid === state?.paymentFromUserId)
-                      ?.username
-                  }
+                  {resolveUserLabel(state?.paymentFromUserId, state?.paymentFromName)}
                 </div>
               </div>
               {state?.supplyReportId && state.supplyReportId.length && (
