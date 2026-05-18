@@ -38,25 +38,28 @@ L.Icon.Default.mergeOptions({
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-const endpointIcon = new L.Icon({
-  iconUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  iconRetinaUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
+const createRouteEndpointIcon = (bgColor) => new L.DivIcon({
+  className: 'route-endpoint-marker',
+  html:
+    `<div style="background:${bgColor};width:12px;height:12px;border-radius:50%;` +
+    'border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.35)"></div>',
+  iconSize: [12, 12],
+  iconAnchor: [6, 6],
 });
+
+const startIcon = createRouteEndpointIcon('#16a34a');
+const currentIcon = createRouteEndpointIcon('#2563eb');
+const endIcon = createRouteEndpointIcon('#dc2626');
 
 const orderIcon = new L.DivIcon({
   className: 'order-map-marker',
   html:
-    '<div style="background:#107c10;width:14px;height:14px;border-radius:50%;' +
-    'border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.4)"></div>',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
+    '<button type="button" aria-label="Visited party" ' +
+    'style="background:#107c10;width:10px;height:10px;border-radius:50%;' +
+    'border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.35);cursor:pointer;' +
+    'padding:0;display:block"></button>',
+  iconSize: [10, 10],
+  iconAnchor: [5, 5],
 });
 
 function AutoFitBounds({ positions }) {
@@ -85,8 +88,42 @@ const haversineKm = (lat1, lng1, lat2, lng2) => {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
+const MAX_TRACKING_GAP_MS = 5 * 60 * 1000;
+
+const buildContinuousSegments = (points, maxGapMs = MAX_TRACKING_GAP_MS) => {
+  if (!points || points.length === 0) return [];
+  const sorted = [...points].sort(
+    (a, b) => (a.timestamp || 0) - (b.timestamp || 0),
+  );
+  const segments = [];
+  let current = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1];
+    const next = sorted[i];
+    const gapMs = (next.timestamp || 0) - (prev.timestamp || 0);
+
+    if (gapMs > maxGapMs) {
+      segments.push(current);
+      current = [next];
+    } else {
+      current.push(next);
+    }
+  }
+
+  segments.push(current);
+  return segments;
+};
+
 function MrDetailPanel({ data }) {
-  const { mrUid, mrName, assignedRoute, companyId, selectedDate } = data;
+  const {
+    mrUid,
+    mrName,
+    assignedRoute,
+    companyId,
+    selectedDate,
+    isSupplyman = false,
+  } = data;
 
   const [loading, setLoading] = useState(true);
   const [routeName, setRouteName] = useState('');
@@ -96,6 +133,7 @@ function MrDetailPanel({ data }) {
   const [partyNames, setPartyNames] = useState({});
   const [partyData, setPartyData] = useState({});
   const [locationPoints, setLocationPoints] = useState([]);
+  const [trackingIsActive, setTrackingIsActive] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
 
   const partyNamesCacheRef = useRef({});
@@ -166,6 +204,53 @@ function MrDetailPanel({ data }) {
     initialLoadDone.current = false;
     setLoading(true);
 
+    const subscribeToLocation = () => {
+      const locationDocId = `${selectedDate}_${mrUid}`;
+      const locationDocRef = getCompanyDoc(
+        companyId,
+        DB_NAMES.LOCATION_TRACKING,
+        locationDocId,
+      );
+      unsubLocationRef.current = onSnapshot(
+        locationDocRef,
+        (snap) => {
+          if (snap.exists()) {
+            const lData = snap.data();
+            setTrackingIsActive(!!lData.isActive);
+            const pts = (lData.points || [])
+              .filter((p) => p.lat && p.lng)
+              .map((p) => ({
+                lat: p.lat,
+                lng: p.lng,
+                timestamp: p.timestamp,
+              }));
+            setLocationPoints(pts);
+          } else {
+            setTrackingIsActive(false);
+            setLocationPoints([]);
+          }
+        },
+        (err) => {
+          console.error('Error listening to location tracking:', err);
+          setTrackingIsActive(false);
+          setLocationPoints([]);
+        },
+      );
+    };
+
+    if (isSupplyman) {
+      setRouteName('');
+      setPlannedPartyIds([]);
+      setRegisterEntries([]);
+      setOrders([]);
+      subscribeToLocation();
+      initialLoadDone.current = true;
+      setLoading(false);
+      return () => {
+        if (unsubLocationRef.current) unsubLocationRef.current();
+      };
+    }
+
     // 1. One-time fetch: route doc for planned parties
     const initRoute = async () => {
       let planned = [];
@@ -223,34 +308,7 @@ function MrDetailPanel({ data }) {
     });
 
     // 4. Real-time listener: location tracking doc for this MR today
-    const locationDocId = `${selectedDate}_${mrUid}`;
-    const locationDocRef = getCompanyDoc(
-      companyId,
-      DB_NAMES.LOCATION_TRACKING,
-      locationDocId,
-    );
-    unsubLocationRef.current = onSnapshot(
-      locationDocRef,
-      (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          const pts = (data.points || [])
-            .filter((p) => p.lat && p.lng)
-            .map((p) => ({
-              lat: p.lat,
-              lng: p.lng,
-              timestamp: p.timestamp,
-            }));
-          setLocationPoints(pts);
-        } else {
-          setLocationPoints([]);
-        }
-      },
-      (err) => {
-        console.error('Error listening to location tracking:', err);
-        setLocationPoints([]);
-      },
-    );
+    subscribeToLocation();
 
     // Kick off the route fetch, then resolve party names for planned parties
     initRoute().then((planned) => {
@@ -270,7 +328,14 @@ function MrDetailPanel({ data }) {
       if (unsubOrdersRef.current) unsubOrdersRef.current();
       if (unsubLocationRef.current) unsubLocationRef.current();
     };
-  }, [companyId, mrUid, selectedDate, assignedRoute, fetchPartyNames]);
+  }, [
+    companyId,
+    mrUid,
+    selectedDate,
+    assignedRoute,
+    fetchPartyNames,
+    isSupplyman,
+  ]);
 
   // Once initial load is done, clear loading whenever snapshot data arrives
   useEffect(() => {
@@ -343,12 +408,23 @@ function MrDetailPanel({ data }) {
     0,
   );
 
-  const polylinePositions = locationPoints.map((p) => [p.lat, p.lng]);
+  const sortedLocationPoints = [...locationPoints].sort(
+    (a, b) => (a.timestamp || 0) - (b.timestamp || 0),
+  );
+  const locationSegments = buildContinuousSegments(sortedLocationPoints);
+  const polylineSegments = locationSegments
+    .filter((segment) => segment.length > 1)
+    .map((segment) => segment.map((p) => [p.lat, p.lng]));
+  const allRoutePositions = sortedLocationPoints.map((p) => [p.lat, p.lng]);
 
-  const totalDistanceKm = locationPoints.reduce((sum, p, i) => {
-    if (i === 0) return 0;
-    const prev = locationPoints[i - 1];
-    return sum + haversineKm(prev.lat, prev.lng, p.lat, p.lng);
+  const totalDistanceKm = locationSegments.reduce((sum, segment) => {
+    let segmentDistance = 0;
+    for (let i = 1; i < segment.length; i += 1) {
+      const prev = segment[i - 1];
+      const point = segment[i];
+      segmentDistance += haversineKm(prev.lat, prev.lng, point.lat, point.lng);
+    }
+    return sum + segmentDistance;
   }, 0);
 
   const orderMarkers = registerEntries
@@ -361,8 +437,8 @@ function MrDetailPanel({ data }) {
     }))
     .filter((m) => m.lat && m.lng);
 
-  const mapCenter = locationPoints.length > 0
-    ? [locationPoints[0].lat, locationPoints[0].lng]
+  const mapCenter = sortedLocationPoints.length > 0
+    ? [sortedLocationPoints[0].lat, sortedLocationPoints[0].lng]
     : [20.5937, 78.9629];
 
   if (loading) {
@@ -408,39 +484,43 @@ function MrDetailPanel({ data }) {
               style={{ width: '100%', height: '100%' }}
               scrollWheelZoom
             >
-              <AutoFitBounds positions={polylinePositions} />
+              <AutoFitBounds positions={allRoutePositions} />
               <TileLayer
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
-              <Polyline
-                positions={polylinePositions}
-                color="#0078d4"
-                weight={3}
-                opacity={0.8}
-              />
-              {locationPoints.length > 0 && (
+              {polylineSegments.map((segmentPositions, index) => (
+                <Polyline
+                  // eslint-disable-next-line react/no-array-index-key
+                  key={`route-segment-${index}`}
+                  positions={segmentPositions}
+                  color="#0078d4"
+                  weight={3}
+                  opacity={0.8}
+                />
+              ))}
+              {sortedLocationPoints.length > 0 && (
                 <Marker
-                  position={[locationPoints[0].lat, locationPoints[0].lng]}
-                  icon={endpointIcon}
+                  position={[sortedLocationPoints[0].lat, sortedLocationPoints[0].lng]}
+                  icon={startIcon}
                 >
                   <Popup>
-                    Start — {formatTime(locationPoints[0].timestamp)}
+                    Start — {formatTime(sortedLocationPoints[0].timestamp)}
                   </Popup>
                 </Marker>
               )}
-              {locationPoints.length > 1 && (
+              {sortedLocationPoints.length > 1 && (
                 <Marker
                   position={[
-                    locationPoints[locationPoints.length - 1].lat,
-                    locationPoints[locationPoints.length - 1].lng,
+                    sortedLocationPoints[sortedLocationPoints.length - 1].lat,
+                    sortedLocationPoints[sortedLocationPoints.length - 1].lng,
                   ]}
-                  icon={endpointIcon}
+                  icon={trackingIsActive ? currentIcon : endIcon}
                 >
                   <Popup>
-                    Latest —{' '}
+                    {trackingIsActive ? 'Current' : 'End'} —{' '}
                     {formatTime(
-                      locationPoints[locationPoints.length - 1].timestamp,
+                      sortedLocationPoints[sortedLocationPoints.length - 1].timestamp,
                     )}
                   </Popup>
                 </Marker>
@@ -451,7 +531,7 @@ function MrDetailPanel({ data }) {
                   position={[om.lat, om.lng]}
                   icon={orderIcon}
                 >
-                  <Tooltip permanent direction="top" offset={[0, -8]}>
+                  <Tooltip direction="top" offset={[0, -10]} opacity={1}>
                     {partyNames[om.partyId] || om.partyId}{' '}
                     ({formatTime(om.timestamp)})
                   </Tooltip>
@@ -463,132 +543,138 @@ function MrDetailPanel({ data }) {
       </div>
 
       {/* Stats */}
-      <div className="mr-detail-stats">
-        <div className="mr-stat-card stat-orders">
-          <div className="stat-label">Orders</div>
-          <div className="stat-value">{orderCount}</div>
-        </div>
-        <div className="mr-stat-card stat-sales">
-          <div className="stat-label">Sales</div>
-          <div className="stat-value">
-            {globalUtils.getCurrencyFormat(salesTotal)}
-          </div>
-        </div>
-        <div className="mr-stat-card stat-visits">
-          <div className="stat-label">Visited</div>
-          <div className="stat-value">
-            {visitedParties.length} / {plannedPartyIds.length}
-          </div>
-        </div>
-        <div className="mr-stat-card stat-distance">
-          <div className="stat-label">Distance</div>
-          <div className="stat-value">{totalDistanceKm.toFixed(1)} km</div>
-        </div>
-      </div>
-
-      {/* Visited Parties */}
-      <div className="visited-section">
-        <h2>Visited Parties ({visitedParties.length})</h2>
-        {visitedParties.length === 0 ? (
-          <div className="no-data-message">No parties visited yet</div>
-        ) : (
-          <div className="visited-cards">
-            {visitedParties.map((vp, i) => {
-              let photoPlaceholder = 'No photo';
-              if (vp.status !== 'Order' && vp.reason === "DIDN'T REACH") {
-                photoPlaceholder = "Didn't reach";
-              }
-              const showCallIcon =
-                vp.status === 'Order' && vp.isCallOrder;
-              return (
-                <div
-                  key={`${vp.partyId}-${i}`}
-                  className={`visited-card ${
-                    vp.status === 'Order' ? 'order-placed' : 'no-order'
-                  }`}
-                >
-                  {/* Visit selfie thumbnail (call orders use icon only) */}
-                  {showCallIcon ? (
-                    <div
-                      className="visited-card__photo visited-card__photo--call"
-                      aria-label="Call order"
-                    >
-                      <Call24Regular />
-                    </div>
-                  ) : vp.photoUrl ? (
-                    <img
-                      className="visited-card__photo"
-                      src={vp.photoUrl}
-                      alt="Visit selfie"
-                      onClick={() => setLightboxUrl(vp.photoUrl)}
-                    />
-                  ) : (
-                    <div className="visited-card__photo visited-card__photo--empty">
-                      {photoPlaceholder}
-                    </div>
-                  )}
-
-                  <div className="party-name">{vp.partyName}</div>
-                  {vp.partyPhone && (
-                    <div className="party-phone">{vp.partyPhone}</div>
-                  )}
-                  {vp.status === 'Order' ? (
-                    <>
-                      <div className="visit-outcome order">
-                        Order: {globalUtils.getCurrencyFormat(vp.orderAmount)}
-                      </div>
-                      <div
-                        className={`visit-type-badge ${
-                          vp.isCallOrder ? 'call' : 'physical'
-                        }`}
-                      >
-                        {vp.isCallOrder ? '\u260E Call order' : '\u{1F6B6} Physical visit'}
-                      </div>
-                      {vp.orderStatus && (
-                        <div className="order-status-badge">{vp.orderStatus}</div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="visit-outcome no-order">
-                      No Order{vp.reason ? ` (${vp.reason})` : ''}
-                    </div>
-                  )}
-                  <div className="visit-time">{formatTime(vp.timestamp)}</div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Selfie lightbox */}
-      {lightboxUrl && (
-        <div
-          className="visited-photo-lightbox"
-          onClick={() => setLightboxUrl(null)}
-        >
-          <img src={lightboxUrl} alt="Visit selfie full" />
-        </div>
-      )}
-
-      {/* Pending Parties */}
-      <div className="pending-section">
-        <h2>Pending Parties ({pendingPartiesList.length})</h2>
-        {pendingPartiesList.length === 0 ? (
-          <div className="no-data-message">All planned parties visited</div>
-        ) : (
-          <div className="pending-chips">
-            {pendingPartiesList.map((pp) => (
-              <div key={pp.partyId} className="pending-chip">
-                {pp.partyName}
-                {pp.partyPhone && (
-                  <span className="pending-chip-tooltip">{pp.partyPhone}</span>
-                )}
+      {!isSupplyman && (
+        <>
+          <div className="mr-detail-stats">
+            <div className="mr-stat-card stat-orders">
+              <div className="stat-label">Orders</div>
+              <div className="stat-value">{orderCount}</div>
+            </div>
+            <div className="mr-stat-card stat-sales">
+              <div className="stat-label">Sales</div>
+              <div className="stat-value">
+                {globalUtils.getCurrencyFormat(salesTotal)}
               </div>
-            ))}
+            </div>
+            <div className="mr-stat-card stat-visits">
+              <div className="stat-label">Visited</div>
+              <div className="stat-value">
+                {visitedParties.length} / {plannedPartyIds.length}
+              </div>
+            </div>
+            <div className="mr-stat-card stat-distance">
+              <div className="stat-label">Distance</div>
+              <div className="stat-value">{totalDistanceKm.toFixed(1)} km</div>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Visited Parties */}
+          <div className="visited-section">
+            <h2>Visited Parties ({visitedParties.length})</h2>
+            {visitedParties.length === 0 ? (
+              <div className="no-data-message">No parties visited yet</div>
+            ) : (
+              <div className="visited-cards">
+                {visitedParties.map((vp, i) => {
+                  let photoPlaceholder = 'No photo';
+                  if (vp.status !== 'Order' && vp.reason === "DIDN'T REACH") {
+                    photoPlaceholder = "Didn't reach";
+                  }
+                  const showCallIcon =
+                    vp.status === 'Order' && vp.isCallOrder;
+                  return (
+                    <div
+                      key={`${vp.partyId}-${i}`}
+                      className={`visited-card ${
+                        vp.status === 'Order' ? 'order-placed' : 'no-order'
+                      }`}
+                    >
+                      {/* Visit selfie thumbnail (call orders use icon only) */}
+                      {showCallIcon ? (
+                        <div
+                          className="visited-card__photo visited-card__photo--call"
+                          aria-label="Call order"
+                        >
+                          <Call24Regular />
+                        </div>
+                      ) : vp.photoUrl ? (
+                        <img
+                          className="visited-card__photo"
+                          src={vp.photoUrl}
+                          alt="Visit selfie"
+                          onClick={() => setLightboxUrl(vp.photoUrl)}
+                        />
+                      ) : (
+                        <div className="visited-card__photo visited-card__photo--empty">
+                          {photoPlaceholder}
+                        </div>
+                      )}
+
+                      <div className="party-name">{vp.partyName}</div>
+                      {vp.partyPhone && (
+                        <div className="party-phone">{vp.partyPhone}</div>
+                      )}
+                      {vp.status === 'Order' ? (
+                        <>
+                          <div className="visit-outcome order">
+                            Order: {globalUtils.getCurrencyFormat(vp.orderAmount)}
+                          </div>
+                          <div
+                            className={`visit-type-badge ${
+                              vp.isCallOrder ? 'call' : 'physical'
+                            }`}
+                          >
+                            {vp.isCallOrder
+                              ? '\u260E Call order'
+                              : '\u{1F6B6} Physical visit'}
+                          </div>
+                          {vp.orderStatus && (
+                            <div className="order-status-badge">{vp.orderStatus}</div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="visit-outcome no-order">
+                          No Order{vp.reason ? ` (${vp.reason})` : ''}
+                        </div>
+                      )}
+                      <div className="visit-time">{formatTime(vp.timestamp)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Selfie lightbox */}
+          {lightboxUrl && (
+            <div
+              className="visited-photo-lightbox"
+              onClick={() => setLightboxUrl(null)}
+            >
+              <img src={lightboxUrl} alt="Visit selfie full" />
+            </div>
+          )}
+
+          {/* Pending Parties */}
+          <div className="pending-section">
+            <h2>Pending Parties ({pendingPartiesList.length})</h2>
+            {pendingPartiesList.length === 0 ? (
+              <div className="no-data-message">All planned parties visited</div>
+            ) : (
+              <div className="pending-chips">
+                {pendingPartiesList.map((pp) => (
+                  <div key={pp.partyId} className="pending-chip">
+                    {pp.partyName}
+                    {pp.partyPhone && (
+                      <span className="pending-chip-tooltip">{pp.partyPhone}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

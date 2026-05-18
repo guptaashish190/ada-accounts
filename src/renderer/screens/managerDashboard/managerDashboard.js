@@ -801,7 +801,7 @@ function ManagerDashboard() {
   ]);
 
   const handleRouteClick = (row) => {
-    if (!row.mrUid || !row.isOnline) return;
+    if (!row.mrUid) return;
     window.electron.ipcRenderer.sendMessage('new-window', {
       type: constants.windowConstants.MR_DETAIL,
       data: {
@@ -864,6 +864,21 @@ function ManagerDashboard() {
     if (!row.activeSR) return;
     navigate('/viewSupplyReport', {
       state: { prefillSupplyReport: row.activeSR },
+    });
+  };
+
+  const handleSupplyRowClick = (row) => {
+    if (!row.uid) return;
+    window.electron.ipcRenderer.sendMessage('new-window', {
+      type: constants.windowConstants.MR_DETAIL,
+      data: {
+        mrUid: row.uid,
+        mrName: row.name,
+        assignedRoute: '',
+        companyId: currentCompanyId,
+        selectedDate,
+        isSupplyman: true,
+      },
     });
   };
 
@@ -943,7 +958,7 @@ function ManagerDashboard() {
                   className={row.isOnline ? 'row-online' : ''}
                   onClick={() => handleRouteClick(row)}
                   style={{
-                    cursor: row.mrUid && row.isOnline ? 'pointer' : 'default',
+                    cursor: row.mrUid ? 'pointer' : 'default',
                   }}
                 >
                   <td>{row.routeName}</td>
@@ -1011,7 +1026,12 @@ function ManagerDashboard() {
             </thead>
             <tbody>
               {supplyRows.map((row) => (
-                <tr key={row.uid} className={row.isOnline ? 'row-online' : ''}>
+                <tr
+                  key={row.uid}
+                  className={row.isOnline ? 'row-online' : ''}
+                  onClick={() => handleSupplyRowClick(row)}
+                  style={{ cursor: row.uid ? 'pointer' : 'default' }}
+                >
                   <td>{row.name}</td>
                   <td>
                     <div className="mr-name-cell">

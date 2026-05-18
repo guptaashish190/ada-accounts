@@ -333,6 +333,7 @@ export default function ProductsListScreen() {
             <thead>
               <tr>
                 <th style={{ width: 40 }}>#</th>
+                <th style={{ width: 56 }}>Photo</th>
                 <th>Name</th>
                 <th>Company</th>
                 <th>Pack Size</th>
@@ -352,6 +353,43 @@ export default function ProductsListScreen() {
                     }}
                   >
                     {startIdx + idx + 1}
+                  </td>
+                  <td>
+                    {(() => {
+                      const mainImage =
+                        p.mainImageUrl
+                        || (Array.isArray(p.imageUrls) && p.imageUrls[0])
+                        || p.imageUrl
+                        || '';
+                      return mainImage ? (
+                        <img
+                          src={mainImage}
+                          alt={p.name || p.Name || 'Product'}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 6,
+                            objectFit: 'cover',
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 6,
+                            background: '#eef2ff',
+                            color: '#4f46e5',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: 10,
+                          }}
+                        >
+                          N/A
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td>{p.name || p.Name || '—'}</td>
                   <td>{p.company || p.Company || p.brand || '—'}</td>
