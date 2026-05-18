@@ -7,7 +7,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 import {
@@ -23,8 +23,6 @@ import {
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 
 import '../style.css';
-import ReactToPrint, { useReactToPrint } from 'react-to-print';
-import { min } from 'mathjs';
 import { useAuthUser } from '../../../contexts/allUsersContext';
 import globalUtils from '../../../services/globalUtils';
 import constants from '../../../constants';
@@ -49,7 +47,7 @@ export default function DaySupplyReportPrint() {
   const { currentCompanyId } = useCompany();
 
   const handlePrint = () => {
-    window.electron.ipcRenderer.sendMessage('printCurrentPage');
+    window.print();
   };
 
   const onSearch = (clear) => {
@@ -149,13 +147,13 @@ export default function DaySupplyReportPrint() {
   }, []);
 
   return (
-    <center>
+    <div className="print-supply-reports-page">
       <div className="print-supply-reports-container">
         <h3>
           Day Supply Report - {globalUtils.getTimeFormat(selectedDate, true)}
         </h3>
 
-        <div className="all-bills-search-input-container">
+        <div className="all-bills-search-input-container no-print">
           <DatePicker
             className=" filter-input"
             onSelectDate={setSelectedDate}
@@ -183,7 +181,9 @@ export default function DaySupplyReportPrint() {
           </Button>
         </div>
         {loading ? (
-          <Spinner />
+          <div className="no-print">
+            <Spinner />
+          </div>
         ) : (
           <div>
             {supplyReports.map((sr, i) => {
@@ -247,7 +247,7 @@ export default function DaySupplyReportPrint() {
       </div>
 
       <div>*** End of Report ***</div>
-    </center>
+    </div>
   );
 }
 
@@ -265,33 +265,33 @@ function SupplyReportRow({
   return (
     <table className="app-table">
       <thead className="supply-report-row">
-        <th style={{ width: '25vw' }}>
+        <th style={{ width: '25%' }}>
           <Text className="sr-id">
             {data.receiptNumber} (
             {data.status === 'Completed' ? 'Received' : 'Unreceived'})
           </Text>
         </th>
-        <th style={{ width: '10vw' }}>
+        <th style={{ width: '10%' }}>
           <Text className="sr-timestamp">
             {allUsers.find((x) => x.uid === data.supplymanId)?.username}
           </Text>
         </th>
 
-        <th style={{ width: '10vw' }}>
+        <th style={{ width: '10%' }}>
           <Text className="sr-supplyman">
             {globalUtils.getDayTime(data.dispatchTimestamp)}
           </Text>
         </th>
-        <th style={{ width: '10vw' }}>
+        <th style={{ width: '10%' }}>
           <Text className="sr-supplyman">Credit Days</Text>
         </th>
-        <th style={{ width: '20vw' }}>
+        <th style={{ width: '20%' }}>
           <Text>Payment</Text>
         </th>
         <th>
           <Text>Outstanding</Text>
         </th>
-        <th style={{ width: '13vw' }}>
+        <th style={{ width: '13%' }}>
           <Text>Remarks</Text>
         </th>
       </thead>

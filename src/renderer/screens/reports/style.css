@@ -1,5 +1,9 @@
+.print-supply-reports-page {
+  width: 100%;
+}
+
 .print-supply-reports-container .supply-report-row {
-  width: 70vw;
+  width: 100%;
   background-color: #ddd;
   color: black;
 }
@@ -20,6 +24,7 @@
 }
 
 .print-supply-reports-container table {
+  width: 100%;
   margin-bottom: 20px;
 }
 
@@ -30,7 +35,8 @@
 
 @media print {
   @page {
-    margin:5mm 5mm;
+    size: A4 portrait;
+    margin: 5mm;
   }
 
   .version-name{
@@ -38,13 +44,37 @@
   }
 
   body,
-  html {  
+  html {
+    margin: 0 !important;
+    padding: 0 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-    height: 100% !important;
+    height: auto !important;
     width: 100% !important;
-    page-break-after: always;
+    overflow: visible !important;
   }
+
+  .tab-navigator,
+  .tab-content,
+  .print-supply-reports-page,
+  .print-supply-reports-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .print-supply-reports-container table {
+    width: 100% !important;
+    table-layout: fixed;
+  }
+
+  .print-supply-reports-container .supply-report-row {
+    width: 100% !important;
+    background-color: white;
+  }
+
   .tab-navigator .left {
     display: none;
   }
@@ -62,10 +92,8 @@
   }
 
   .tab-navigator {
+    height: auto !important;
     overflow: visible !important;
-  }
-  .print-supply-reports-container .supply-report-row {
-    background-color: white;
   }
 
   .print-supply-reports-container .supply-report-row span {

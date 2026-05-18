@@ -23,6 +23,7 @@ import {
   getCompanyDoc,
   DB_NAMES,
 } from '../../services/firestoreHelpers';
+import { Call24Regular } from '@fluentui/react-icons';
 import globalUtils from '../../services/globalUtils';
 import './style.css';
 
@@ -496,9 +497,9 @@ function MrDetailPanel({ data }) {
               let photoPlaceholder = 'No photo';
               if (vp.status !== 'Order' && vp.reason === "DIDN'T REACH") {
                 photoPlaceholder = "Didn't reach";
-              } else if (vp.status === 'Order' && vp.isCallOrder) {
-                photoPlaceholder = 'Call order';
               }
+              const showCallIcon =
+                vp.status === 'Order' && vp.isCallOrder;
               return (
                 <div
                   key={`${vp.partyId}-${i}`}
@@ -506,8 +507,15 @@ function MrDetailPanel({ data }) {
                     vp.status === 'Order' ? 'order-placed' : 'no-order'
                   }`}
                 >
-                  {/* Visit selfie thumbnail */}
-                  {vp.photoUrl ? (
+                  {/* Visit selfie thumbnail (call orders use icon only) */}
+                  {showCallIcon ? (
+                    <div
+                      className="visited-card__photo visited-card__photo--call"
+                      aria-label="Call order"
+                    >
+                      <Call24Regular />
+                    </div>
+                  ) : vp.photoUrl ? (
                     <img
                       className="visited-card__photo"
                       src={vp.photoUrl}

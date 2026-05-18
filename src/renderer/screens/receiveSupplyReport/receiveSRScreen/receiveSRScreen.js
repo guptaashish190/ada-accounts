@@ -285,7 +285,7 @@ export default function ReceiveSRScreen() {
 
     if (!Object.keys(prItems).length) {
       showToast(dispatchToast, 'No Cash Received', 'error');
-      navigate(isBundle ? '/bundles' : '/receiveSupplyReports');
+      window.close();
       return;
     }
 

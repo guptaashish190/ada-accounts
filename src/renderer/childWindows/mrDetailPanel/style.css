@@ -164,6 +164,24 @@
   background: #faf9f8;
 }
 
+.visited-card__photo--call {
+  width: 100%;
+  height: 56px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  background: #fff4e5;
+  color: #9a3a00;
+  flex-shrink: 0;
+}
+
+.visited-card__photo--call svg {
+  width: 28px;
+  height: 28px;
+}
+
 /* Full-screen lightbox */
 .visited-photo-lightbox {
   position: fixed;

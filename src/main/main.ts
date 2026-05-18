@@ -113,9 +113,8 @@ function printCurrentPage() {
     mainWindow.webContents.print({
       pageSize: 'A4',
       margins: {
-        marginType: 'printableArea',
+        marginType: 'none',
       },
-
       landscape: false,
       printBackground: true,
     });

@@ -147,8 +147,9 @@ export default function ViewBundleScreen() {
         <Button
           appearance="primary"
           onClick={() => {
-            navigate('/receiveSRScreen', {
-              state: { supplyReport: bundle, isBundle: true },
+            window.electron.ipcRenderer.sendMessage('new-window', {
+              type: constants.windowConstants.RECEIVE_SUPPLY_REPORT,
+              data: { supplyReport: bundle, isBundle: true },
             });
           }}
         >

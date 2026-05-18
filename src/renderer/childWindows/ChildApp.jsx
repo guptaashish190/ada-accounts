@@ -73,7 +73,7 @@ export default function App({ args }) {
                   pathname: '/receiveSRScreen',
                   state: {
                     supplyReport: args.data?.supplyReport,
-                    isBundle: false,
+                    isBundle: args.data?.isBundle ?? false,
                   },
                 },
               ]}

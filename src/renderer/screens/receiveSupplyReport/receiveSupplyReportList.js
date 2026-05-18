@@ -1,4 +1,4 @@
-import { getDocs, query, where } from 'firebase/firestore';
+import { onSnapshot, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Button, Card, Text, Input } from '@fluentui/react-components';
 import './style.css';
@@ -20,63 +20,58 @@ export default function ReceiveSupplyReportScreen() {
   // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
 
-  const fetchDispatchedSupplyReports = async () => {
+  useEffect(() => {
+    if (!currentCompanyId) return;
     setLoading(true);
-    try {
-      const supplyReportsCollection = getCompanyCollection(currentCompanyId, DB_NAMES.SUPPLY_REPORTS);
 
-      const q = query(
-        supplyReportsCollection,
-        where('status', '==', 'Delivered'),
-      );
-      const q2 = query(
-        supplyReportsCollection,
-        where('status', '==', 'Dispatched'),
-      );
-      const querySnapshot = await getDocs(q);
-      const querySnapshot2 = await getDocs(q2);
+    const supplyReportsCollection = getCompanyCollection(
+      currentCompanyId,
+      DB_NAMES.SUPPLY_REPORTS,
+    );
 
-      const dispatchedSupplyReports = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    let deliveredDocs = [];
+    let dispatchedDocs = [];
 
-      const dispatchedSupplyReports2 = querySnapshot2.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const merge = () => {
+      const merged = [...deliveredDocs, ...dispatchedDocs];
+      setSupplyReports(merged);
+      setFilteredSupplyReports(merged);
       setLoading(false);
-      setSupplyReports([
-        ...dispatchedSupplyReports,
-        ...dispatchedSupplyReports2,
-      ]);
-      setFilteredSupplyReports([
-        ...dispatchedSupplyReports,
-        ...dispatchedSupplyReports2,
-      ]);
-    } catch (error) {
-      console.error('Error fetching undispatched supply reports:', error);
-      setLoading(false);
-      throw error;
-    }
-  };
-  useEffect(() => {
-    fetchDispatchedSupplyReports();
+    };
+
+    const unsubDelivered = onSnapshot(
+      query(supplyReportsCollection, where('status', '==', 'Delivered')),
+      (snap) => {
+        deliveredDocs = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        merge();
+      },
+      (error) => console.error('Error listening to Delivered SRs:', error),
+    );
+
+    const unsubDispatched = onSnapshot(
+      query(supplyReportsCollection, where('status', '==', 'Dispatched')),
+      (snap) => {
+        dispatchedDocs = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        merge();
+      },
+      (error) => console.error('Error listening to Dispatched SRs:', error),
+    );
+
+    return () => {
+      unsubDelivered();
+      unsubDispatched();
+    };
   }, [currentCompanyId]);
-
-  // eslint-disable-next-line
-  useEffect(() => {
-  }, []);
 
   useEffect(() => {
     if (querySR.length === 0) {
       setFilteredSupplyReports(supplyReports);
     } else {
       setFilteredSupplyReports(
-        filteredSupplyReports.filter((x) => x.receiptNumber.includes(querySR)),
+        supplyReports.filter((x) => x.receiptNumber.includes(querySR)),
       );
     }
-  }, [querySR]);
+  }, [querySR, supplyReports]);
 
   if (loading) return <Loader />;
 
