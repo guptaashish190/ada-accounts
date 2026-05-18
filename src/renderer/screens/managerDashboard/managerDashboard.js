@@ -89,6 +89,13 @@ function getSelectedMrLabel(mrUsers, uid) {
   return mr.username || mr.email || mr.uid;
 }
 
+function getSelectedRouteLabel(routes, routeId) {
+  if (!routeId) return '';
+  const route = routes.find((r) => r.routeId === routeId);
+  if (!route) return routeId;
+  return route.routeName || route.routeId;
+}
+
 function AssignMrDialog({
   open,
   onClose,
@@ -128,6 +135,53 @@ function AssignMrDialog({
                     </Option>
                   );
                 })}
+              </Dropdown>
+            </div>
+          </DialogContent>
+          <DialogActions>
+            <Button appearance="secondary" onClick={onClose} disabled={saving}>
+              Cancel
+            </Button>
+            <Button appearance="primary" onClick={onSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
+  );
+}
+
+function AssignRouteDialog({
+  open,
+  onClose,
+  mrName,
+  routeOptions,
+  selectedRouteId,
+  onSelectRoute,
+  onSave,
+  saving,
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(e, d) => !d.open && onClose()}>
+      <DialogSurface style={{ maxWidth: 420 }}>
+        <DialogBody>
+          <DialogTitle>Assign Route — {mrName}</DialogTitle>
+          <DialogContent>
+            <div style={{ marginTop: 12 }}>
+              <Dropdown
+                placeholder="Select route"
+                value={getSelectedRouteLabel(routeOptions, selectedRouteId)}
+                selectedOptions={selectedRouteId ? [selectedRouteId] : []}
+                onOptionSelect={(e, d) => onSelectRoute(d.optionValue || '')}
+                style={{ width: '100%' }}
+              >
+                <Option value="">No route</Option>
+                {routeOptions.map((route) => (
+                  <Option key={route.routeId} value={route.routeId}>
+                    {route.routeName}
+                  </Option>
+                ))}
               </Dropdown>
             </div>
           </DialogContent>
@@ -400,7 +454,8 @@ function ManagerDashboard() {
     new Date().toISOString().split('T')[0],
   );
 
-  const [routeRows, setRouteRows] = useState([]);
+  const [mrRows, setMrRows] = useState([]);
+  const [unassignedRoutes, setUnassignedRoutes] = useState([]);
   const [summaryStats, setSummaryStats] = useState({
     totalOrders: 0,
     totalSales: 0,
@@ -413,6 +468,10 @@ function ManagerDashboard() {
   const [assignRouteName, setAssignRouteName] = useState('');
   const [assignSelectedMrUid, setAssignSelectedMrUid] = useState('');
   const [assignSaving, setAssignSaving] = useState(false);
+  const [assignRouteDialogOpen, setAssignRouteDialogOpen] = useState(false);
+  const [assignRouteForMr, setAssignRouteForMr] = useState(null);
+  const [assignSelectedRouteId, setAssignSelectedRouteId] = useState('');
+  const [assignRouteSaving, setAssignRouteSaving] = useState(false);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editOrder, setEditOrder] = useState(null);
@@ -457,6 +516,27 @@ function ManagerDashboard() {
     return map;
   }, [companyUsers]);
 
+  const routeOptions = useMemo(() => {
+    if (!routesDocs) return [];
+    const dayIndex = getWeekdayIndex(selectedDate);
+    const options = routesDocs
+      .map((d) => {
+        const data = d.data();
+        const routeArray = data.route || [];
+        const todayRoute = routeArray[dayIndex];
+        const todayParties =
+          todayRoute && todayRoute.parties ? todayRoute.parties : [];
+        return {
+          routeId: d.id,
+          routeName: data.name || d.id,
+          plannedParties: todayParties.length,
+        };
+      })
+      .filter((route) => route.plannedParties > 0)
+      .sort((a, b) => a.routeName.localeCompare(b.routeName));
+    return options;
+  }, [routesDocs, selectedDate]);
+
   const fetchPartyNames = async (partyIds) => {
     const missing = partyIds.filter(
       (id) => id && !partyNamesCacheRef.current[id],
@@ -493,11 +573,11 @@ function ManagerDashboard() {
     };
   };
 
-  const getWeekdayIndex = (dateStr) => {
+  function getWeekdayIndex(dateStr) {
     const d = new Date(dateStr);
     const jsDay = d.getDay(); // 0=Sunday
     return (jsDay + 6) % 7; // 0=Monday...6=Sunday
-  };
+  }
 
   // Set up real-time Firestore listeners; re-subscribe when company or date changes
   useEffect(() => {
@@ -617,6 +697,12 @@ function ManagerDashboard() {
       ordersByUser[uid].push(data);
       if (data.flowCompleted === false) pipelineCount++;
     });
+    // Dashboard summary should represent all day orders, irrespective of route.
+    const totalOrders = ordersDocs.length;
+    const totalSales = ordersDocs.reduce(
+      (sum, d) => sum + (d.data().orderAmount || 0),
+      0,
+    );
 
     // Currently-active (online) employee UIDs from attendance. Used by both
     // the MR and Supply Performance tables.
@@ -643,62 +729,70 @@ function ManagerDashboard() {
       }
     });
 
-    // Build route rows
-    let totalOrders = 0;
-    let totalSales = 0;
-    let totalVisits = 0;
+    // Build MR-first rows for the primary table.
+    const rows = mrUsers.map((mr) => {
+      const mrUid = mr.uid;
+      const assignedRouteId = mr.assignedRoute || '';
+      const assignedRoute = assignedRouteId ? routeMap[assignedRouteId] : null;
 
-    const rows = Object.entries(routeMap)
-      .filter(([, route]) => route.todayParties.length > 0)
-      .map(([routeId, route]) => {
-        const mr = routeToMr[routeId] || null;
-        const mrUid = mr ? mr.uid : null;
-        const mrName = mr ? mr.username || mr.email || mr.uid : null;
-        const isOnline = mrUid ? onlineEmployeeUids.has(mrUid) : false;
+      const entries = registerByUser[mrUid] || [];
+      // Count distinct parties visited — multiple orders for the same party
+      // in a single day count as one visit.
+      const visitsDone = new Set(
+        entries.map((e) => e.partyId).filter(Boolean),
+      ).size;
 
-        const entries = mrUid ? registerByUser[mrUid] || [] : [];
-        // Count distinct parties visited — multiple orders for the same party
-        // in a single day count as one visit.
-        const visitsDone = new Set(
-          entries.map((e) => e.partyId).filter(Boolean),
-        ).size;
+      const mrOrders = ordersByUser[mrUid] || [];
+      const orderCount = mrOrders.length;
+      const salesTotal = mrOrders.reduce((sum, o) => sum + (o.orderAmount || 0), 0);
 
-        const mrOrders = mrUid ? ordersByUser[mrUid] || [] : [];
-        const orderCount = mrOrders.length;
-        const salesTotal = mrOrders.reduce(
-          (sum, o) => sum + (o.orderAmount || 0),
-          0,
-        );
-
-        totalOrders += orderCount;
-        totalSales += salesTotal;
-        totalVisits += visitsDone;
-
-        const distanceKm = mrUid ? distanceByUser[mrUid] || 0 : 0;
-
-        return {
-          routeId,
-          routeName: route.name,
-          mrUid,
-          mrName,
-          isOnline,
-          orderCount,
-          salesTotal,
-          visitsDone,
-          plannedParties: route.todayParties.length,
-          distanceKm,
-        };
-      });
-
-    // Sort: online first, then offline with MR, then unassigned; within group by route name
-    rows.sort((a, b) => {
-      const aRank = a.mrUid ? (a.isOnline ? 0 : 1) : 2;
-      const bRank = b.mrUid ? (b.isOnline ? 0 : 1) : 2;
-      if (aRank !== bRank) return aRank - bRank;
-      return a.routeName.localeCompare(b.routeName);
+      return {
+        mrUid,
+        mrName: mr.username || mr.email || mr.uid,
+        isOnline: onlineEmployeeUids.has(mrUid),
+        orderCount,
+        salesTotal,
+        visitsDone,
+        plannedParties: assignedRoute ? assignedRoute.todayParties.length : 0,
+        distanceKm: distanceByUser[mrUid] || 0,
+        assignedRouteId,
+        assignedRouteName: assignedRoute ? assignedRoute.name : '',
+      };
     });
 
-    setRouteRows(rows);
+    // Keep summary "visits done" behavior route-wise as before.
+    const totalVisits = Object.entries(routeMap)
+      .filter(([, route]) => route.todayParties.length > 0)
+      .reduce((sum, [routeId]) => {
+        const mr = routeToMr[routeId];
+        if (!mr) return sum;
+        const entries = registerByUser[mr.uid] || [];
+        const visitsDone = new Set(entries.map((e) => e.partyId).filter(Boolean))
+          .size;
+        return sum + visitsDone;
+      }, 0);
+
+    rows.sort((a, b) => {
+      const aRank = a.isOnline ? 0 : 1;
+      const bRank = b.isOnline ? 0 : 1;
+      if (aRank !== bRank) return aRank - bRank;
+      return a.mrName.localeCompare(b.mrName);
+    });
+
+    const scheduledRoutes = Object.entries(routeMap).filter(
+      ([, route]) => route.todayParties.length > 0,
+    );
+    const missingAssignmentRows = scheduledRoutes
+      .filter(([routeId]) => !routeToMr[routeId])
+      .map(([routeId, route]) => ({
+        routeId,
+        routeName: route.name,
+        plannedParties: route.todayParties.length,
+      }))
+      .sort((a, b) => a.routeName.localeCompare(b.routeName));
+
+    setMrRows(rows);
+    setUnassignedRoutes(missingAssignmentRows);
     setSummaryStats({ totalOrders, totalSales, totalVisits, pipelineCount });
 
     // Build order rows for the orders table
@@ -807,19 +901,28 @@ function ManagerDashboard() {
       data: {
         mrUid: row.mrUid,
         mrName: row.mrName,
-        assignedRoute: row.routeId,
+        assignedRoute: row.assignedRouteId || '',
         companyId: currentCompanyId,
         selectedDate,
       },
     });
   };
 
-  const handleOpenAssignDialog = (e, row) => {
-    e.stopPropagation();
+  const handleOpenAssignDialog = (row) => {
     setAssignRouteId(row.routeId);
     setAssignRouteName(row.routeName);
     setAssignSelectedMrUid(row.mrUid || '');
     setAssignDialogOpen(true);
+  };
+
+  const handleOpenAssignRouteDialog = (e, row) => {
+    e.stopPropagation();
+    setAssignRouteForMr({
+      mrUid: row.mrUid,
+      mrName: row.mrName,
+    });
+    setAssignSelectedRouteId(row.assignedRouteId || '');
+    setAssignRouteDialogOpen(true);
   };
 
   const handleAssignSave = async () => {
@@ -851,6 +954,38 @@ function ManagerDashboard() {
       console.error('Error assigning MR:', err);
     }
     setAssignSaving(false);
+  };
+
+  const handleAssignRouteSave = async () => {
+    if (!assignRouteForMr?.mrUid) return;
+    setAssignRouteSaving(true);
+    try {
+      const targetMrUid = assignRouteForMr.mrUid;
+      const selectedRouteId = assignSelectedRouteId || '';
+      const batch = writeBatch(firebaseDB);
+
+      if (selectedRouteId) {
+        const currentHolder = mrUsers.find(
+          (u) => u.assignedRoute === selectedRouteId && u.uid !== targetMrUid,
+        );
+        if (currentHolder) {
+          batch.update(doc(firebaseDB, 'users', currentHolder.uid), {
+            assignedRoute: '',
+          });
+        }
+      }
+
+      batch.update(doc(firebaseDB, 'users', targetMrUid), {
+        assignedRoute: selectedRouteId,
+      });
+
+      await batch.commit();
+      setAssignRouteDialogOpen(false);
+      setAssignRouteForMr(null);
+    } catch (err) {
+      console.error('Error assigning route to MR:', err);
+    }
+    setAssignRouteSaving(false);
   };
 
   const handleOpenEditOrder = (e, order) => {
@@ -931,19 +1066,19 @@ function ManagerDashboard() {
         </Card>
       </div>
 
-      {/* Route Performance Table */}
+      {/* MR Performance Table */}
       <div className="mr-table-section">
-        <h2>Route Performance</h2>
-        {routeRows.length === 0 ? (
+        <h2>MR Performance</h2>
+        {mrRows.length === 0 && unassignedRoutes.length === 0 ? (
           <div className="empty-state">
-            <Text>No routes scheduled today</Text>
+            <Text>No MRs found and no routes scheduled today</Text>
           </div>
         ) : (
           <table className="app-table">
             <thead>
               <tr>
-                <th>Route Name</th>
-                <th>Assigned MR</th>
+                <th>MR Name</th>
+                <th>Assigned Route</th>
                 <th>Status</th>
                 <th>Orders</th>
                 <th>Sales</th>
@@ -952,40 +1087,30 @@ function ManagerDashboard() {
               </tr>
             </thead>
             <tbody>
-              {routeRows.map((row) => (
+              {mrRows.map((row) => (
                 <tr
-                  key={row.routeId}
+                  key={row.mrUid}
                   className={row.isOnline ? 'row-online' : ''}
                   onClick={() => handleRouteClick(row)}
-                  style={{
-                    cursor: row.mrUid ? 'pointer' : 'default',
-                  }}
+                  style={{ cursor: 'pointer' }}
                 >
-                  <td>{row.routeName}</td>
+                  <td>{row.mrName}</td>
                   <td>
                     <div className="assigned-mr-cell">
-                      <span>{row.mrName || '—'}</span>
+                      <span>{row.assignedRouteName || row.assignedRouteId || '—'}</span>
                       <Button
                         appearance="subtle"
                         icon={<Edit16Regular />}
                         size="small"
-                        onClick={(e) => handleOpenAssignDialog(e, row)}
+                        onClick={(e) => handleOpenAssignRouteDialog(e, row)}
                       />
                     </div>
                   </td>
                   <td>
-                    {row.mrUid ? (
-                      <div className="mr-name-cell">
-                        <div
-                          className={
-                            row.isOnline ? 'online-dot' : 'offline-dot'
-                          }
-                        />
-                        {row.isOnline ? 'Online' : 'Offline'}
-                      </div>
-                    ) : (
-                      <span className="no-mr-badge">No MR</span>
-                    )}
+                    <div className="mr-name-cell">
+                      <div className={row.isOnline ? 'online-dot' : 'offline-dot'} />
+                      {row.isOnline ? 'Online' : 'Offline'}
+                    </div>
                   </td>
                   <td>{row.orderCount}</td>
                   <td>{globalUtils.getCurrencyFormat(row.salesTotal)}</td>
@@ -993,10 +1118,53 @@ function ManagerDashboard() {
                     {row.visitsDone} / {row.plannedParties}
                   </td>
                   <td>
-                    {row.mrUid && row.distanceKm > 0
+                    {row.distanceKm > 0
                       ? `${row.distanceKm.toFixed(1)} km`
                       : '—'}
                   </td>
+                </tr>
+              ))}
+              {unassignedRoutes.map((route) => (
+                <tr
+                  key={`unassigned-${route.routeId}`}
+                  className="unassigned-route-row"
+                  onClick={() =>
+                    handleOpenAssignDialog({
+                      routeId: route.routeId,
+                      routeName: route.routeName,
+                      mrUid: '',
+                    })
+                  }
+                  style={{ cursor: 'pointer' }}
+                >
+                  <td>—</td>
+                  <td>
+                    <div className="assigned-mr-cell">
+                      <span>{route.routeName}</span>
+                      <Button
+                        appearance="subtle"
+                        size="small"
+                        className="assign-route-inline-cta"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenAssignDialog({
+                            routeId: route.routeId,
+                            routeName: route.routeName,
+                            mrUid: '',
+                          });
+                        }}
+                      >
+                        Assign this route
+                      </Button>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="no-mr-badge">No MR</span>
+                  </td>
+                  <td>0</td>
+                  <td>{globalUtils.getCurrencyFormat(0)}</td>
+                  <td>0 / {route.plannedParties}</td>
+                  <td>—</td>
                 </tr>
               ))}
             </tbody>
@@ -1132,6 +1300,20 @@ function ManagerDashboard() {
         onSelectMr={setAssignSelectedMrUid}
         onSave={handleAssignSave}
         saving={assignSaving}
+      />
+
+      <AssignRouteDialog
+        open={assignRouteDialogOpen}
+        onClose={() => {
+          setAssignRouteDialogOpen(false);
+          setAssignRouteForMr(null);
+        }}
+        mrName={assignRouteForMr?.mrName || ''}
+        routeOptions={routeOptions}
+        selectedRouteId={assignSelectedRouteId}
+        onSelectRoute={setAssignSelectedRouteId}
+        onSave={handleAssignRouteSave}
+        saving={assignRouteSaving}
       />
 
       {/* Edit Order Dialog */}

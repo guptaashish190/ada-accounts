@@ -133,6 +133,14 @@
   background-color: #dff6dd;
 }
 
+.app-table tbody tr.unassigned-route-row {
+  background-color: #fff8e1;
+}
+
+.app-table tbody tr.unassigned-route-row:hover {
+  background-color: #ffefc2;
+}
+
 .assigned-mr-cell {
   display: flex;
   align-items: center;
@@ -189,6 +197,13 @@
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.3px;
+}
+
+.assign-route-inline-cta {
+  color: #8a6f00;
+  font-weight: 600;
+  text-decoration: underline;
+  min-width: auto;
 }
 
 .empty-state {
