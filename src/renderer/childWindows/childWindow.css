@@ -1,0 +1,15 @@
+/* Child windows load the same renderer bundle as the main app (App.css sets body overflow hidden). */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden !important;
+}
+
+#root-child {
+  height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+}

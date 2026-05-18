@@ -3,7 +3,7 @@
 
 import { getDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { DatePicker, setMonth } from '@fluentui/react-datepicker-compat';
 import {
   Button,
@@ -32,6 +32,7 @@ import {
   DialogBody,
   DialogActions,
   DialogContent,
+  Toaster,
 } from '@fluentui/react-components';
 import { Edit12Filled, Dismiss16Filled } from '@fluentui/react-icons';
 import math, { asecDependencies, parse } from 'mathjs';
@@ -49,12 +50,16 @@ import supplyReportRecievingFormatGenerator from '../../common/printerDataGenera
 import supplyReportFormatGenerator from '../../common/printerDataGenerator/supplyReportFormatGenerator';
 import SelectUserDropdown from '../../common/selectUser';
 
-export default function ViewSupplyReportScreen() {
+export default function ViewSupplyReportScreen({
+  prefillSupplyReport: prefillSupplyReportProp,
+  supplyReportId: supplyReportIdProp,
+} = {}) {
   const { allUsers } = useAuthUser();
   const { state } = useLocation();
-  const navigate = useNavigate();
-  const supplyReportState = state.prefillSupplyReport;
-  const supplyReportIdState = state.supplyReportId;
+  const supplyReportState =
+    prefillSupplyReportProp ?? state?.prefillSupplyReport;
+  const supplyReportIdState =
+    supplyReportIdProp ?? state?.supplyReportId;
   const [supplyReport, setSupplyReport] = useState(supplyReportState);
   const [allBills, setAllBills] = useState([]);
   const [extraOldBills, setExtraOldBills] = useState([]);
@@ -274,7 +279,7 @@ export default function ViewSupplyReportScreen() {
   }
 
   return (
-    <center>
+    <div className="view-supply-report-shell">
       <div className="view-supply-report-container">
         <h3>Supply Report: {supplyReport.receiptNumber}</h3>
         <VerticalSpace1 />
@@ -398,6 +403,7 @@ export default function ViewSupplyReportScreen() {
         )}
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>New Bills</h3>
+        <div className="app-table-wrapper">
         <table className="app-table">
           <thead>
             <tr>
@@ -432,8 +438,10 @@ export default function ViewSupplyReportScreen() {
             })}
           </tbody>
         </table>
+        </div>
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>Old Bills</h3>
+        <div className="app-table-wrapper">
         <table className="app-table">
           <thead>
             <tr>
@@ -464,6 +472,7 @@ export default function ViewSupplyReportScreen() {
             })}
           </tbody>
         </table>
+        </div>
         {otherAdjustedBills?.length ? (
           <>
             <VerticalSpace2 />
@@ -478,14 +487,17 @@ export default function ViewSupplyReportScreen() {
             <ReturnedBillsTable returnedBills={returnedGoods} />
           </>
         ) : null}
+        
         <VerticalSpace2 />
       </div>
-    </center>
+      <Toaster toasterId={toasterId} />
+    </div>
   );
 }
 
 function OtherAdjustedBills({ otherAdjustedBills }) {
   return (
+    <div className="app-table-wrapper">
     <table size="extra-small" className="app-table">
       <thead>
         <tr>
@@ -508,6 +520,7 @@ function OtherAdjustedBills({ otherAdjustedBills }) {
         })}
       </tbody>
     </table>
+    </div>
   );
 }
 
@@ -558,8 +571,6 @@ function BillRow({
   editEnabled,
   remove,
 }) {
-  const navigate = useNavigate();
-
   const getBalance = () => {
     return (
       data.orderAmount -
@@ -629,6 +640,7 @@ function TableCustomCell({ children }) {
 
 function ReturnedBillsTable({ returnedBills }) {
   return (
+    <div className="app-table-wrapper">
     <table size="extra-small" className="app-table">
       <tr >
         <th>BILL NO.</th>
@@ -640,6 +652,7 @@ function ReturnedBillsTable({ returnedBills }) {
         return <ReturnedBillRow data={bill} index={i} />;
       })}
     </table>
+    </div>
   );
 }
 function ReturnedBillRow({ data, index }) {

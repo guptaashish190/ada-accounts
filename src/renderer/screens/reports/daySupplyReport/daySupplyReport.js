@@ -214,13 +214,10 @@ export default function DaySupplyReportPrint() {
                     <Text>Amount</Text>
                   </th>
                   <th>
-                    <Text>Payment Terms</Text>
+                    <Text>Credit Days</Text>
                   </th>
                   <th>
                     <Text>Payment</Text>
-                  </th>
-                  <th>
-                    <Text>Last Payment Received</Text>
                   </th>
                   <th>
                     <Text>Outstanding</Text>
@@ -286,13 +283,10 @@ function SupplyReportRow({
           </Text>
         </th>
         <th style={{ width: '10vw' }}>
-          <Text className="sr-supplyman">Payment Terms</Text>
+          <Text className="sr-supplyman">Credit Days</Text>
         </th>
         <th style={{ width: '20vw' }}>
           <Text>Payment</Text>
-        </th>
-        <th style={{ width: '20vw' }}>
-          <Text>Last Payment Received</Text>
         </th>
         <th>
           <Text>Outstanding</Text>
@@ -325,7 +319,6 @@ function SupplyReportOrderRow({
   const [cashReceipts, setCashReceipts] = useState([]);
   const [chequeReceipts, setChequeReceipts] = useState([]);
   const [upiReceipts, setUpiReceipts] = useState([]);
-  const [lastPayment, setLastPayment] = useState();
   const [isDefaulter, setIsDefaulter] = useState(true);
   const { currentCompanyId } = useCompany();
 
@@ -512,7 +505,7 @@ function SupplyReportOrderRow({
           : ''}
       </td> */}
 
-      <td>{order.party?.paymentTerms || '--'}</td>
+      <td>{order.party?.creditDays || '--'}</td>
 
       <td>
         {[...cashReceipts, ...upiReceipts, ...chequeReceipts].length === 0
@@ -542,49 +535,6 @@ function SupplyReportOrderRow({
             (PDC: {globalUtils.getTimeFormat(cr.chequeDate, true)})
           </div>
         ))}
-      </td>
-      <td>
-        {lastPayment?.type === 'cash' ? (
-          <div key={`Cash${lastPayment.timestamp}`}>
-            <b>
-              Cash:
-              {globalUtils.getCurrencyFormat(
-                lastPayment.prItems.find((x) => x.partyId === order.partyId)
-                  ?.amount,
-              )}
-            </b>
-            (
-            {globalUtils
-              .getTimeFormat(lastPayment.timestamp, true)
-              ?.slice(0, 5)}
-            )
-          </div>
-        ) : (
-          ''
-        )}{' '}
-        {lastPayment?.type === 'upi' ? (
-          <div key={`upi${lastPayment.timestamp}`}>
-            <b>UPI {globalUtils.getCurrencyFormat(lastPayment.amount)}</b>(
-            {globalUtils
-              .getTimeFormat(lastPayment.timestamp, true)
-              ?.slice(0, 5)}
-            )
-          </div>
-        ) : (
-          ''
-        )}{' '}
-        {lastPayment?.type === 'cheque' ? (
-          <div key={`cheque${lastPayment.timestamp}`}>
-            <b>Cheque: {globalUtils.getCurrencyFormat(lastPayment.amount)}</b>(
-            {globalUtils
-              .getTimeFormat(lastPayment.timestamp, true)
-              ?.slice(0, 5)}
-            ) <br />
-            (PDC: {globalUtils.getTimeFormat(lastPayment.chequeDate, true)})
-          </div>
-        ) : (
-          ''
-        )}
       </td>
       <td>{globalUtils.getCurrencyFormat(order.party.partyBalance)}</td>
       <td>

@@ -282,19 +282,43 @@ app.on('window-all-closed', () => {
 // Handle the "new-window" event
 ipcMain.on('new-window', (event, args) => {
   const isMrDetail = args && args.type === 'MR_DETAIL';
-  const winWidth = isMrDetail ? 1100 : 800;
-  const winHeight = isMrDetail ? 750 : 600;
+  const isViewSupplyReport = args && args.type === 'VIEW_SUPPLY_REPORT';
+  const isReceiveSupplyReport =
+    args && args.type === 'RECEIVE_SUPPLY_REPORT';
+  const winWidth = isMrDetail
+    ? 1100
+    : isViewSupplyReport
+      ? 1200
+      : isReceiveSupplyReport
+        ? 1500
+        : 800;
+  const winHeight = isMrDetail
+    ? 750
+    : isViewSupplyReport
+      ? 850
+      : isReceiveSupplyReport
+        ? 900
+        : 600;
+  const childTitle = isViewSupplyReport
+    ? 'Supply Report'
+    : isMrDetail
+      ? 'MR Detail'
+      : isReceiveSupplyReport
+        ? 'Receive Supply Report'
+        : 'Child Window';
 
   if (childWindow) {
     childWindow.setSize(winWidth, winHeight);
+    childWindow.setTitle(childTitle);
     childWindow.show();
     childWindow.webContents.send('child-window-args', args);
   } else {
     childWindow = new BrowserWindow({
       width: winWidth,
       height: winHeight,
+      title: childTitle,
       webPreferences: {
-        devTools: isMrDetail,
+        devTools: isMrDetail || isViewSupplyReport || isReceiveSupplyReport,
         nodeIntegration: true,
         contextIsolation: true,
         preload: app.isPackaged

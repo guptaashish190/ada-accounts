@@ -5,6 +5,8 @@ export default {
   },
   windowConstants: {
     MR_DETAIL: 'MR_DETAIL',
+    VIEW_SUPPLY_REPORT: 'VIEW_SUPPLY_REPORT',
+    RECEIVE_SUPPLY_REPORT: 'RECEIVE_SUPPLY_REPORT',
   },
   paymentOkBuffer: 2,
   paymentTermsListItems: ['Monthly', 'Weekly', 'Cash', 'Bill to Bill'],

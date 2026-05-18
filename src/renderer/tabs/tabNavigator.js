@@ -14,6 +14,7 @@ import {
   Person20Filled,
 } from '@fluentui/react-icons';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import Logo from '../assets/images/logo.png';
 
 import { useCurrentUser } from '../contexts/userContext';
@@ -42,18 +43,41 @@ export default function TabNavigator({ children }) {
   const filteredTabs =
     config.enableAllTabs || user.isManager ? tabs : filterJobs(tabs);
 
-  const currentMenu = (() => {
+  const [currentMenu, setCurrentMenu] = useState(0);
+
+  useEffect(() => {
+    if (!filteredTabs.length) return;
+
+    let matchedIndex = -1;
+
     for (let i = 0; i < filteredTabs.length; i++) {
       const tab = filteredTabs[i];
-      if (tab.route && tab.route === pathname) return i;
+      if (tab.route && tab.route === pathname) {
+        matchedIndex = i;
+        break;
+      }
       if (tab.submenu) {
         for (const sub of tab.submenu) {
-          if (sub.route === pathname) return i;
+          if (sub.route === pathname) {
+            matchedIndex = i;
+            break;
+          }
         }
       }
+      if (matchedIndex !== -1) break;
     }
-    return 0;
-  })();
+
+    // Keep current selection when route has no direct menu mapping.
+    if (matchedIndex !== -1) {
+      setCurrentMenu(matchedIndex);
+      return;
+    }
+
+    // Ensure index stays valid when tab visibility changes by role.
+    if (currentMenu >= filteredTabs.length) {
+      setCurrentMenu(0);
+    }
+  }, [pathname, filteredTabs, currentMenu]);
 
   const filteredSubmenu =
     config.enableAllTabs || user.isManager
@@ -76,7 +100,7 @@ export default function TabNavigator({ children }) {
             <div className="logo-section">
               <Image width={32} height={32} src={Logo} className="logo" />
               <Text weight="semibold" className="app-title">
-                ADA Accounts
+                Unitas Work
               </Text>
             </div>
           </div>

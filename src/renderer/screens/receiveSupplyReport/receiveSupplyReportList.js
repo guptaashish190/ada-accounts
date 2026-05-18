@@ -1,6 +1,5 @@
 import { getDocs, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button, Card, Text, Input } from '@fluentui/react-components';
 import './style.css';
 import Loader from '../../common/loader';
@@ -8,6 +7,7 @@ import globalUtils from '../../services/globalUtils';
 import { VerticalSpace1 } from '../../common/verticalSpace';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
+import constants from '../../constants';
 
 export default function ReceiveSupplyReportScreen() {
   const [supplyReports, setSupplyReports] = useState([]);
@@ -119,7 +119,6 @@ export function SupplyRowListHeader() {
 }
 
 export function SupplyReportRow({ data }) {
-  const navigate = useNavigate();
   const [supplyman, setSupplyman] = useState();
 
   const getSupplyman = async () => {
@@ -152,8 +151,9 @@ export function SupplyReportRow({ data }) {
         appearance="subtle"
         className="verify-button"
         onClick={() => {
-          navigate('/receiveSRScreen', {
-            state: { supplyReport: data },
+          window.electron.ipcRenderer.sendMessage('new-window', {
+            type: constants.windowConstants.RECEIVE_SUPPLY_REPORT,
+            data: { supplyReport: data },
           });
         }}
       >

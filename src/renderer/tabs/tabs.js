@@ -3,40 +3,59 @@ import constants from '../constants';
 export default [
   {
     name: 'Dashboard',
-    route: '/managerDashboard',
-    key: 'tab-manager-dashboard',
-    allowJob: [],
+    key: 'tab-dashboard',
+    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+    submenu: [
+      {
+        name: 'Cashier',
+        route: '/cashierDashboard',
+        key: 'tab-dashboard-cashier',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+      },
+      {
+        name: 'Manager',
+        route: '/managerDashboard',
+        key: 'tab-dashboard-manager',
+        allowJob: [],
+      },
+    ],
   },
   {
-    name: 'Supply Report',
-    key: 'tab-supply-report',
+    name: 'Supply',
+    key: 'tab-supply',
     submenu: [
+      {
+        name: 'Create',
+        route: '/createSupplyReport',
+        key: 'tab-supply-create',
+        allowJob: [constants.firebaseIds.JOBS.DISPATCH],
+      },
+      {
+        name: 'Verify',
+        route: '/pendingSupplyReports',
+        key: 'tab-supply-verify',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+      },
+      {
+        name: 'Receive',
+        route: '/receiveSupplyReports',
+        key: 'tab-supply-receive',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+      },
+      {
+        name: 'User Wise Receive',
+        route: '/receivePendingUser',
+        key: 'tab-supply-user-wise-receive',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+      },
       {
         name: 'All Supply Reports',
         route: '/',
-        key: 'tab-allSupplyReports',
+        key: 'tab-supply-all',
         allowJob: [
           constants.firebaseIds.JOBS.DISPATCH,
           constants.firebaseIds.JOBS.CASHIER,
         ],
-      },
-      {
-        name: 'Create Supply Report',
-        route: '/createSupplyReport',
-        key: 'tab-create-supply-report',
-        allowJob: [constants.firebaseIds.JOBS.DISPATCH],
-      },
-      {
-        name: 'Pending Supply Reports',
-        route: '/pendingSupplyReports',
-        key: 'tab-pendingSupplyReports',
-        allowJob: [constants.firebaseIds.JOBS.CASHIER],
-      },
-      {
-        name: 'Receive Supply Reports',
-        route: '/receiveSupplyReports',
-        key: 'tab-receiveSupplyReports',
-        allowJob: [constants.firebaseIds.JOBS.CASHIER],
       },
     ],
   },
@@ -46,96 +65,79 @@ export default [
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
     submenu: [
       {
-        name: 'All Bundles',
-        route: '/bundles',
-        key: 'tab-bundles',
+        name: 'Create',
+        route: '/assignBills',
+        key: 'tab-bundles-create',
       },
       {
-        name: 'Create Bill Bundle',
-        route: '/assignBills',
-        key: 'tab-assignbills',
+        name: 'All Bundles',
+        route: '/bundles',
+        key: 'tab-bundles-all',
       },
     ],
   },
   {
-    name: 'Receive User',
-    route: '/receivePendingUser',
-    key: 'tab-receivependinuser',
+    name: 'Transactions',
+    key: 'tab-transactions',
     allowJob: [constants.firebaseIds.JOBS.CASHIER],
-  },
-  {
-    name: 'Payments',
-    route: '/upi',
-    key: 'tab-upi',
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
-
     submenu: [
       {
-        name: 'Payment Dashboard',
-        route: '/cashierDashboard',
-        key: 'tab-cashier-dashboard',
-        allowJob: [constants.firebaseIds.JOBS.CASHIER],
-      },
-      {
-        name: 'UPI',
-        route: '/upi',
-        key: 'tab-upi1',
+        name: 'Expense',
+        route: '/vouchers',
+        key: 'tab-transactions-expense',
       },
       {
         name: 'Cash Receipts',
         route: '/paymentReceipts',
-        key: 'tab-payments',
+        key: 'tab-transactions-cash-receipts',
       },
       {
-        name: 'Expense',
-        route: '/vouchers',
-        key: 'tab-vouchers',
+        name: 'UPI',
+        route: '/upi',
+        key: 'tab-transactions-upi',
       },
       {
         name: 'Cheques',
         route: '/chequesList',
-        key: 'tab-chequesList',
+        key: 'tab-transactions-cheques',
         allowJob: [constants.firebaseIds.JOBS.CASHIER],
       },
     ],
   },
-
   {
     name: 'Bills',
-    route: '/searchBills',
-    key: 'tab-searchBills',
+    key: 'tab-bills',
     submenu: [
       {
         name: 'All Bills',
         route: '/searchBills',
-        key: 'tab-searchBills',
+        key: 'tab-bills-all',
       },
       {
         name: 'Pending Bills',
         route: '/pendingBillsToday',
-        key: 'tab-pending-bills',
+        key: 'tab-bills-pending',
       },
     ],
   },
   {
     name: 'Reports',
-
     key: 'tab-reports',
     submenu: [
       {
         name: 'Supply',
         route: '/daySupplyReportPrint',
-        key: 'tab-daysupplysreportprint',
+        key: 'tab-reports-supply',
       },
       {
         name: 'Expense',
         route: '/expenseReport',
-        key: 'tab-expensereport',
+        key: 'tab-reports-expense',
       },
       {
         name: 'Collection',
         route: '/collectionReport',
-        key: 'tab-collectionreport',
+        key: 'tab-reports-collection',
       },
     ],
   },
@@ -144,25 +146,15 @@ export default [
     key: 'tab-settings',
     submenu: [
       {
+        name: 'Users',
+        route: '/usersManagement',
+        key: 'tab-settings-users',
+        allowJob: [],
+      },
+      {
         name: 'Products',
         route: '/products',
         key: 'tab-settings-products',
-      },
-      {
-        name: 'Parties',
-        route: '/partyListSettings',
-        key: 'tab-settings',
-      },
-      {
-        name: 'Printer',
-        route: '/printerSettings',
-        key: 'tab-settings-printers',
-      },
-      {
-        name: 'Routes',
-        route: '/routeSettings',
-        key: 'tab-settings-route',
-        allowJob: [],
       },
       {
         name: 'Companies',
@@ -171,10 +163,20 @@ export default [
         allowJob: [],
       },
       {
-        name: 'Users',
-        route: '/usersManagement',
-        key: 'tab-settings-users',
+        name: 'Routes',
+        route: '/routeSettings',
+        key: 'tab-settings-routes',
         allowJob: [],
+      },
+      {
+        name: 'Parties',
+        route: '/partyListSettings',
+        key: 'tab-settings-parties',
+      },
+      {
+        name: 'Printer',
+        route: '/printerSettings',
+        key: 'tab-settings-printer',
       },
     ],
   },

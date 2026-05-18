@@ -14,8 +14,9 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
-// Set to true to use Firebase Emulators
-const USE_EMULATOR = true;
+// Emulator is opt-in via env for local development only.
+// Production defaults to real Firebase services.
+const USE_EMULATOR = false
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional

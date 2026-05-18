@@ -21,7 +21,6 @@
 
 .view-voucher-container .voucher-border{
   border: 1px solid black;
-  height: 79vh;
   width: 100%;
   padding: 8mm;
 }
@@ -43,9 +42,7 @@
   justify-content: space-between;
 }
 .view-voucher-container .created-by{
-  position: absolute;
-  font-size: 0.7em;
-  bottom: 0;
+  font-size: 0.8em;
 }
 
 .view-voucher-container .signatures div{
@@ -62,4 +59,38 @@
 
 .view-voucher-container .date-row{
   justify-content: flex-end;
+}
+
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 6mm;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .view-voucher-container {
+    display: block !important;
+    width: 100% !important;
+    page-break-after: auto !important;
+  }
+
+  .view-voucher-container .voucher-border {
+    width: 100% !important;
+    box-sizing: border-box;
+    border: 1px solid black;
+    padding: 6mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }

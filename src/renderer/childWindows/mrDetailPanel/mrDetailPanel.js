@@ -323,6 +323,7 @@ function MrDetailPanel({ data }) {
         orderStatus: matchedOrder
           ? matchedOrder.orderStatus || ''
           : '',
+        isCallOrder: matchedOrder ? !!matchedOrder.isCallOrder : false,
         photoUrl,
       };
     });
@@ -492,10 +493,12 @@ function MrDetailPanel({ data }) {
         ) : (
           <div className="visited-cards">
             {visitedParties.map((vp, i) => {
-              const photoPlaceholder =
-                vp.status !== 'Order' && vp.reason === "DIDN'T REACH"
-                  ? "Didn't reach"
-                  : 'No photo';
+              let photoPlaceholder = 'No photo';
+              if (vp.status !== 'Order' && vp.reason === "DIDN'T REACH") {
+                photoPlaceholder = "Didn't reach";
+              } else if (vp.status === 'Order' && vp.isCallOrder) {
+                photoPlaceholder = 'Call order';
+              }
               return (
                 <div
                   key={`${vp.partyId}-${i}`}
@@ -525,6 +528,13 @@ function MrDetailPanel({ data }) {
                     <>
                       <div className="visit-outcome order">
                         Order: {globalUtils.getCurrencyFormat(vp.orderAmount)}
+                      </div>
+                      <div
+                        className={`visit-type-badge ${
+                          vp.isCallOrder ? 'call' : 'physical'
+                        }`}
+                      >
+                        {vp.isCallOrder ? '\u260E Call order' : '\u{1F6B6} Physical visit'}
                       </div>
                       {vp.orderStatus && (
                         <div className="order-status-badge">{vp.orderStatus}</div>

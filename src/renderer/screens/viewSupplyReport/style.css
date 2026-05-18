@@ -1,5 +1,23 @@
+.view-supply-report-shell {
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 16px 12px 32px;
+}
+
 .view-supply-report-container {
-  width: 90%;
+  width: min(100%, 1100px);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.view-supply-report-shell .app-table-wrapper {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  margin-bottom: 16px;
 }
 
 .view-supply-report-container .bill-row-top {

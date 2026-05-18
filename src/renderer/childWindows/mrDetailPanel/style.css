@@ -245,6 +245,27 @@
   margin-bottom: 4px;
 }
 
+.visited-card .visit-type-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-right: 4px;
+  margin-bottom: 4px;
+  letter-spacing: 0.2px;
+}
+
+.visited-card .visit-type-badge.physical {
+  background-color: #dff6dd;
+  color: #107c10;
+}
+
+.visited-card .visit-type-badge.call {
+  background-color: #fff4e5;
+  color: #9a3a00;
+}
+
 .visited-card .visit-outcome {
   font-size: 13px;
   margin-bottom: 4px;

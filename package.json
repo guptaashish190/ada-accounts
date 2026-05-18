@@ -11,8 +11,8 @@
     "hot",
     "reload"
   ],
-  "name": "ADA-Accounts",
-  "productName": "ADA Accounts",
+  "name": "unitas-work",
+  "productName": "Unitas Work",
   "version": "1.0.0",
   "repository": {
     "type": "git",
@@ -193,7 +193,7 @@
     "webpack-merge": "^5.9.0"
   },
   "build": {
-    "productName": "ADA Accounts",
+    "productName": "Unitas Work",
     "appId": "org.erb.adaAccounts",
     "asar": true,
     "extends": null,

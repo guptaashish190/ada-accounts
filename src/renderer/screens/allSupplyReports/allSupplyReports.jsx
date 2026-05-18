@@ -1,7 +1,6 @@
 /* eslint-disable no-restricted-syntax */
 import { getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Button,
   Card,
@@ -18,6 +17,7 @@ import globalUtils from '../../services/globalUtils';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
+import constants from '../../constants';
 
 const statusColors = {
   Completed: '#00A9A5',
@@ -293,8 +293,14 @@ export default function AllSupplyReportsScreen() {
   );
 }
 
+function openViewSupplyReportWindow(supplyReport) {
+  window.electron.ipcRenderer.sendMessage('new-window', {
+    type: constants.windowConstants.VIEW_SUPPLY_REPORT,
+    data: { prefillSupplyReport: supplyReport },
+  });
+}
+
 function SupplyReportCard({ data, index }) {
-  const navigate = useNavigate();
   const [supplyman, setSupplyman] = useState();
 
   const getSupplyman = async () => {
@@ -316,16 +322,10 @@ function SupplyReportCard({ data, index }) {
       className="supply-report-card"
       role="button"
       tabIndex={0}
-      onClick={() => {
-        navigate('/viewSupplyReport', {
-          state: { prefillSupplyReport: data },
-        });
-      }}
+      onClick={() => openViewSupplyReportWindow(data)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
-          navigate('/viewSupplyReport', {
-            state: { prefillSupplyReport: data },
-          });
+          openViewSupplyReportWindow(data);
         }
       }}
     >

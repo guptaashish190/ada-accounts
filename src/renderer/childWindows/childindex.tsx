@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import './childWindow.css';
 import ChildApp from './ChildApp';
 
 try {
