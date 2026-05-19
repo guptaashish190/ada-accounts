@@ -34,6 +34,29 @@ import ImportProducts from './importProducts';
 import './style.css';
 
 const PAGE_SIZE = 50;
+const IMPORT_FORMAT_COLUMNS = [
+  'name',
+  'type',
+  'company',
+  'packSize',
+  'mrp',
+  'ptd',
+  'ptr',
+  'composition',
+  'imageUrls',
+];
+const IMPORT_SAMPLE_ROW = {
+  name: 'Paracetamol 650',
+  type: 'Tablet',
+  company: 'ABC Pharma',
+  packSize: '10 Tab',
+  mrp: '34.50',
+  ptd: '27.00',
+  ptr: '30.00',
+  composition: 'Paracetamol 650mg',
+  imageUrls:
+    'https://example.com/images/paracetamol-main.jpg, https://example.com/images/paracetamol-side.jpg',
+};
 
 export default function ProductsListScreen() {
   const [products, setProducts] = useState([]);
@@ -253,6 +276,22 @@ export default function ProductsListScreen() {
     fetchCount();
   };
 
+  const downloadImportTemplate = () => {
+    const csvRows = [
+      IMPORT_FORMAT_COLUMNS.join(','),
+      IMPORT_FORMAT_COLUMNS.map((key) => `"${IMPORT_SAMPLE_ROW[key]}"`).join(','),
+    ];
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'products-import-template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const isSearching = debouncedSearch && debouncedSearch.length >= 2;
   const displayProducts = showInactive
     ? products
@@ -316,6 +355,20 @@ export default function ProductsListScreen() {
         )}
       </div>
 
+      <div className="products-import-format">
+        <div className="products-import-format__text">
+          <strong>Excel import format:</strong>{' '}
+          <code>{IMPORT_FORMAT_COLUMNS.join(', ')}</code>
+          <span>
+            {' '}
+            (primary image is always the first URL in `imageUrls`)
+          </span>
+        </div>
+        <Button appearance="subtle" size="small" onClick={downloadImportTemplate}>
+          Download format CSV
+        </Button>
+      </div>
+
       <div className="products-table-wrapper">
         {loading ? (
           <div className="products-loading">
@@ -335,9 +388,12 @@ export default function ProductsListScreen() {
                 <th style={{ width: 40 }}>#</th>
                 <th style={{ width: 56 }}>Photo</th>
                 <th>Name</th>
+                <th>Type</th>
                 <th>Company</th>
                 <th>Pack Size</th>
                 <th className="num">MRP</th>
+                <th className="num">PTD</th>
+                <th className="num">PTR</th>
                 <th>Composition</th>
                 <th className="col-active">Status</th>
                 <th className="col-actions">Actions</th>
@@ -357,10 +413,7 @@ export default function ProductsListScreen() {
                   <td>
                     {(() => {
                       const mainImage =
-                        p.mainImageUrl
-                        || (Array.isArray(p.imageUrls) && p.imageUrls[0])
-                        || p.imageUrl
-                        || '';
+                        (Array.isArray(p.imageUrls) && p.imageUrls[0]) || '';
                       return mainImage ? (
                         <img
                           src={mainImage}
@@ -392,10 +445,23 @@ export default function ProductsListScreen() {
                     })()}
                   </td>
                   <td>{p.name || p.Name || '—'}</td>
+                  <td>{p.type || '—'}</td>
                   <td>{p.company || p.Company || p.brand || '—'}</td>
                   <td>{p.packSize || p.Pack || p.pack || '—'}</td>
                   <td className="num">
                     {(p.mrp || p.MRP || 0).toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="num">
+                    {(p.ptd || 0).toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td className="num">
+                    {(p.ptr || 0).toLocaleString('en-IN', {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}

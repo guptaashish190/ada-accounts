@@ -24,6 +24,7 @@ import {
   DB_NAMES,
 } from '../../services/firestoreHelpers';
 import { Call24Regular } from '@fluentui/react-icons';
+import constants from '../../constants';
 import globalUtils from '../../services/globalUtils';
 import './style.css';
 
@@ -50,6 +51,7 @@ const createRouteEndpointIcon = (bgColor) => new L.DivIcon({
 const startIcon = createRouteEndpointIcon('#16a34a');
 const currentIcon = createRouteEndpointIcon('#2563eb');
 const endIcon = createRouteEndpointIcon('#dc2626');
+const BILL_CREATED_FLOW = constants.firebase.billFlowTypes.BILL_CREATED;
 
 const orderIcon = new L.DivIcon({
   className: 'order-map-marker',
@@ -390,6 +392,11 @@ function MrDetailPanel({ data }) {
           ? matchedOrder.orderStatus || ''
           : '',
         isCallOrder: matchedOrder ? !!matchedOrder.isCallOrder : false,
+        isDirectBilling:
+          matchedOrder &&
+          Array.isArray(matchedOrder.flow) &&
+          matchedOrder.flow.length > 0 &&
+          matchedOrder.flow[0]?.type === BILL_CREATED_FLOW,
         photoUrl,
       };
     });
@@ -581,7 +588,7 @@ function MrDetailPanel({ data }) {
                     photoPlaceholder = "Didn't reach";
                   }
                   const showCallIcon =
-                    vp.status === 'Order' && vp.isCallOrder;
+                    vp.status === 'Order' && vp.isCallOrder && !vp.isDirectBilling;
                   return (
                     <div
                       key={`${vp.partyId}-${i}`}
@@ -589,25 +596,29 @@ function MrDetailPanel({ data }) {
                         vp.status === 'Order' ? 'order-placed' : 'no-order'
                       }`}
                     >
-                      {/* Visit selfie thumbnail (call orders use icon only) */}
-                      {showCallIcon ? (
-                        <div
-                          className="visited-card__photo visited-card__photo--call"
-                          aria-label="Call order"
-                        >
-                          <Call24Regular />
-                        </div>
-                      ) : vp.photoUrl ? (
-                        <img
-                          className="visited-card__photo"
-                          src={vp.photoUrl}
-                          alt="Visit selfie"
-                          onClick={() => setLightboxUrl(vp.photoUrl)}
-                        />
-                      ) : (
-                        <div className="visited-card__photo visited-card__photo--empty">
-                          {photoPlaceholder}
-                        </div>
+                      {!vp.isDirectBilling && (
+                        <>
+                          {/* Visit selfie thumbnail (call orders use icon only) */}
+                          {showCallIcon ? (
+                            <div
+                              className="visited-card__photo visited-card__photo--call"
+                              aria-label="Call order"
+                            >
+                              <Call24Regular />
+                            </div>
+                          ) : vp.photoUrl ? (
+                            <img
+                              className="visited-card__photo"
+                              src={vp.photoUrl}
+                              alt="Visit selfie"
+                              onClick={() => setLightboxUrl(vp.photoUrl)}
+                            />
+                          ) : (
+                            <div className="visited-card__photo visited-card__photo--empty">
+                              {photoPlaceholder}
+                            </div>
+                          )}
+                        </>
                       )}
 
                       <div className="party-name">{vp.partyName}</div>
@@ -621,12 +632,18 @@ function MrDetailPanel({ data }) {
                           </div>
                           <div
                             className={`visit-type-badge ${
-                              vp.isCallOrder ? 'call' : 'physical'
+                              vp.isDirectBilling
+                                ? 'call'
+                                : vp.isCallOrder
+                                  ? 'call'
+                                  : 'physical'
                             }`}
                           >
-                            {vp.isCallOrder
-                              ? '\u260E Call order'
-                              : '\u{1F6B6} Physical visit'}
+                            {vp.isDirectBilling
+                              ? 'Direct Billing'
+                              : vp.isCallOrder
+                                ? '\u260E Call order'
+                                : '\u{1F6B6} Physical visit'}
                           </div>
                           {vp.orderStatus && (
                             <div className="order-status-badge">{vp.orderStatus}</div>

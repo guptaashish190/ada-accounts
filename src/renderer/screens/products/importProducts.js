@@ -28,10 +28,17 @@ import './style.css';
 
 const PRODUCT_FIELDS = [
   { key: 'name', label: 'Product Name', required: true },
+  { key: 'type', label: 'Type' },
   { key: 'company', label: 'Company / Brand' },
   { key: 'packSize', label: 'Pack Size' },
   { key: 'mrp', label: 'MRP' },
+  { key: 'ptd', label: 'PTD' },
+  { key: 'ptr', label: 'PTR' },
   { key: 'composition', label: 'Composition' },
+  {
+    key: 'imageUrls',
+    label: 'All Image URLs (comma separated)',
+  },
 ];
 
 const SKIP = '__skip__';
@@ -111,9 +118,36 @@ export default function ImportProducts({ open, onClose, onImported }) {
         );
         if (idx !== -1) newMap[f.key] = cols[idx];
       }
+      if (f.key === 'type') {
+        const idx = lowerCols.findIndex(
+          (c) => c === 'type' || c.includes('category') || c.includes('segment'),
+        );
+        if (idx !== -1) newMap[f.key] = cols[idx];
+      }
       if (f.key === 'packSize') {
         const idx = lowerCols.findIndex(
           (c) => c.includes('pack') || c.includes('unit') || c.includes('size'),
+        );
+        if (idx !== -1) newMap[f.key] = cols[idx];
+      }
+      if (f.key === 'ptd') {
+        const idx = lowerCols.findIndex(
+          (c) => c === 'ptd' || c.includes('price to distributor'),
+        );
+        if (idx !== -1) newMap[f.key] = cols[idx];
+      }
+      if (f.key === 'ptr') {
+        const idx = lowerCols.findIndex(
+          (c) => c === 'ptr' || c.includes('price to retailer'),
+        );
+        if (idx !== -1) newMap[f.key] = cols[idx];
+      }
+      if (f.key === 'imageUrls') {
+        const idx = lowerCols.findIndex(
+          (c) =>
+            c.includes('imageurls')
+            || c.includes('image urls')
+            || (c.includes('images') && c.includes('url')),
         );
         if (idx !== -1) newMap[f.key] = cols[idx];
       }
@@ -142,13 +176,23 @@ export default function ImportProducts({ open, onClose, onImported }) {
       .map((row) => {
         const name = String(row[mapping.name] || '').trim();
         if (!name) return null;
+        const imageUrlsRaw = String(row[mapping.imageUrls] || '').trim();
+        const imageUrls = imageUrlsRaw
+          .split(/[\n,|]+/)
+          .map((u) => u.trim())
+          .filter(Boolean);
+        const normalizedImageUrls = [...new Set(imageUrls)];
         return {
           name,
           Name: name.toUpperCase(),
+          type: String(row[mapping.type] || '').trim(),
           company: String(row[mapping.company] || '').trim(),
           packSize: String(row[mapping.packSize] || '').trim(),
           mrp: parseFloat(row[mapping.mrp]) || 0,
+          ptd: parseFloat(row[mapping.ptd]) || 0,
+          ptr: parseFloat(row[mapping.ptr]) || 0,
           composition: String(row[mapping.composition] || '').trim(),
+          imageUrls: normalizedImageUrls,
           isActive: true,
         };
       })
@@ -298,20 +342,28 @@ export default function ImportProducts({ open, onClose, onImported }) {
                         <thead>
                           <tr>
                             <th>Name</th>
+                            <th>Type</th>
                             <th>Company</th>
                             <th>Pack</th>
                             <th>MRP</th>
+                            <th>PTD</th>
+                            <th>PTR</th>
                             <th>Composition</th>
+                            <th>Image Count</th>
                           </tr>
                         </thead>
                         <tbody>
                           {previewProducts.map((p, i) => (
                             <tr key={i}>
                               <td>{p.name}</td>
+                              <td>{p.type || '—'}</td>
                               <td>{p.company}</td>
                               <td>{p.packSize}</td>
                               <td>{p.mrp}</td>
+                              <td>{p.ptd}</td>
+                              <td>{p.ptr}</td>
                               <td>{p.composition}</td>
+                              <td>{p.imageUrls.length}</td>
                             </tr>
                           ))}
                         </tbody>

@@ -41,7 +41,47 @@ const DAYS_OF_WEEK = [
   'Sunday',
 ];
 
-const EMPTY_WEEK = DAYS_OF_WEEK.map((day) => ({ day, parties: [], fileNumber: '' }));
+const EMPTY_WEEK = DAYS_OF_WEEK.map((day) => ({
+  day,
+  parties: [],
+  fileNumber: '',
+}));
+
+const normalizePhone = (value) => {
+  if (!value) return '';
+  const text = value.toString().trim();
+  if (!text) return '';
+
+  const candidateMatches = text.match(/\+?\d[\d\s\-()]{7,}\d/g) || [];
+  const candidates = candidateMatches.length > 0 ? candidateMatches : [text];
+
+  const firstValidCandidate = candidates.find((candidate) => {
+    const digitsOnly = candidate.replace(/\D/g, '');
+    return digitsOnly.length >= 10 && digitsOnly.length <= 15;
+  });
+
+  if (!firstValidCandidate) return '';
+
+  const startsWithPlus = firstValidCandidate.trim().startsWith('+');
+  const digitsOnly = firstValidCandidate.replace(/\D/g, '');
+  return startsWithPlus ? `+${digitsOnly}` : digitsOnly;
+};
+
+const resolvePartyPhone = (partyData = {}) => {
+  const phoneCandidates = [
+    partyData.contact,
+    partyData.phone1,
+    partyData.phone2,
+    partyData.phone3,
+    partyData.phone4,
+  ];
+
+  const firstValidPhone = phoneCandidates
+    .map((candidate) => normalizePhone(candidate))
+    .find((phone) => !!phone);
+
+  return firstValidPhone || '';
+};
 
 export default function RouteSettings() {
   const [routes, setRoutes] = useState([]);
@@ -58,14 +98,19 @@ export default function RouteSettings() {
   const fetchParties = async () => {
     setPartiesLoading(true);
     try {
-      const partiesCollection = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
+      const partiesCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.PARTIES,
+      );
       const partiesSnapshot = await getDocs(partiesCollection);
       const partiesData = {};
 
       partiesSnapshot.docs.forEach((docSnapshot) => {
         const data = docSnapshot.data();
-        partiesData[docSnapshot.id] =
-          data.name || data.partyName || 'Unknown Party';
+        partiesData[docSnapshot.id] = {
+          name: data.name || data.partyName || 'Unknown Party',
+          phone: resolvePartyPhone(data),
+        };
       });
 
       setParties(partiesData);
@@ -79,7 +124,10 @@ export default function RouteSettings() {
   const fetchRoutes = async () => {
     setRoutesLoading(true);
     try {
-      const routesCollection = getCompanyCollection(currentCompanyId, DB_NAMES.MR_ROUTES);
+      const routesCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.MR_ROUTES,
+      );
       const routesSnapshot = await getDocs(routesCollection);
       const routesData = routesSnapshot.docs.map((docSnapshot) => ({
         id: docSnapshot.id,
@@ -105,13 +153,30 @@ export default function RouteSettings() {
     loadData();
   }, [currentCompanyId]);
 
+  const getPartyDetails = (partyId) => {
+    return (
+      parties[partyId] || {
+        name: `Party ID: ${partyId}`,
+        phone: '',
+      }
+    );
+  };
+
   const getPartyName = (partyId) => {
-    return parties[partyId] || `Party ID: ${partyId}`;
+    return getPartyDetails(partyId).name;
+  };
+
+  const getPartyPhone = (partyId) => {
+    return getPartyDetails(partyId).phone;
   };
 
   const updateRouteInFirestore = async (routeId, updatedRouteArray) => {
     try {
-      const routeRef = getCompanyDoc(currentCompanyId, DB_NAMES.MR_ROUTES, routeId);
+      const routeRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.MR_ROUTES,
+        routeId,
+      );
       await updateDoc(routeRef, { route: updatedRouteArray });
     } catch (error) {
       console.error('Error updating route:', error);
@@ -125,8 +190,13 @@ export default function RouteSettings() {
 
     const updatedRoute = route.route.map((day, i) => {
       if (i !== dayIndex) return { ...day, day: DAYS_OF_WEEK[i] };
-      if (day.parties?.includes(partyId)) return { ...day, day: DAYS_OF_WEEK[i] };
-      return { ...day, day: DAYS_OF_WEEK[i], parties: [...(day.parties || []), partyId] };
+      if (day.parties?.includes(partyId))
+        return { ...day, day: DAYS_OF_WEEK[i] };
+      return {
+        ...day,
+        day: DAYS_OF_WEEK[i],
+        parties: [...(day.parties || []), partyId],
+      };
     });
 
     await updateRouteInFirestore(routeId, updatedRoute);
@@ -142,15 +212,38 @@ export default function RouteSettings() {
     const updatedRoute = route.route.map((day, i) => ({
       ...day,
       day: DAYS_OF_WEEK[i],
-      parties: i === dayIndex
-        ? (day.parties || []).filter((p) => p !== partyId)
-        : (day.parties || []),
+      parties:
+        i === dayIndex
+          ? (day.parties || []).filter((p) => p !== partyId)
+          : day.parties || [],
     }));
 
     await updateRouteInFirestore(routeId, updatedRoute);
     setRoutes((prev) =>
       prev.map((r) => (r.id === routeId ? { ...r, route: updatedRoute } : r)),
     );
+  };
+
+  const savePartyPhone = async (partyId, phoneValue) => {
+    const normalizedPhone = normalizePhone(phoneValue);
+    try {
+      const partyRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.PARTIES,
+        partyId,
+      );
+      await updateDoc(partyRef, { contact: normalizedPhone });
+      setParties((prev) => ({
+        ...prev,
+        [partyId]: {
+          ...(prev[partyId] || { name: `Party ID: ${partyId}` }),
+          phone: normalizedPhone,
+        },
+      }));
+    } catch (error) {
+      console.error('Error saving party phone:', error);
+      throw error;
+    }
   };
 
   const handleCreateRoute = async () => {
@@ -224,6 +317,7 @@ export default function RouteSettings() {
               route={route}
               parties={parties}
               getPartyName={getPartyName}
+              getPartyPhone={getPartyPhone}
               partiesLoading={partiesLoading}
               onAddParty={(dayIndex, partyId) =>
                 addPartyToDay(route.id, dayIndex, partyId)
@@ -231,6 +325,7 @@ export default function RouteSettings() {
               onRemoveParty={(dayIndex, partyId) =>
                 removePartyFromDay(route.id, dayIndex, partyId)
               }
+              onSavePartyPhone={savePartyPhone}
             />
           ))
         )}
@@ -296,9 +391,11 @@ function RouteComponent({
   route,
   parties,
   getPartyName,
+  getPartyPhone,
   partiesLoading,
   onAddParty,
   onRemoveParty,
+  onSavePartyPhone,
 }) {
   const { settings } = useSettingsContext();
   const [expandedDays, setExpandedDays] = useState({});
@@ -332,11 +429,13 @@ function RouteComponent({
                 dayName={daysOfWeek[index] || `Day ${index + 1}`}
                 parties={parties}
                 getPartyName={getPartyName}
+                getPartyPhone={getPartyPhone}
                 isExpanded={expandedDays[index]}
                 onToggleExpansion={() => toggleDayExpansion(index)}
                 partiesLoading={partiesLoading}
                 onAddParty={(partyId) => onAddParty(index, partyId)}
                 onRemoveParty={(partyId) => onRemoveParty(index, partyId)}
+                onSavePartyPhone={onSavePartyPhone}
               />
             ))
           ) : (
@@ -354,24 +453,29 @@ function RouteDayComponent({
   dayName,
   parties,
   getPartyName,
+  getPartyPhone,
   isExpanded,
   onToggleExpansion,
   partiesLoading,
   onAddParty,
   onRemoveParty,
+  onSavePartyPhone,
 }) {
   const partyCount = routeDay.parties ? routeDay.parties.length : 0;
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
+  const [savingPhoneForPartyId, setSavingPhoneForPartyId] = useState('');
+  const [phoneDrafts, setPhoneDrafts] = useState({});
 
   const assignedPartyIds = new Set(routeDay.parties || []);
   const availableParties = Object.entries(parties)
     .filter(([id]) => !assignedPartyIds.has(id))
     .filter(
-      ([, name]) =>
-        !searchQuery || name.toLowerCase().includes(searchQuery.toLowerCase()),
+      ([, party]) =>
+        !searchQuery ||
+        (party?.name || '').toLowerCase().includes(searchQuery.toLowerCase()),
     )
-    .sort((a, b) => a[1].localeCompare(b[1]));
+    .sort((a, b) => (a[1]?.name || '').localeCompare(b[1]?.name || ''));
 
   const handleAddParty = async (partyId) => {
     setSaving(true);
@@ -389,6 +493,15 @@ function RouteDayComponent({
       await onRemoveParty(partyId);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSavePhone = async (partyId) => {
+    setSavingPhoneForPartyId(partyId);
+    try {
+      await onSavePartyPhone(partyId, phoneDrafts[partyId] || '');
+    } finally {
+      setSavingPhoneForPartyId('');
     }
   };
 
@@ -435,7 +548,36 @@ function RouteDayComponent({
                 {routeDay.parties && routeDay.parties.length > 0 ? (
                   routeDay.parties.map((partyId) => (
                     <div key={`party-${partyId}`} className="party-item-row">
-                      <Text size={300}>{getPartyName(partyId)}</Text>
+                      <Text size={300} className="party-name-inline">
+                        {getPartyName(partyId)}
+                      </Text>
+                      <Input
+                        size="small"
+                        placeholder="Enter phone number"
+                        value={
+                          phoneDrafts[partyId] !== undefined
+                            ? phoneDrafts[partyId]
+                            : getPartyPhone(partyId)
+                        }
+                        onChange={(e) =>
+                          setPhoneDrafts((prev) => ({
+                            ...prev,
+                            [partyId]: e.target.value,
+                          }))
+                        }
+                        disabled={savingPhoneForPartyId === partyId}
+                        className="party-phone-input-inline"
+                      />
+                      <Button
+                        appearance="primary"
+                        size="small"
+                        disabled={savingPhoneForPartyId === partyId}
+                        onClick={() => handleSavePhone(partyId)}
+                      >
+                        {savingPhoneForPartyId === partyId
+                          ? 'Saving...'
+                          : 'Save'}
+                      </Button>
                       <Button
                         appearance="subtle"
                         size="small"
@@ -468,9 +610,9 @@ function RouteDayComponent({
                     freeform
                   >
                     {availableParties.length > 0 ? (
-                      availableParties.slice(0, 50).map(([id, name]) => (
-                        <Option key={id} value={id} text={name}>
-                          {name}
+                      availableParties.slice(0, 50).map(([id, party]) => (
+                        <Option key={id} value={id} text={party.name}>
+                          {party.name}
                         </Option>
                       ))
                     ) : (

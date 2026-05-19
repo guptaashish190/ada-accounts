@@ -66,14 +66,29 @@
 
 .party-item-row {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 4px 0;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 0;
     border-bottom: 1px solid #f0f0f0;
 }
 
 .party-item-row:last-of-type {
     border-bottom: none;
+}
+
+.party-name-inline {
+    min-width: 180px;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.party-phone-input-inline {
+    flex: 0 0 220px;
+    width: 220px;
+    margin-left: auto;
 }
 
 .add-party-row {

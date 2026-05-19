@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogSurface,
@@ -25,15 +25,19 @@ import './style.css';
 
 const EMPTY_FORM = {
   name: '',
+  type: '',
   company: '',
   packSize: '',
   mrp: '',
+  ptd: '',
+  ptr: '',
   composition: '',
   isActive: true,
 };
 
 export default function ProductDialog({ open, onClose, product, onSaved }) {
   const isEdit = Boolean(product);
+  const fileInputRef = useRef(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [imageItems, setImageItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,9 +45,7 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
 
   const normalizeExistingImages = (p) => {
     if (!p) return [];
-    const rawList = Array.isArray(p.imageUrls)
-      ? p.imageUrls
-      : [p.mainImageUrl, p.imageUrl, p.photoUrl, p.image];
+    const rawList = Array.isArray(p.imageUrls) ? p.imageUrls : [];
     const urls = [...new Set(rawList.map((u) => (u || '').trim()).filter(Boolean))];
     return urls.map((url) => ({ url, file: null, previewUrl: '' }));
   };
@@ -53,9 +55,12 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
       if (product) {
         setForm({
           name: product.name || product.Name || '',
+          type: product.type || '',
           company: product.company || product.Company || product.brand || product.Brand || '',
           packSize: product.packSize || product.Pack || product.pack || product.Unit || '',
           mrp: (product.mrp ?? product.MRP ?? product.Mrp ?? '')?.toString() || '',
+          ptd: (product.ptd ?? '')?.toString() || '',
+          ptr: (product.ptr ?? '')?.toString() || '',
           composition: product.composition || product.Composition || product.comp || '',
           isActive: product.isActive !== false,
         });
@@ -66,6 +71,7 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
       }
     }
     if (!open) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setImageItems((prev) => {
         prev.forEach((item) => {
           if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
@@ -137,9 +143,12 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
       const data = {
         name: nameVal,
         Name: nameVal.toUpperCase(),
+        type: form.type.trim(),
         company: form.company.trim(),
         packSize: form.packSize.trim(),
         mrp: parseFloat(form.mrp) || 0,
+        ptd: parseFloat(form.ptd) || 0,
+        ptr: parseFloat(form.ptr) || 0,
         composition: form.composition.trim(),
         isActive: form.isActive,
       };
@@ -178,7 +187,6 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
           }),
         )
       ).filter(Boolean);
-      const mainImageUrl = imageUrls[0] || '';
       if (productId) {
         const ref = getCompanyDoc(
           currentCompanyId,
@@ -187,8 +195,6 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
         );
         await updateDoc(ref, {
           imageUrls,
-          mainImageUrl,
-          imageUrl: mainImageUrl,
         });
       }
 
@@ -219,6 +225,15 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
               </div>
 
               <div className="field-row-inline">
+                <div className="field-row">
+                  <Label htmlFor="prod-type">Type</Label>
+                  <Input
+                    id="prod-type"
+                    value={form.type}
+                    onChange={set('type')}
+                    placeholder="e.g. Tablet"
+                  />
+                </div>
                 <div className="field-row">
                   <Label htmlFor="prod-company">Company / Brand</Label>
                   <Input
@@ -251,6 +266,26 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
                   />
                 </div>
                 <div className="field-row">
+                  <Label htmlFor="prod-ptd">PTD</Label>
+                  <Input
+                    id="prod-ptd"
+                    type="number"
+                    value={form.ptd}
+                    onChange={set('ptd')}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="field-row">
+                  <Label htmlFor="prod-ptr">PTR</Label>
+                  <Input
+                    id="prod-ptr"
+                    type="number"
+                    value={form.ptr}
+                    onChange={set('ptr')}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="field-row">
                   <Label htmlFor="prod-composition">Composition</Label>
                   <Input
                     id="prod-composition"
@@ -275,7 +310,14 @@ export default function ProductDialog({ open, onClose, product, onSaved }) {
 
               <div className="field-row">
                 <Label htmlFor="prod-images">Product Images</Label>
-                <Input id="prod-images" type="file" accept="image/*" multiple onChange={onPickImages} />
+                <input
+                  id="prod-images"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={onPickImages}
+                />
                 {imageItems.length > 0 && (
                   <div className="product-images-grid">
                     {imageItems.map((item, index) => {
