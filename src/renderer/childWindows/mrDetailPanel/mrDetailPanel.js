@@ -91,6 +91,7 @@ const haversineKm = (lat1, lng1, lat2, lng2) => {
 };
 
 const MAX_TRACKING_GAP_MS = 5 * 60 * 1000;
+const MAX_MAP_POINT_ACCURACY_METERS = 50;
 
 const buildContinuousSegments = (points, maxGapMs = MAX_TRACKING_GAP_MS) => {
   if (!points || points.length === 0) return [];
@@ -115,6 +116,55 @@ const buildContinuousSegments = (points, maxGapMs = MAX_TRACKING_GAP_MS) => {
 
   segments.push(current);
   return segments;
+};
+
+const filterAndSmoothPathPoints = (points) => {
+  const sorted = [...(points || [])].sort(
+    (a, b) => (a.timestamp || 0) - (b.timestamp || 0),
+  );
+  if (sorted.length === 0) return [];
+
+  const filtered = [];
+  sorted.forEach((point) => {
+    if (!point || !point.lat || !point.lng) return;
+    const hasKnownAccuracy = Number(point.accuracy) > 0;
+    if (hasKnownAccuracy && Number(point.accuracy) > MAX_MAP_POINT_ACCURACY_METERS) {
+      return;
+    }
+
+    if (filtered.length === 0) {
+      filtered.push(point);
+      return;
+    }
+
+    filtered.push(point);
+  });
+
+  if (filtered.length < 3) return filtered;
+
+  const segments = buildContinuousSegments(filtered);
+  const smoothed = [];
+
+  segments.forEach((segment) => {
+    if (segment.length < 3) {
+      smoothed.push(...segment);
+      return;
+    }
+    smoothed.push(segment[0]);
+    for (let i = 1; i < segment.length - 1; i += 1) {
+      const prev = segment[i - 1];
+      const current = segment[i];
+      const next = segment[i + 1];
+      smoothed.push({
+        ...current,
+        lat: (prev.lat + current.lat + next.lat) / 3,
+        lng: (prev.lng + current.lng + next.lng) / 3,
+      });
+    }
+    smoothed.push(segment[segment.length - 1]);
+  });
+
+  return smoothed;
 };
 
 function MrDetailPanel({ data }) {
@@ -225,6 +275,7 @@ function MrDetailPanel({ data }) {
                 lat: p.lat,
                 lng: p.lng,
                 timestamp: p.timestamp,
+                accuracy: p.accuracy || 0,
               }));
             setLocationPoints(pts);
           } else {
@@ -415,9 +466,7 @@ function MrDetailPanel({ data }) {
     0,
   );
 
-  const sortedLocationPoints = [...locationPoints].sort(
-    (a, b) => (a.timestamp || 0) - (b.timestamp || 0),
-  );
+  const sortedLocationPoints = filterAndSmoothPathPoints(locationPoints);
   const locationSegments = buildContinuousSegments(sortedLocationPoints);
   const polylineSegments = locationSegments
     .filter((segment) => segment.length > 1)
