@@ -83,7 +83,24 @@ export default function AllBundlesScreen() {
   return (
     <center>
       <div className="all-bundles-container">
-        <h3>All Bundles</h3>{' '}
+         <div className="page-header">
+        <Text size={600} weight="bold" style={{ color: '#323130' }}>
+          Bundles
+        </Text>
+      </div>
+          <Button
+            appearance="primary"
+            onClick={() => {
+              window.electron.ipcRenderer.sendMessage('new-window', {
+                type: constants.windowConstants.ASSIGN_BILLS,
+              });
+            }}
+          >
+            Create Bundle
+          </Button>
+        
+       <br />
+       <br />
         <DatePicker
           size="large"
           className=" filter-input"

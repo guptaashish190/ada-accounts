@@ -28,6 +28,7 @@ import {
 import constants from '../../../constants';
 import supplyReportFormatGenerator from '../../../common/printerDataGenerator/supplyReportFormatGenerator';
 import supplyReportRecievingFormatGenerator from '../../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
+import { firebaseAuth } from '../../../firebaseInit';
 
 export default function ViewBundleScreen() {
   const [bundle, setBundle] = useState();
@@ -92,13 +93,11 @@ export default function ViewBundleScreen() {
         bundleId,
       );
 
-      updateDoc(billBundleRef, {
+      await updateDoc(billBundleRef, {
         status: constants.firebase.billBundleFlowStatus.HANDOVER,
       });
 
-      await allBills.forEach(async (bill1) => {
-        await updateBills(bill1);
-      });
+      await Promise.all(allBills.map((bill1) => updateBills(bill1)));
       await getAllBills();
       setLoading(false);
       showToast(
@@ -118,12 +117,20 @@ export default function ViewBundleScreen() {
         DB_NAMES.ORDERS,
         bill1.id,
       );
+      const currentFlow = Array.isArray(bill1.flow) ? bill1.flow : [];
+      const handoverFlowEntry = {
+        employeeId: firebaseAuth.currentUser?.uid || '',
+        timestamp: Date.now(),
+        type: 'Handover',
+      };
 
-      updateDoc(orderRef, {
+      await updateDoc(orderRef, {
         with: user.uid,
+        orderStatus: constants.firebase.billBundleFlowStatus.HANDOVER,
+        flow: [...currentFlow, handoverFlowEntry],
       });
 
-      console.log(`Order status updated to "HANDOVER"`);
+      console.log(`Order handover flow/status updated`);
     } catch (error) {
       console.error(`Error updating order  status:`, error);
     }

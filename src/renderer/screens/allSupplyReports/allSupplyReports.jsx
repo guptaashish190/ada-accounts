@@ -135,10 +135,22 @@ export default function AllSupplyReportsScreen() {
     <div className="all-supply-reports-container">
       <div className="page-header">
         <Text size={600} weight="bold" style={{ color: '#323130' }}>
-          All Supply Reports
+          Supply Reports
         </Text>
       </div>
-
+      <center>
+        <Button
+          appearance="primary"
+          onClick={() => {
+            window.electron.ipcRenderer.sendMessage('new-window', {
+              type: constants.windowConstants.CREATE_SUPPLY_REPORT,
+            });
+          }}
+        >
+          Create Supply Report
+        </Button>
+      </center>
+      <br />
       {/* Compact Filter Section */}
       <div className="filters-section">
         <div className="filters-row">

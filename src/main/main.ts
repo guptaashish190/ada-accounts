@@ -284,22 +284,50 @@ ipcMain.on('new-window', (event, args) => {
   const isViewSupplyReport = args && args.type === 'VIEW_SUPPLY_REPORT';
   const isReceiveSupplyReport =
     args && args.type === 'RECEIVE_SUPPLY_REPORT';
+  const isCreateSupplyReport = args && args.type === 'CREATE_SUPPLY_REPORT';
+  const isViewVoucher = args && args.type === 'VIEW_VOUCHER';
+  const isAssignBills = args && args.type === 'ASSIGN_BILLS';
+  const isPrintCashReceipt = args && args.type === 'PRINT_CASH_RECEIPT';
   const winWidth = isMrDetail
     ? 1100
     : isViewSupplyReport
       ? 1200
+      : isPrintCashReceipt
+        ? 700
+      : isAssignBills
+        ? 1300
+      : isViewVoucher
+        ? 950
+      : isCreateSupplyReport
+        ? 1200
       : isReceiveSupplyReport
-        ? 1500
+        ? 1150
         : 800;
   const winHeight = isMrDetail
     ? 750
     : isViewSupplyReport
       ? 850
-      : isReceiveSupplyReport
+      : isPrintCashReceipt
         ? 900
+      : isAssignBills
+        ? 850
+      : isViewVoucher
+        ? 820
+      : isCreateSupplyReport
+        ? 850
+      : isReceiveSupplyReport
+        ? 760
         : 600;
   const childTitle = isViewSupplyReport
     ? 'Supply Report'
+    : isPrintCashReceipt
+      ? 'Print Cash Receipt'
+    : isAssignBills
+      ? 'Assign Bills'
+    : isViewVoucher
+      ? 'View Voucher'
+    : isCreateSupplyReport
+      ? 'Create Supply Report'
     : isMrDetail
       ? 'MR Detail'
       : isReceiveSupplyReport
@@ -317,7 +345,14 @@ ipcMain.on('new-window', (event, args) => {
       height: winHeight,
       title: childTitle,
       webPreferences: {
-        devTools: isMrDetail || isViewSupplyReport || isReceiveSupplyReport,
+        devTools:
+          isMrDetail ||
+          isViewSupplyReport ||
+          isPrintCashReceipt ||
+          isAssignBills ||
+          isViewVoucher ||
+          isReceiveSupplyReport ||
+          isCreateSupplyReport,
         nodeIntegration: true,
         contextIsolation: true,
         preload: app.isPackaged

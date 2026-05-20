@@ -1,7 +1,7 @@
 import { Button, Card, Text } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDocs, query, where } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import CreatePaymentReceiptDialog from './createPaymentReceiptDialog/createPaymentReceiptDialog';
 import globalUtils from '../../services/globalUtils';
@@ -10,6 +10,8 @@ import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
+import constants from '../../constants';
+import { firebaseDB } from '../../firebaseInit';
 
 export default function PaymentReceipts() {
   const navigate = useNavigate();
@@ -52,6 +54,55 @@ export default function PaymentReceipts() {
   };
 
   const { allUsers } = useAuthUser();
+
+  const openCashReceiptPrintWindow = async (receipt) => {
+    try {
+      const prItemsFetched = await globalUtils.fetchPartyInfoForOrders(
+        receipt?.prItems || [],
+        currentCompanyId,
+      );
+
+      let companyData = {};
+      if (currentCompanyId) {
+        const companyRef = doc(firebaseDB, 'companies', currentCompanyId);
+        const companySnap = await getDoc(companyRef);
+        if (companySnap.exists()) {
+          companyData = companySnap.data() || {};
+        }
+      }
+
+      const createdByName =
+        allUsers.find((x) => x.uid === receipt?.createdByUserId)?.username ||
+        receipt?.createdByName ||
+        '--';
+      const paymentFromName =
+        allUsers.find((x) => x.uid === receipt?.paymentFromUserId)?.username ||
+        receipt?.paymentFromName ||
+        '--';
+
+      window.electron.ipcRenderer.sendMessage('new-window', {
+        type: constants.printConstants.PRINT_CASHRECEIPT,
+        printData: {
+          receiptNumber: receipt?.cashReceiptNumber,
+          createdBy: createdByName,
+          user: paymentFromName,
+          items: prItemsFetched || [],
+          total: (receipt?.prItems || []).reduce(
+            (acc, current) => acc + (current.amount || 0),
+            0,
+          ),
+          company: {
+            name: companyData?.name || '',
+            address: companyData?.address || '',
+            logoUrl: companyData?.logoUrl || '',
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Failed to open print window for cash receipt:', error);
+    }
+  };
+
   useEffect(() => {
     fetchCashReceipts();
   }, [currentCompanyId]);
@@ -108,10 +159,8 @@ export default function PaymentReceipts() {
               return (
                 <tr
                   key={`receipt-list-${rc.cashReceiptNumber}`}
-                  onClick={() => {
-                    navigate('/createPaymentReceipts', {
-                      state: { ...rc, view: true },
-                    });
+                  onClick={async () => {
+                    await openCashReceiptPrintWindow(rc);
                   }}
                   className="pr-receipt-row"
                 >

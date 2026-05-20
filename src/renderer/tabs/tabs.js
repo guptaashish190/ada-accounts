@@ -25,10 +25,13 @@ export default [
     key: 'tab-supply',
     submenu: [
       {
-        name: 'Create',
-        route: '/createSupplyReport',
-        key: 'tab-supply-create',
-        allowJob: [constants.firebaseIds.JOBS.DISPATCH],
+        name: 'Supply Reports',
+        route: '/',
+        key: 'tab-supply-all',
+        allowJob: [
+          constants.firebaseIds.JOBS.DISPATCH,
+          constants.firebaseIds.JOBS.CASHIER,
+        ],
       },
       {
         name: 'Verify',
@@ -43,36 +46,10 @@ export default [
         allowJob: [constants.firebaseIds.JOBS.CASHIER],
       },
       {
-        name: 'User Wise Receive',
-        route: '/receivePendingUser',
-        key: 'tab-supply-user-wise-receive',
-        allowJob: [constants.firebaseIds.JOBS.CASHIER],
-      },
-      {
-        name: 'All Supply Reports',
-        route: '/',
-        key: 'tab-supply-all',
-        allowJob: [
-          constants.firebaseIds.JOBS.DISPATCH,
-          constants.firebaseIds.JOBS.CASHIER,
-        ],
-      },
-    ],
-  },
-  {
-    name: 'Bundles',
-    key: 'tab-bundles',
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
-    submenu: [
-      {
-        name: 'Create',
-        route: '/assignBills',
-        key: 'tab-bundles-create',
-      },
-      {
-        name: 'All Bundles',
+        name: 'Bundles',
         route: '/bundles',
-        key: 'tab-bundles-all',
+        key: 'tab-supply-bundles-all',
+        allowJob: [constants.firebaseIds.JOBS.CASHIER],
       },
     ],
   },

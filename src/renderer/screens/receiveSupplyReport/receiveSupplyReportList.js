@@ -1,24 +1,50 @@
 import { onSnapshot, query, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { Button, Card, Text, Input } from '@fluentui/react-components';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Text, Input } from '@fluentui/react-components';
 import './style.css';
 import Loader from '../../common/loader';
-import globalUtils from '../../services/globalUtils';
 import { VerticalSpace1 } from '../../common/verticalSpace';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 import constants from '../../constants';
+import { useAuthUser } from '../../contexts/allUsersContext';
 
 export default function ReceiveSupplyReportScreen() {
-  const [supplyReports, setSupplyReports] = useState([]);
+  const [receiveQueue, setReceiveQueue] = useState([]);
 
-  const [filteredSupplyReports, setFilteredSupplyReports] = useState([]);
+  const [filteredReceiveQueue, setFilteredReceiveQueue] = useState([]);
   const [querySR, setQuerySR] = useState('');
 
   const [loading, setLoading] = useState(false);
 
   // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
+  const { allUsers } = useAuthUser();
+
+  const supplymanNameById = useMemo(() => {
+    const map = {};
+    (allUsers || []).forEach((user) => {
+      map[user.uid] = user.username;
+    });
+    return map;
+  }, [allUsers]);
+
+  const groupedSupplyReports = useMemo(() => {
+    const grouped = {};
+    filteredReceiveQueue.forEach((report) => {
+      const supplymanId = report.personId || 'unassigned';
+      if (!grouped[supplymanId]) {
+        grouped[supplymanId] = {
+          supplymanName: supplymanNameById[supplymanId] || 'Unknown Supplyman',
+          reports: [],
+        };
+      }
+      grouped[supplymanId].reports.push(report);
+    });
+    return Object.entries(grouped).sort((a, b) =>
+      a[1].supplymanName.localeCompare(b[1].supplymanName),
+    );
+  }, [filteredReceiveQueue, supplymanNameById]);
 
   useEffect(() => {
     if (!currentCompanyId) return;
@@ -28,14 +54,66 @@ export default function ReceiveSupplyReportScreen() {
       currentCompanyId,
       DB_NAMES.SUPPLY_REPORTS,
     );
+    const bundlesCollection = getCompanyCollection(
+      currentCompanyId,
+      DB_NAMES.BILL_BUNDLES,
+    );
 
     let deliveredDocs = [];
     let dispatchedDocs = [];
+    let handoverBundles = [];
 
     const merge = () => {
-      const merged = [...deliveredDocs, ...dispatchedDocs];
-      setSupplyReports(merged);
-      setFilteredSupplyReports(merged);
+      const normalizedSupplyReports = [...deliveredDocs, ...dispatchedDocs].map(
+        (doc) => ({
+          ...doc,
+          itemType: 'supplyReport',
+          personId: doc.supplymanId || '',
+          totalBills: [
+            ...(doc.orders || []),
+            ...(doc.supplementaryBills || []),
+            ...(doc.attachedBills || []),
+          ].length,
+          sourceData: doc,
+        }),
+      );
+      const normalizedBundles = handoverBundles.map((doc) => ({
+        ...doc,
+        itemType: 'bundle',
+        personId: doc.assignedTo || '',
+        totalBills: (doc.bills || []).length,
+        sourceData: doc,
+      }));
+      const getPriority = (item) => {
+        if (
+          item.itemType === 'supplyReport' &&
+          item.status === constants.firebase.supplyReportStatus.DELIVERED
+        ) {
+          return 0;
+        }
+        if (
+          item.itemType === 'bundle' &&
+          item.status === constants.firebase.billBundleFlowStatus.HANDOVER
+        ) {
+          return 1;
+        }
+        if (
+          item.itemType === 'supplyReport' &&
+          item.status === constants.firebase.supplyReportStatus.DISPATCHED
+        ) {
+          return 2;
+        }
+        return 3;
+      };
+      const merged = [...normalizedSupplyReports, ...normalizedBundles].sort(
+        (a, b) => {
+          const priorityDiff = getPriority(a) - getPriority(b);
+          if (priorityDiff !== 0) return priorityDiff;
+          return (b.timestamp || 0) - (a.timestamp || 0);
+        },
+      );
+      setReceiveQueue(merged);
+      setFilteredReceiveQueue(merged);
       setLoading(false);
     };
 
@@ -56,45 +134,76 @@ export default function ReceiveSupplyReportScreen() {
       },
       (error) => console.error('Error listening to Dispatched SRs:', error),
     );
+    const unsubHandoverBundles = onSnapshot(
+      query(
+        bundlesCollection,
+        where('status', '==', constants.firebase.billBundleFlowStatus.HANDOVER),
+      ),
+      (snap) => {
+        handoverBundles = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        merge();
+      },
+      (error) => console.error('Error listening to Handover Bundles:', error),
+    );
 
     return () => {
       unsubDelivered();
       unsubDispatched();
+      unsubHandoverBundles();
     };
   }, [currentCompanyId]);
 
   useEffect(() => {
     if (querySR.length === 0) {
-      setFilteredSupplyReports(supplyReports);
+      setFilteredReceiveQueue(receiveQueue);
     } else {
-      setFilteredSupplyReports(
-        supplyReports.filter((x) => x.receiptNumber.includes(querySR)),
+      setFilteredReceiveQueue(
+        receiveQueue.filter((x) =>
+          (x.receiptNumber || '')
+            .toString()
+            .toLowerCase()
+            .includes(querySR.toLowerCase()),
+        ),
       );
     }
-  }, [querySR, supplyReports]);
+  }, [querySR, receiveQueue]);
 
   if (loading) return <Loader />;
 
   return (
     <center>
       <div className="receive-supply-reports-container">
-        <h3>Receive Supply Reports</h3>
+        <h3>Receive Supply Reports & Bundles</h3>
 
         <Input
           onChange={(_, e) => setQuerySR(e.value)}
-          contentBefore="SR-"
-          placeholder="00"
+          placeholder="Search by receipt number..."
         />
         <VerticalSpace1 />
         <SupplyRowListHeader />
         <VerticalSpace1 />
-        {filteredSupplyReports.map((sr) => {
-          return <SupplyReportRow key={`recevie-sr-list-${sr.id}`} data={sr} />;
-        })}
-
-        {filteredSupplyReports.length === 0 ? (
-          <Text style={{ color: '#ddd' }}>No Supply Reports to receive</Text>
-        ) : null}
+        {filteredReceiveQueue.length === 0 ? (
+          <Text style={{ color: '#ddd' }}>No items to receive</Text>
+        ) : (
+          groupedSupplyReports.map(([supplymanId, groupedReports]) => (
+            <div className="supplyman-group" key={`supplyman-group-${supplymanId}`}>
+              <Text className="supplyman-group-title">
+                {groupedReports.supplymanName} ({groupedReports.reports.length})
+              </Text>
+              <VerticalSpace1 />
+              {groupedReports.reports.map((sr) => {
+                return (
+                  <SupplyReportRow
+                    key={`recevie-sr-list-${sr.id}`}
+                    data={sr}
+                    supplymanName={groupedReports.supplymanName}
+                  />
+                );
+              })}
+              <VerticalSpace1 />
+            </div>
+          ))
+        )}
       </div>
     </center>
   );
@@ -113,19 +222,17 @@ export function SupplyRowListHeader() {
   );
 }
 
-export function SupplyReportRow({ data }) {
-  const [supplyman, setSupplyman] = useState();
+export function SupplyReportRow({ data, supplymanName }) {
+  const { allUsers } = useAuthUser();
+  const resolvedSupplymanName =
+    supplymanName ||
+    allUsers?.find((user) => user.uid === data.personId)?.username ||
+    '--';
 
-  const getSupplyman = async () => {
-    const user = await globalUtils.fetchUserById(data.supplymanId);
-    setSupplyman(user);
-  };
-
-  useEffect(() => {
-    getSupplyman();
-  }, []);
-
-  const isDelivered = data.status === 'Delivered';
+  const isBundle = data.itemType === 'bundle';
+  const isDelivered = isBundle
+    ? data.status === constants.firebase.billBundleFlowStatus.HANDOVER
+    : data.status === 'Delivered';
   return (
     <div
       className="supply-report-row"
@@ -135,11 +242,8 @@ export function SupplyReportRow({ data }) {
       <Text className="sr-timestamp">
         {new Date(data.timestamp).toLocaleDateString()}
       </Text>
-      <Text className="sr-parties-length">{supplyman?.username}</Text>
-      <Text>
-        {[...data.orders, ...data.supplementaryBills, ...data.attachedBills]
-          ?.length || 0}
-      </Text>
+      <Text className="sr-parties-length">{resolvedSupplymanName}</Text>
+      <Text>{data.totalBills || 0}</Text>
       <Text>{data.status}</Text>
       <Button
         disabled={!isDelivered}
@@ -148,7 +252,10 @@ export function SupplyReportRow({ data }) {
         onClick={() => {
           window.electron.ipcRenderer.sendMessage('new-window', {
             type: constants.windowConstants.RECEIVE_SUPPLY_REPORT,
-            data: { supplyReport: data },
+            data: {
+              supplyReport: data.sourceData || data,
+              ...(isBundle ? { isBundle: true } : {}),
+            },
           });
         }}
       >

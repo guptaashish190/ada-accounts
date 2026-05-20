@@ -1,24 +1,15 @@
 import {
   Button,
-  Card,
-  Dialog,
-  DialogActions,
-  DialogBody,
-  DialogContent,
-  DialogSurface,
-  DialogTitle,
-  DialogTrigger,
-  Image,
   Text,
 } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getDocs, query, where } from 'firebase/firestore';
 
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import globalUtils from '../../services/globalUtils';
 import './style.css';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
+import constants from '../../constants';
 
 import CreateVoucherDialog from './createVoucherDialog/createVoucherDialog';
 import { useAuthUser } from '../../contexts/allUsersContext';
@@ -27,7 +18,6 @@ import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
 export default function VoucherScreen() {
-  const navigate = useNavigate();
   const [vouchers, setVouchers] = useState([]);
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
@@ -124,8 +114,9 @@ export default function VoucherScreen() {
                   style={rc.status === 'Cancelled' ? { opacity: 0.4 } : {}}
                   onClick={() => {
                     if (rc.status === 'Cancelled') return;
-                    navigate('/viewVoucherScreen', {
-                      state: { voucherData: rc },
+                    window.electron.ipcRenderer.sendMessage('new-window', {
+                      type: constants.windowConstants.VIEW_VOUCHER,
+                      data: { voucherData: rc },
                     });
                   }}
                   key={`vouchers-list-${rc.id}`}

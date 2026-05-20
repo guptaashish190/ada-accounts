@@ -21,7 +21,7 @@ const useStyles = makeStyles({
   container: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    columnGap: '8px',
   },
   dropdown: {
     minWidth: '200px',

@@ -28,3 +28,17 @@
 .receive-supply-reports-container .sr-id {
   font-weight: bold;
 }
+
+.receive-supply-reports-container .supplyman-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.receive-supply-reports-container .supplyman-group-title {
+  width: 60%;
+  text-align: left;
+  font-weight: 600;
+  color: #4b5563;
+}
