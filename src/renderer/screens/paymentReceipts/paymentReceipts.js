@@ -12,6 +12,7 @@ import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 import constants from '../../constants';
 import { firebaseDB } from '../../firebaseInit';
+import cashReceiptFormatGenerator from '../../common/printerDataGenerator/cashReceiptFormatGenerator';
 
 export default function PaymentReceipts() {
   const navigate = useNavigate();
@@ -80,24 +81,27 @@ export default function PaymentReceipts() {
         receipt?.paymentFromName ||
         '--';
 
-      window.electron.ipcRenderer.sendMessage('new-window', {
-        type: constants.printConstants.PRINT_CASHRECEIPT,
-        printData: {
-          receiptNumber: receipt?.cashReceiptNumber,
-          createdBy: createdByName,
-          user: paymentFromName,
-          items: prItemsFetched || [],
-          total: (receipt?.prItems || []).reduce(
-            (acc, current) => acc + (current.amount || 0),
-            0,
-          ),
-          company: {
-            name: companyData?.name || '',
-            address: companyData?.address || '',
-            logoUrl: companyData?.logoUrl || '',
-          },
+      const printData = {
+        receiptNumber: receipt?.cashReceiptNumber,
+        createdBy: createdByName,
+        user: paymentFromName,
+        time: globalUtils.getTimeFormat(receipt?.timestamp),
+        items: prItemsFetched || [],
+        total: (receipt?.prItems || []).reduce(
+          (acc, current) => acc + (current.amount || 0),
+          0,
+        ),
+        company: {
+          name: companyData?.name || '',
+          address: companyData?.address || '',
+          logoUrl: companyData?.logoUrl || '',
         },
-      });
+      };
+
+      window.electron.ipcRenderer.sendMessage(
+        'print',
+        cashReceiptFormatGenerator(printData),
+      );
     } catch (error) {
       console.error('Failed to open print window for cash receipt:', error);
     }
