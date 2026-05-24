@@ -178,7 +178,7 @@ export default function ReceiveSRScreen() {
       const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
       console.log(dbName, supplyReport.id);
       // update supply report for all the bill rec details
-      updateDoc(supplyReportRef, {
+      await updateDoc(supplyReportRef, {
         ...(allBillsReceived
           ? { status: constants.firebase.supplyReportStatus.COMPLETED }
           : {}),
@@ -216,7 +216,7 @@ export default function ReceiveSRScreen() {
         );
         const orderData = await getDoc(orderRef);
         const paymentsObj = orderData.data().payments || [];
-        updateDoc(orderRef, {
+        await updateDoc(orderRef, {
           flow: [
             ...rb2.flow,
             {
@@ -244,7 +244,7 @@ export default function ReceiveSRScreen() {
           rb2.id,
         );
 
-        updateDoc(orderRef, {
+        await updateDoc(orderRef, {
           flow: [
             ...rb2.flow,
             {
