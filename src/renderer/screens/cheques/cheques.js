@@ -331,12 +331,31 @@ function TableCustomCell({ children }) {
 export function ChequeEntryDialog({ onClose, chequeData }) {
   const [showChequeEntryDialog, setShowChequeEntryDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [chequeNumber, setChequeNumber] = useState('');
   const [chequeDate, setChequeDate] = useState();
   const [party, setParty] = useState(chequeData?.party);
   const [amount, setAmount] = useState();
   const [notes, setNotes] = useState('');
   const { currentCompanyId } = useCompany();
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 5;
+
+  const clampZoom = (value) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+  const resetImageView = () => {
+    setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
+  const openImageViewer = () => {
+    resetImageView();
+    setShowImageViewer(true);
+  };
 
   const handleAddCheque = async () => {
     if (loading) return;
@@ -409,7 +428,8 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
     [chequeDate],
   );
   return (
-    <Dialog open={showChequeEntryDialog}>
+    <>
+      <Dialog open={showChequeEntryDialog}>
       <DialogTrigger disableButtonEnhancement>
         <Button onClick={() => setShowChequeEntryDialog(true)}>
           Cheque Entry
@@ -423,7 +443,12 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
               <Image
                 fit="contain"
                 src={chequeData.image}
-                style={{ height: '25vh', marginBottom: '20px' }}
+                style={{
+                  height: '25vh',
+                  marginBottom: '20px',
+                  cursor: 'zoom-in',
+                }}
+                onClick={() => openImageViewer()}
               />
             ) : null}
             <Label>Cheque Number</Label>
@@ -490,6 +515,115 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
           </DialogActions>
         </DialogBody>
       </DialogSurface>
-    </Dialog>
+      </Dialog>
+      <Dialog
+        open={showImageViewer}
+        onOpenChange={(_, dialogData) => {
+          if (!dialogData.open) {
+            setShowImageViewer(false);
+            resetImageView();
+          }
+        }}
+      >
+        <DialogSurface
+          style={{
+            width: '95vw',
+            maxWidth: '95vw',
+            height: '95vh',
+          }}
+        >
+          <DialogBody>
+            <DialogTitle>Cheque Image Preview</DialogTitle>
+            <DialogContent>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  marginBottom: '12px',
+                  alignItems: 'center',
+                }}
+              >
+                <Button
+                  appearance="secondary"
+                  onClick={() => setZoomScale((prev) => clampZoom(prev - 0.25))}
+                >
+                  -
+                </Button>
+                <Text>{`${Math.round(zoomScale * 100)}%`}</Text>
+                <Button
+                  appearance="secondary"
+                  onClick={() => setZoomScale((prev) => clampZoom(prev + 0.25))}
+                >
+                  +
+                </Button>
+                <Button appearance="secondary" onClick={() => resetImageView()}>
+                  Reset
+                </Button>
+                <Text size={200}>
+                  Scroll to zoom. Drag to pan when zoomed in.
+                </Text>
+              </div>
+              <div
+                style={{
+                  height: '72vh',
+                  backgroundColor: '#111',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  userSelect: 'none',
+                }}
+                onMouseMove={(e) => {
+                  if (!isDragging || zoomScale <= 1) return;
+                  setPanOffset({
+                    x: e.clientX - dragStart.x,
+                    y: e.clientY - dragStart.y,
+                  });
+                }}
+                onMouseUp={() => setIsDragging(false)}
+                onMouseLeave={() => setIsDragging(false)}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  const delta = e.deltaY > 0 ? -0.2 : 0.2;
+                  setZoomScale((prev) => clampZoom(prev + delta));
+                }}
+              >
+                <img
+                  src={chequeData?.image}
+                  alt="Cheque"
+                  onDragStart={(e) => e.preventDefault()}
+                  onMouseDown={(e) => {
+                    if (zoomScale <= 1) return;
+                    setIsDragging(true);
+                    setDragStart({
+                      x: e.clientX - panOffset.x,
+                      y: e.clientY - panOffset.y,
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
+                    transformOrigin: 'center center',
+                    cursor: zoomScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                  }}
+                />
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                appearance="secondary"
+                onClick={() => {
+                  setShowImageViewer(false);
+                  resetImageView();
+                }}
+              >
+                Close
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+    </>
   );
 }

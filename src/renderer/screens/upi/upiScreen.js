@@ -269,9 +269,28 @@ function UpiItemRow({ data, refreshData }) {
 function UPIDialog({ data, createdBy }) {
   const [adjustedBills, setAdjustedBills] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
   const [loading, setLoading] = useState(false);
   const { currentCompanyId } = useCompany();
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 5;
+
+  const clampZoom = (value) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
+  const resetImageView = () => {
+    setZoomScale(1);
+    setPanOffset({ x: 0, y: 0 });
+    setIsDragging(false);
+  };
+
+  const openImageViewer = () => {
+    resetImageView();
+    setShowImageViewer(true);
+  };
 
   const onDone = async () => {
     if (loading) return;
@@ -312,7 +331,8 @@ function UPIDialog({ data, createdBy }) {
   };
 
   return (
-    <Dialog open={openDialog}>
+    <>
+      <Dialog open={openDialog}>
       <DialogTrigger disableButtonEnhancement>
         <Button onClick={() => setOpenDialog(true)}>
           {data.isReceived ? 'View' : 'Receive'}
@@ -331,8 +351,12 @@ function UPIDialog({ data, createdBy }) {
             >
               <Image
                 width={300}
-                style={{ objectFit: 'contain' }}
+                style={{
+                  objectFit: 'contain',
+                  cursor: 'zoom-in',
+                }}
                 src={data?.imageUrl}
+                onClick={() => openImageViewer()}
               />
               <div style={{ marginLeft: '20px' }}>
                 <Text size={400}>
@@ -380,6 +404,115 @@ function UPIDialog({ data, createdBy }) {
           </DialogActions>
         </DialogBody>
       </DialogSurface>
-    </Dialog>
+      </Dialog>
+      <Dialog
+        open={showImageViewer}
+        onOpenChange={(_, dialogData) => {
+          if (!dialogData.open) {
+            setShowImageViewer(false);
+            resetImageView();
+          }
+        }}
+      >
+        <DialogSurface
+          style={{
+            width: '95vw',
+            maxWidth: '95vw',
+            height: '95vh',
+          }}
+        >
+          <DialogBody>
+            <DialogTitle>Image Preview</DialogTitle>
+            <DialogContent>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '8px',
+                  marginBottom: '12px',
+                  alignItems: 'center',
+                }}
+              >
+                <Button
+                  appearance="secondary"
+                  onClick={() => setZoomScale((prev) => clampZoom(prev - 0.25))}
+                >
+                  -
+                </Button>
+                <Text>{`${Math.round(zoomScale * 100)}%`}</Text>
+                <Button
+                  appearance="secondary"
+                  onClick={() => setZoomScale((prev) => clampZoom(prev + 0.25))}
+                >
+                  +
+                </Button>
+                <Button appearance="secondary" onClick={() => resetImageView()}>
+                  Reset
+                </Button>
+                <Text size={200}>
+                  Scroll to zoom. Drag to pan when zoomed in.
+                </Text>
+              </div>
+              <div
+                style={{
+                  height: '72vh',
+                  backgroundColor: '#111',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  userSelect: 'none',
+                }}
+                onMouseMove={(e) => {
+                  if (!isDragging || zoomScale <= 1) return;
+                  setPanOffset({
+                    x: e.clientX - dragStart.x,
+                    y: e.clientY - dragStart.y,
+                  });
+                }}
+                onMouseUp={() => setIsDragging(false)}
+                onMouseLeave={() => setIsDragging(false)}
+                onWheel={(e) => {
+                  e.preventDefault();
+                  const delta = e.deltaY > 0 ? -0.2 : 0.2;
+                  setZoomScale((prev) => clampZoom(prev + delta));
+                }}
+              >
+                <img
+                  src={data?.imageUrl}
+                  alt="UPI"
+                  onDragStart={(e) => e.preventDefault()}
+                  onMouseDown={(e) => {
+                    if (zoomScale <= 1) return;
+                    setIsDragging(true);
+                    setDragStart({
+                      x: e.clientX - panOffset.x,
+                      y: e.clientY - panOffset.y,
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
+                    transformOrigin: 'center center',
+                    cursor: zoomScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                  }}
+                />
+              </div>
+            </DialogContent>
+            <DialogActions>
+              <Button
+                appearance="secondary"
+                onClick={() => {
+                  setShowImageViewer(false);
+                  resetImageView();
+                }}
+              >
+                Close
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+    </>
   );
 }

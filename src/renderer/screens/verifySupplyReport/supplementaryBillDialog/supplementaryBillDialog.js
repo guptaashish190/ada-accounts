@@ -52,6 +52,22 @@ export default function SupplementaryBillDialog({
 
   const { currentCompanyId } = useCompany();
 
+  const getBillNumberCandidates = (billNumberInput) => {
+    const normalized = String(billNumberInput || '').trim();
+    if (!normalized) return [];
+
+    if (normalized.startsWith('*T-') || normalized.startsWith('T-')) {
+      return [normalized];
+    }
+
+    if (normalized.startsWith('*')) {
+      return [normalized];
+    }
+
+    const prefixed = `T-${normalized}`;
+    return [prefixed, `*${prefixed}`];
+  };
+
   const fetchOrders = async () => {
     try {
       const ordersCollection = getCompanyCollection(
@@ -80,23 +96,32 @@ export default function SupplementaryBillDialog({
     const ordersRef = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
 
     // Build the query dynamically based on non-empty filter fields
-    let dynamicQuery = ordersRef;
+    let dynamicQuery = query(ordersRef, where('balance', '!=', 0));
 
     const filters = {
       partyId: queryPartyId,
-      billNumber: queryBillNumber ? `T-${queryBillNumber}` : null,
     };
+    const billNumberCandidates = getBillNumberCandidates(queryBillNumber);
     if (Object.keys(filters).length === 0) return;
 
     for (const field in filters) {
       if (filters[field]) {
-        dynamicQuery = query(
-          dynamicQuery,
-          where(field, '==', filters[field]),
-          where('balance', '!=', 0),
-        );
+        dynamicQuery = query(dynamicQuery, where(field, '==', filters[field]));
       }
     }
+
+    if (billNumberCandidates.length === 1) {
+      dynamicQuery = query(
+        dynamicQuery,
+        where('billNumber', '==', billNumberCandidates[0]),
+      );
+    } else if (billNumberCandidates.length > 1) {
+      dynamicQuery = query(
+        dynamicQuery,
+        where('billNumber', 'in', billNumberCandidates),
+      );
+    }
+
     dynamicQuery = query(dynamicQuery, limit(10));
     // Fetch parties based on the dynamic query
     const fetchData = async () => {

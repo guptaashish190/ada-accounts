@@ -1,89 +1,211 @@
-/* eslint-disable no-restricted-syntax */
+/* eslint-disable no-console */
 const admin = require('firebase-admin');
+const { getFirestore } = require('firebase-admin/firestore');
 
-const serviceAccount = require('./private_key.json'); // Replace with your service account key file
-const data = require('./outstanding.json'); // Replace with the correct path to your data file
+const serviceAccount = require('./private_key.json');
+
+const TARGET_COMPANY_ID = 'ashish-drug-agencies';
+const DEFAULT_SOURCE_COLLECTION = 'orders';
+const MIGRATION_MARKER = 'isImportedPreviousFy';
+const IMPORTED_FROM_FIELD = 'importedFromFy';
+const DEFAULT_IMPORT_LABEL = 'FY 25-26';
+const BATCH_WRITE_LIMIT = 400;
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
-const db = admin.firestore();
 
-// Define the Firestore collection where you want to write the data
-const collectionName = 'orders'; // Replace with your collection name
-const partyDetailsCollection = 'parties';
-
-// Function to fetch party details by name
-const getPartyId = async (partyName) => {
-  const partyQuery = await db
-    .collection(partyDetailsCollection)
-    .where('name', '==', partyName)
-    .get();
-
-  if (!partyQuery.empty) {
-    return partyQuery.docs[0].id; // Return the document ID of the party details
-  }
-
-  return null; // Return null if party details are not found
+const parseArgs = () => {
+  const rawArgs = process.argv.slice(2);
+  const argMap = {};
+  rawArgs.forEach((arg) => {
+    if (!arg.startsWith('--')) return;
+    const trimmed = arg.replace(/^--/, '');
+    const [key, value] = trimmed.split('=');
+    argMap[key] = value === undefined ? true : value;
+  });
+  return argMap;
 };
 
-// Function to write data to Firestore
-const writeDataToFirestore = async () => {
-  try {
-    // Iterate over each document in the data and write it to the Firestore collection
+const getRuntimeConfig = () => {
+  const argMap = parseArgs();
+  const sourceDatabaseId = String(
+    argMap.sourceDb || process.env.SOURCE_DB_ID || '',
+  ).trim();
+  const targetDatabaseId = String(
+    argMap.targetDb || process.env.TARGET_DB_ID || '',
+  ).trim();
+  const sourceCollection = String(
+    argMap.sourceCollection ||
+      process.env.SOURCE_ORDERS_COLLECTION ||
+      DEFAULT_SOURCE_COLLECTION,
+  ).trim();
+  const importLabel = String(
+    argMap.importLabel || process.env.IMPORT_FY_LABEL || DEFAULT_IMPORT_LABEL,
+  ).trim();
+  const dryRun =
+    argMap.execute !== true &&
+    String(process.env.EXECUTE_IMPORT || '').toLowerCase() !== 'true';
+  const overwriteExisting =
+    argMap.overwriteExisting === true ||
+    String(process.env.OVERWRITE_EXISTING || '').toLowerCase() === 'true';
 
-    let partyId;
-    let count = 0;
+  if (!sourceDatabaseId) {
+    throw new Error(
+      'Missing source DB id. Pass --sourceDb=<database-id> or SOURCE_DB_ID env.',
+    );
+  }
 
-    for await (const document of data) {
-      if (document['Party Name']) {
-        partyId = await getPartyId(document['Party Name']);
-      } else if (partyId) {
-        const billData = {
-          balance: document.Balance || 0,
-          accountsNotes: '',
-          billNumber: document['Bill No.'] || '',
-          creationTime: new Date(document['Bill Date']).getTime(),
-          flow: [],
-          flowCompleted: true,
-          orderAmount: document['Bill Amt.'] || '',
-          orderStatus: 'Received Bill',
-          partyId,
-          with: 'Accounts',
-        };
-        const docRef = db.collection(collectionName).doc();
-        await docRef.set({ ...billData, id: docRef.id });
-        count += 1;
+  return {
+    sourceDatabaseId,
+    targetDatabaseId,
+    sourceCollection,
+    importLabel,
+    dryRun,
+    overwriteExisting,
+  };
+};
+
+const buildDb = (databaseId) => {
+  if (!databaseId || databaseId === '(default)') {
+    return getFirestore(admin.app());
+  }
+  return getFirestore(admin.app(), databaseId);
+};
+
+const toStarBillNumber = (billNumber) => {
+  const normalized = String(billNumber || '').trim();
+  if (!normalized) return normalized;
+  if (normalized.startsWith('*')) return normalized;
+  return `*${normalized}`;
+};
+
+const isAlreadyImported = (targetDocData = {}) => {
+  if (targetDocData[MIGRATION_MARKER] === true) return true;
+  const billNumber = String(targetDocData.billNumber || '').trim();
+  return billNumber.startsWith('*');
+};
+
+const buildTargetData = (sourceId, sourceData, importLabel) => {
+  const cloned = { ...sourceData };
+  cloned.billNumber = toStarBillNumber(cloned.billNumber);
+  cloned.id = sourceId;
+  cloned[MIGRATION_MARKER] = true;
+  cloned[IMPORTED_FROM_FIELD] = importLabel;
+  return cloned;
+};
+
+const commitInBatches = async (targetDb, writes) => {
+  let committed = 0;
+  for (let index = 0; index < writes.length; index += BATCH_WRITE_LIMIT) {
+    const chunk = writes.slice(index, index + BATCH_WRITE_LIMIT);
+    const batch = targetDb.batch();
+    chunk.forEach(({ docPath, payload }) => {
+      batch.set(targetDb.doc(docPath), payload, { merge: true });
+    });
+    await batch.commit();
+    committed += chunk.length;
+    console.log(`Committed ${committed}/${writes.length}`);
+  }
+};
+
+const runMigration = async () => {
+  const config = getRuntimeConfig();
+  const sourceDb = buildDb(config.sourceDatabaseId);
+  const targetDb = buildDb(config.targetDatabaseId);
+  const sourceRef = sourceDb.collection(config.sourceCollection);
+  const targetOrdersRef = targetDb.collection(
+    `companies/${TARGET_COMPANY_ID}/orders`,
+  );
+
+  console.log('Starting previous FY import with config:');
+  console.log(
+    JSON.stringify(
+      {
+        sourceDatabaseId: config.sourceDatabaseId,
+        targetDatabaseId: config.targetDatabaseId || '(default)',
+        sourceCollection: config.sourceCollection,
+        targetCollection: `companies/${TARGET_COMPANY_ID}/orders`,
+        importLabel: config.importLabel,
+        dryRun: config.dryRun,
+        overwriteExisting: config.overwriteExisting,
+      },
+      null,
+      2,
+    ),
+  );
+
+  const sourceSnapshot = await sourceRef.get();
+  console.log(`Source documents found: ${sourceSnapshot.size}`);
+
+  const writes = [];
+  let skippedExisting = 0;
+  let skippedMissingData = 0;
+  let alreadyStarred = 0;
+  let skippedExistingNonMigrated = 0;
+
+  for (const sourceDoc of sourceSnapshot.docs) {
+    const sourceData = sourceDoc.data();
+    if (!sourceData || typeof sourceData !== 'object') {
+      skippedMissingData += 1;
+      continue;
+    }
+
+    const targetDocRef = targetOrdersRef.doc(sourceDoc.id);
+    const existingTarget = await targetDocRef.get();
+
+    if (existingTarget.exists) {
+      if (isAlreadyImported(existingTarget.data())) {
+        skippedExisting += 1;
+        continue;
+      }
+      if (!config.overwriteExisting) {
+        skippedExistingNonMigrated += 1;
+        continue;
       }
     }
 
-    console.log('Data has been successfully written to Firestore.', count);
-  } catch (error) {
-    console.error('Error writing data to Firestore:', error);
-  }
-};
-
-const updateOrdersWithDocumentId = async () => {
-  try {
-    const ordersSnapshot = await db.collection(collectionName).get();
-
-    const batch = db.batch();
-    let count = 0;
-    ordersSnapshot.forEach((doc) => {
-      const docRef = db.collection(collectionName).doc(doc.id);
-      batch.update(docRef, { id: doc.id });
-      count += 1;
-      console.log(`${count} done`);
+    const payload = buildTargetData(sourceDoc.id, sourceData, config.importLabel);
+    if (String(sourceData.billNumber || '').trim().startsWith('*')) {
+      alreadyStarred += 1;
+    }
+    writes.push({
+      docPath: `companies/${TARGET_COMPANY_ID}/orders/${sourceDoc.id}`,
+      payload,
     });
-
-    await batch.commit();
-    console.log(
-      'Documents in the "orders" collection updated with "id" field.',
-      count,
-    );
-  } catch (error) {
-    console.error('Error updating documents:', error);
   }
+
+  console.log(`Prepared writes: ${writes.length}`);
+  console.log(`Skipped existing imported docs: ${skippedExisting}`);
+  console.log(
+    `Skipped existing non-imported docs (safe no-overwrite): ${skippedExistingNonMigrated}`,
+  );
+  console.log(`Skipped invalid source docs: ${skippedMissingData}`);
+  console.log(`Source docs already having * billNumber: ${alreadyStarred}`);
+
+  if (writes.length > 0) {
+    const sample = writes.slice(0, 5).map((entry) => ({
+      id: entry.payload.id,
+      billNumber: entry.payload.billNumber || '',
+      importedFromFy: entry.payload[IMPORTED_FROM_FIELD],
+    }));
+    console.log('Sample transformed docs:', sample);
+  }
+
+  if (config.dryRun) {
+    console.log(
+      'Dry run complete. No writes were executed. Pass --execute=true to apply writes.',
+    );
+    return;
+  }
+
+  await commitInBatches(targetDb, writes);
+  console.log(`Import complete. Total docs written: ${writes.length}`);
 };
-// Call the function to write data to Firestore
-writeDataToFirestore();
+
+runMigration()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error('Previous FY import failed:', error);
+    process.exit(1);
+  });

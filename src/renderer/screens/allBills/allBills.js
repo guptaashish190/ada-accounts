@@ -1,11 +1,5 @@
 /* eslint-disable no-restricted-syntax */
-import {
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  where,
-} from 'firebase/firestore';
+import { getDocs, limit, orderBy, query, where } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 // import { throttle, debounce } from 'lodash';
@@ -77,6 +71,22 @@ export default function AllBillsScreen() {
     }
   };
 
+  const getBillNumberCandidates = (billNumberInput) => {
+    const normalized = String(billNumberInput || '').trim();
+    if (!normalized) return [];
+
+    if (normalized.startsWith('*T-') || normalized.startsWith('T-')) {
+      return [normalized];
+    }
+
+    if (normalized.startsWith('*')) {
+      return [normalized];
+    }
+
+    const prefixed = `T-${normalized}`;
+    return [prefixed, `*${prefixed}`];
+  };
+
   const onSearchBill = () => {
     const ordersRef = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
 
@@ -86,9 +96,9 @@ export default function AllBillsScreen() {
     const filters = {
       partyId: queryPartyId,
       with: queryWith,
-      billNumber: queryBillNumber ? `T-${queryBillNumber}` : null,
       mrId: queryMR,
     };
+    const billNumberCandidates = getBillNumberCandidates(queryBillNumber);
 
     if (Object.keys(filters).length === 0) return;
     for (const field in filters) {
@@ -96,6 +106,19 @@ export default function AllBillsScreen() {
         dynamicQuery = query(dynamicQuery, where(field, '==', filters[field]));
       }
     }
+
+    if (billNumberCandidates.length === 1) {
+      dynamicQuery = query(
+        dynamicQuery,
+        where('billNumber', '==', billNumberCandidates[0]),
+      );
+    } else if (billNumberCandidates.length > 1) {
+      dynamicQuery = query(
+        dynamicQuery,
+        where('billNumber', 'in', billNumberCandidates),
+      );
+    }
+
     dynamicQuery = query(dynamicQuery, limit(10));
     // Fetch parties based on the dynamic query
     const fetchData = async () => {

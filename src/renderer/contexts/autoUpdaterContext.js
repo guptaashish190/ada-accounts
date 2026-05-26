@@ -11,6 +11,7 @@ import firebaseApp from '../firebaseInit';
 import Loader from '../common/loader';
 import { showToast } from '../common/toaster';
 
+
 export default function AutoUpdaterWrapper({ children }) {
   const [version, setVersion] = useState('');
   const [progressPercentage, setProgressPercentage] = useState(0);
