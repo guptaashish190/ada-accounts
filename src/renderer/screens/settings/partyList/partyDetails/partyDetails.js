@@ -37,6 +37,7 @@ export default function PartyDetailsScreen() {
   const [party, setParty] = useState();
   const [loading, setLoading] = useState();
   const [outstandingBills, setOutstandingBills] = useState();
+  const [receivedPayments, setReceivedPayments] = useState([]);
   const navigate = useNavigate();
 
   const { user } = useCurrentUser();
@@ -55,11 +56,86 @@ export default function PartyDetailsScreen() {
       } else {
         console.log('Document not found.');
       }
-      await fetchOutstanding();
+      await Promise.all([fetchOutstanding(), fetchReceivedPayments()]);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching document:', error);
       setLoading(false);
+    }
+  };
+
+  const fetchReceivedPayments = async () => {
+    try {
+      const upiRef = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
+      const chequesRef = getCompanyCollection(currentCompanyId, DB_NAMES.CHEQUES);
+      const cashReceiptsRef = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.CASH_RECEIPTS,
+      );
+
+      const [upiSnapshot, chequeSnapshot, cashReceiptSnapshot] = await Promise.all([
+        getDocs(
+          query(
+            upiRef,
+            where('partyId', '==', partyId),
+            where('isReceived', '==', true),
+          ),
+        ),
+        getDocs(query(chequesRef, where('partyId', '==', partyId))),
+        getDocs(query(cashReceiptsRef, where('parties', 'array-contains', partyId))),
+      ]);
+
+      const upiPayments = upiSnapshot.docs
+        .map((doc1) => ({ id: doc1.id, ...doc1.data() }))
+        .filter((payment) => {
+          const normalizedType = (payment?.type || 'upi').toString().toLowerCase();
+          return normalizedType === 'upi' || normalizedType === 'neft';
+        })
+        .map((payment) => ({
+          id: payment.id,
+          timestamp: payment.timestamp || 0,
+          mode: (payment.type || 'upi').toString().toUpperCase(),
+          amount: parseFloat(payment.amount || 0),
+          reference: payment.billNumber || payment.comment || '--',
+        }));
+
+      const chequePayments = chequeSnapshot.docs.map((doc1) => {
+        const data = doc1.data();
+        return {
+          id: doc1.id,
+          timestamp: data.timestamp || data.chequeDate || 0,
+          mode: 'CHEQUE',
+          amount: parseFloat(data.amount || 0),
+          reference: data.chequeNumber || '--',
+        };
+      });
+
+      const cashPayments = cashReceiptSnapshot.docs
+        .map((doc1) => ({ id: doc1.id, ...doc1.data() }))
+        .filter((receipt) => receipt.status !== 'CANCELLED')
+        .map((receipt) => {
+          const amountForParty = (receipt.prItems || []).reduce((acc, item) => {
+            if (item.partyId !== partyId) return acc;
+            return acc + parseFloat(item.amount || 0);
+          }, 0);
+          return {
+            id: receipt.id,
+            timestamp: receipt.timestamp || 0,
+            mode: 'CASH',
+            amount: amountForParty,
+            reference: receipt.cashReceiptNumber || '--',
+          };
+        })
+        .filter((payment) => payment.amount > 0);
+
+      const allPayments = [...upiPayments, ...chequePayments, ...cashPayments].sort(
+        (p1, p2) => (p2.timestamp || 0) - (p1.timestamp || 0),
+      );
+
+      setReceivedPayments(allPayments);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+      setReceivedPayments([]);
     }
   };
   const fetchOutstanding = async () => {
@@ -69,6 +145,8 @@ export default function PartyDetailsScreen() {
         currentCompanyId,
         DB_NAMES.ORDERS,
       );
+
+      
       const q = query(
         ordersCollection,
         where('partyId', '==', partyId),
@@ -83,7 +161,7 @@ export default function PartyDetailsScreen() {
         ordersData.push(orderData);
       }
       const sortedData = ordersData.sort(
-        (s1, s2) => s2.creationTime - s1.creationTime,
+        (s1, s2) => s1.creationTime - s2.creationTime,
       );
       setOutstandingBills(sortedData);
     } catch (error) {
@@ -232,6 +310,42 @@ export default function PartyDetailsScreen() {
               </td>
               <td />
             </tr>
+          </tbody>
+        </table>
+        <VerticalSpace1 />
+        <h3>Payments (UPI / NEFT / CHEQUE / CASH)</h3>
+        <table className="app-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Mode</th>
+              <th>Amount</th>
+              <th>Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {receivedPayments.length ? (
+              receivedPayments.map((payment, index) => (
+                <tr
+                  key={`party-received-payment-${
+                    payment?.timestamp || payment?.amount || index
+                  }-${index}`}
+                >
+                  <td>
+                    {payment?.timestamp
+                      ? new Date(payment.timestamp).toLocaleString()
+                      : '--'}
+                  </td>
+                  <td>{(payment?.mode || '--').toString().toUpperCase()}</td>
+                  <td>{globalUtils.getCurrencyFormat(payment?.amount || 0)}</td>
+                  <td>{payment?.reference || '--'}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4}>No received payments found.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

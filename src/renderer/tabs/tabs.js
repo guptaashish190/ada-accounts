@@ -90,12 +90,13 @@ export default [
         route: '/searchBills',
         key: 'tab-bills-all',
       },
-      {
-        name: 'Pending Bills',
-        route: '/pendingBillsToday',
-        key: 'tab-bills-pending',
-      },
     ],
+
+  },
+  {
+    name: 'Parties',
+    key: 'tab-parties',
+    route: '/partyListSettings',
   },
   {
     name: 'Reports',
@@ -129,6 +130,12 @@ export default [
         allowJob: [],
       },
       {
+        name: 'General',
+        route: '/settings',
+        key: 'tab-settings-general',
+        allowJob: [],
+      },
+      {
         name: 'Products',
         route: '/products',
         key: 'tab-settings-products',
@@ -146,14 +153,9 @@ export default [
         allowJob: [],
       },
       {
-        name: 'Parties',
-        route: '/partyListSettings',
-        key: 'tab-settings-parties',
-      },
-      {
-        name: 'Printer',
-        route: '/printerSettings',
-        key: 'tab-settings-printer',
+        name: 'Outstanding Import',
+        route: '/outstandingImport',
+        key: 'tab-settings-outstanding-import',
       },
     ],
   },

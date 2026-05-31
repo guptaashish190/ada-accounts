@@ -1,110 +1,127 @@
 import React, { useEffect, useState } from 'react';
 import {
-  arrayUnion,
-  collection,
   doc,
-  getDoc,
+  getDocs,
   onSnapshot,
   setDoc,
-  updateDoc,
 } from 'firebase/firestore';
 import {
   Button,
-  Dialog,
-  DialogTrigger,
-  DialogSurface,
-  DialogTitle,
-  DialogBody,
-  DialogActions,
-  DialogContent,
-  Input,
   CardHeader,
   Card,
+  Dropdown,
+  Option,
+  Toaster,
+  useToastController,
+  Text,
 } from '@fluentui/react-components';
 import { firebaseDB } from '../../firebaseInit';
+import { getUsersCollection } from '../../services/firestoreHelpers';
+import { showToast } from '../../common/toaster';
+import PrinterSettings from './printers';
 
 export default function SettingsScreen() {
-  const [fileNumbers, setFileNumbers] = useState([]);
+  const [billWithPartyUserId, setBillWithPartyUserId] = useState('');
+  const [allUsers, setAllUsers] = useState([]);
+  const [billWithPartySaving, setBillWithPartySaving] = useState(false);
+  const toasterId = 'settings-toaster';
+  const { dispatchToast } = useToastController(toasterId);
 
-  const getFileNumbers = async () => {
-    const settingsCollection = collection(firebaseDB, 'settings');
-    const fileNumbersDoc = doc(firebaseDB, 'settings', 'fileNumbers');
 
-    const unsubscribe = onSnapshot(fileNumbersDoc, (doc1) => {
-      if (doc1.exists()) {
-        const data = doc1.data();
-        setFileNumbers(data.data);
-        // Perform actions with the data as it changes
+  const getBillWithPartySetting = async () => {
+    const billWithPartyDoc = doc(firebaseDB, 'settings', 'billWithParty');
+    onSnapshot(billWithPartyDoc, (docSnap) => {
+      if (docSnap.exists()) {
+        setBillWithPartyUserId(docSnap.data()?.userId || '');
       } else {
-        console.log('Document does not exist');
+        setBillWithPartyUserId('');
       }
     });
   };
 
+  const getAllUsers = async () => {
+    const usersRef = getUsersCollection();
+    const usersSnap = await getDocs(usersRef);
+    const users = [];
+    usersSnap.forEach((docSnap) => {
+      users.push({ id: docSnap.id, ...docSnap.data() });
+    });
+    users.sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+    setAllUsers(users);
+  };
+
+  const saveBillWithPartyUser = async () => {
+    if (!billWithPartyUserId) {
+      showToast(dispatchToast, 'Please select a user', 'error');
+      return;
+    }
+    setBillWithPartySaving(true);
+    try {
+      const settingsDocRef = doc(firebaseDB, 'settings', 'billWithParty');
+      await setDoc(
+        settingsDocRef,
+        {
+          userId: billWithPartyUserId,
+          updatedAt: Date.now(),
+        },
+        { merge: true },
+      );
+      showToast(dispatchToast, 'Bill With Party user saved', 'success');
+    } catch (error) {
+      console.error('Error updating Bill With Party user:', error);
+      showToast(dispatchToast, 'Failed to save Bill With Party user', 'error');
+    } finally {
+      setBillWithPartySaving(false);
+    }
+  };
+
   useEffect(() => {
-    getFileNumbers();
+    getAllUsers();
+    getBillWithPartySetting();
   }, []);
 
   return (
     <center>
+      <Toaster toasterId={toasterId} />
       <h3>Settings</h3>
-      <Card>
-        <CardHeader>File Numbers</CardHeader>
-        {fileNumbers.map((fn, index) => {
-          return <div key={`fn-item-${fn}`}>{fn}</div>;
-        })}
+      <Card style={{ maxWidth: 500, textAlign: 'left', padding: 16 }}>
+        <CardHeader header="Bill With Party Assignment" />
+        <Text size={200}>
+          Select the user whose UID should be used in the bill `with` field
+          when accounts marks a bill as &quot;Bill With Party&quot;.
+        </Text>
+        <br />
+        <Dropdown
+          placeholder="Select user"
+          selectedOptions={billWithPartyUserId ? [billWithPartyUserId] : []}
+          value={
+            allUsers.find((u) => u.id === billWithPartyUserId)?.username || ''
+          }
+          onOptionSelect={(_, data) => {
+            setBillWithPartyUserId(data.optionValue || '');
+          }}
+        >
+          {allUsers.map((user) => (
+            <Option key={user.id} value={user.id}>
+              {user.username || user.id}
+            </Option>
+          ))}
+        </Dropdown>
+        <br />
+        <Button
+          appearance="primary"
+          onClick={saveBillWithPartyUser}
+          disabled={!billWithPartyUserId || billWithPartySaving}
+        >
+          {billWithPartySaving ? 'Saving...' : 'Save Bill With Party User'}
+        </Button>
       </Card>
-      <AddFileNumberDialog />
+      <br />
+      <Card style={{ maxWidth: 800, textAlign: 'left', padding: 16 }}>
+        <CardHeader header="Printer Settings" />
+        <PrinterSettings />
+      </Card>
     </center>
   );
 }
 
-function AddFileNumberDialog() {
-  const [file, setFile] = useState('');
-  const [open, setOpen] = useState(false);
-
-  const onAdd = async () => {
-    const settingsDocRef = doc(firebaseDB, 'settings', 'fileNumbers');
-    try {
-      setDoc(settingsDocRef, {
-        data: arrayUnion(file),
-      });
-      console.log('Document updated successfully.');
-      setOpen(false);
-    } catch (error) {
-      console.error('Error updating document:', error);
-    }
-  };
-
-  return (
-    <Dialog open={open}>
-      <DialogTrigger disableButtonEnhancement>
-        <Button onClick={() => setOpen(true)}>Add</Button>
-      </DialogTrigger>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>Add File Number</DialogTitle>
-          <DialogContent>
-            <Input
-              value={file}
-              onChange={(e) => setFile(e.target.value)}
-              placeholder="File Number"
-            />
-          </DialogContent>
-          <DialogActions>
-            <DialogTrigger>
-              <Button appearance="primary" onClick={() => onAdd()}>
-                Add
-              </Button>
-            </DialogTrigger>
-            <DialogTrigger disableButtonEnhancement>
-              <Button onClick={() => setOpen(false)} appearance="secondary">
-                Close
-              </Button>
-            </DialogTrigger>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
-  );
-}

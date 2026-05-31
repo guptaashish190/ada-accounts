@@ -16,7 +16,7 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 
 // Emulator is opt-in via env for local development only.
 // Production defaults to real Firebase services.
-const USE_EMULATOR = false
+const USE_EMULATOR = true
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -37,6 +37,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 initializeFirestore(firebaseApp, {
   localCache: persistentLocalCache(/* settings */ {}),
   ignoreUndefinedProperties: true,
+  
 });
 
 export default firebaseApp;

@@ -2,7 +2,6 @@
 /* eslint-disable no-restricted-syntax */
 import { getDoc, getDocs, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { evaluate } from 'mathjs';
 import {
   Button,
   Divider,
@@ -69,7 +68,7 @@ export default function PartySection({
         ordersData.push(orderData);
       }
       const sortedData = ordersData.sort(
-        (s1, s2) => s2.creationTime - s1.creationTime,
+        (s1, s2) => s1.creationTime - s2.creationTime,
       );
       setOldBills(sortedData);
       setLoading(false);
@@ -77,14 +76,6 @@ export default function PartySection({
       console.error('Error fetching orders: ', error);
       setLoading(false);
     }
-  };
-
-  const getOutstanding = (orders1) => {
-    return orders1.reduce(
-      (acc, cur) =>
-        acc + evaluate(cur.balance?.toString() || cur.orderAmount || '0'),
-      0,
-    );
   };
 
   useEffect(() => {
@@ -115,15 +106,14 @@ export default function PartySection({
         </h4>{' '}
         <h4>
           Total:
-          {globalUtils.getCurrencyFormat(
-            getOutstanding(attachedBills.filter((x) => x.partyId === party.id)),
-          )}
+          {globalUtils.getCurrencyFormat(party.partyBalance || 0)}
         </h4>
       </div>
       {oldBills.length && !loading ? (
         <div className="party-old-bills">
           <div className="party-old-bills-header">BILL NO.</div>
           <div className="party-old-bills-header">BILL DATE</div>
+          <div className="party-old-bills-header">DAYS</div>
           <div className="party-old-bills-header">WITH</div>
           <div className="party-old-bills-header">AMOUNT</div>
           <div className="party-old-bills-header">BALANCE</div>
@@ -202,6 +192,7 @@ function OldBillRow({
       <div className="old-bill bill-number">
         {new Date(oldbill.creationTime).toLocaleDateString()}
       </div>
+      <div className="old-bill">{globalUtils.getDaysPassed(oldbill.creationTime) + 1}</div>
       <div className="old-bill with">{withUser}</div>
       <div className="old-bill amount">₹{oldbill.orderAmount}</div>
 

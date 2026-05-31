@@ -339,11 +339,15 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
   const [chequeNumber, setChequeNumber] = useState('');
   const [chequeDate, setChequeDate] = useState();
   const [party, setParty] = useState(chequeData?.party);
-  const [amount, setAmount] = useState();
+  const [amount, setAmount] = useState(
+    chequeData?.amount !== undefined ? String(chequeData.amount) : '',
+  );
   const [notes, setNotes] = useState('');
   const { currentCompanyId } = useCompany();
   const MIN_ZOOM = 1;
+
   const MAX_ZOOM = 5;
+
 
   const clampZoom = (value) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
   const resetImageView = () => {
@@ -356,6 +360,10 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
     resetImageView();
     setShowImageViewer(true);
   };
+
+  useEffect(() => {
+    setAmount(chequeData?.amount !== undefined ? String(chequeData.amount) : '');
+  }, [chequeData?.amount]);
 
   const handleAddCheque = async () => {
     if (loading) return;

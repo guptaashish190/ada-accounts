@@ -370,6 +370,7 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
                   <tr>
                     <th>Bill Number</th>
                     <th>Date</th>
+                    <th>Days</th>
                     <th>Party Name</th>
                     <th>Amount</th>
                     <th>Balance</th>
@@ -378,11 +379,17 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
                 <tbody>
                   {addedBills
                     .filter((x) => x.balance !== 0)
+                    .sort((a, b) => a.creationTime - b.creationTime)
                     .map((ab) => (
                       <tr>
                         <TableCustomCell>{ab.billNumber}</TableCustomCell>
                         <TableCustomCell>
                           {globalUtils.getTimeFormat(ab.creationTime, true)}
+                        </TableCustomCell>
+                        <TableCustomCell>
+                          {ab.creationTime != null
+                            ? globalUtils.getDaysPassed(ab.creationTime)
+                            : '--'}
                         </TableCustomCell>
                         <TableCustomCell>{ab.party?.name}</TableCustomCell>
                         <TableCustomCell>

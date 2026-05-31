@@ -88,6 +88,7 @@ const ModernTable = ({
             transition: 'background-color 0.2s ease',
             ...rowClassName
           }}
+          
           onClick={() => onRowClick && onRowClick(row, rowIndex)}
           onMouseEnter={(e) => {
             if (onRowClick) {

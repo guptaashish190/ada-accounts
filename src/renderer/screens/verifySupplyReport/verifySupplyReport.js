@@ -695,7 +695,7 @@ function PartySection({
         ordersData.push(orderData);
       }
       const sortedData = ordersData.sort(
-        (s1, s2) => s2.creationTime - s1.creationTime,
+        (s1, s2) => s1.creationTime - s2.creationTime,
       );
       setOldBills(sortedData);
       setLoading(false);

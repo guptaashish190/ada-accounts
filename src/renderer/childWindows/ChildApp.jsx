@@ -9,6 +9,7 @@ import constants from '../constants';
 import '../firebaseInit';
 import AllUsersContext from '../contexts/allUsersContext';
 import CompanyProvider from '../contexts/companyContext';
+import SettingsContext from '../contexts/settingsContext';
 import PrintCashReceipt from './printCashReceipt/printCasheReceipt';
 import MrDetailPanel from './mrDetailPanel/mrDetailPanel';
 import ViewSupplyReportScreen from '../screens/viewSupplyReport/viewSupplyReport';
@@ -83,30 +84,32 @@ export default function App({ args }) {
       <FluentProvider theme={webLightTheme}>
         <CompanyProvider>
           <AllUsersContext>
-            <MemoryRouter
-              key={reportKey}
-              initialEntries={[
-                {
-                  pathname: '/receiveSRScreen',
-                  state: {
-                    supplyReport: args.data?.supplyReport,
-                    isBundle: args.data?.isBundle ?? false,
+            <SettingsContext>
+              <MemoryRouter
+                key={reportKey}
+                initialEntries={[
+                  {
+                    pathname: '/receiveSRScreen',
+                    state: {
+                      supplyReport: args.data?.supplyReport,
+                      isBundle: args.data?.isBundle ?? false,
+                    },
                   },
-                },
-              ]}
-            >
-              <Routes>
-                <Route
-                  path="/receiveSupplyReports"
-                  element={<ReceiveSupplyReportScreen />}
-                />
-                <Route path="/receiveSRScreen" element={<ReceiveSRScreen />} />
-                <Route
-                  path="/createPaymentReceipts"
-                  element={<CreatePaymentReceiptDialog />}
-                />
-              </Routes>
-            </MemoryRouter>
+                ]}
+              >
+                <Routes>
+                  <Route
+                    path="/receiveSupplyReports"
+                    element={<ReceiveSupplyReportScreen />}
+                  />
+                  <Route path="/receiveSRScreen" element={<ReceiveSRScreen />} />
+                  <Route
+                    path="/createPaymentReceipts"
+                    element={<CreatePaymentReceiptDialog />}
+                  />
+                </Routes>
+              </MemoryRouter>
+            </SettingsContext>
           </AllUsersContext>
         </CompanyProvider>
       </FluentProvider>
@@ -118,14 +121,16 @@ export default function App({ args }) {
       <FluentProvider theme={webLightTheme}>
         <CompanyProvider>
           <AllUsersContext>
-            <MemoryRouter initialEntries={['/createSupplyReport']}>
-              <Routes>
-                <Route
-                  path="/createSupplyReport"
-                  element={<CreateSupplyReportScreen />}
-                />
-              </Routes>
-            </MemoryRouter>
+            <SettingsContext>
+              <MemoryRouter initialEntries={['/createSupplyReport']}>
+                <Routes>
+                  <Route
+                    path="/createSupplyReport"
+                    element={<CreateSupplyReportScreen />}
+                  />
+                </Routes>
+              </MemoryRouter>
+            </SettingsContext>
           </AllUsersContext>
         </CompanyProvider>
       </FluentProvider>

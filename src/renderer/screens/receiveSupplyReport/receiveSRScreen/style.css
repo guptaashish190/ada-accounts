@@ -5,6 +5,10 @@
   padding: 12px;
   background: #fafafa;
   min-height: 100vh;
+  --rsr-bill-row-columns: minmax(220px, 0.95fr) minmax(380px, 1.45fr)
+    minmax(250px, 0.9fr);
+  --rsr-bill-row-gap: 12px;
+  --rsr-bill-row-padding: 10px 12px;
 }
 
 /* Header Section */
@@ -59,7 +63,7 @@
   background: white;
   border-radius: 8px;
   overflow: hidden;
-  border: none;
+  border: 1px solid #e5e7eb;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
 }
@@ -109,18 +113,15 @@
 
 /* Bill Row Styles */
 .receivesr-bill-row {
-  border-radius: 6px;
-  padding: 12px;
+  border-radius: 8px;
+  padding: var(--rsr-bill-row-padding);
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  align-items: center;
+  grid-template-columns: var(--rsr-bill-row-columns);
+  align-items: start;
+  column-gap: var(--rsr-bill-row-gap);
   transition: all 0.2s ease;
   position: relative;
-}
-
-.receivesr-bill-row:hover {
-  border-color: #d1d5db;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
 }
 
 .receivesr-bill-row.received {
@@ -135,15 +136,15 @@
 
 /* Bill Header */
 .bill-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-  gap: 12px;
+  margin: 0;
+  align-self: start;
 }
 
-.bill-info {
-  flex: 1;
+.bill-info-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .bill-number {
@@ -154,107 +155,140 @@
 }
 
 .received-badge {
-  background: #6b7280;
+  background: #0f766e;
   color: white;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-size: 0.65rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 600;
 }
 
 .bill-number-text {
-  font-weight: 600;
-  font-size: 1rem;
+  font-weight: 700;
+  font-size: 0.95rem;
   color: #111827;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 
-.bill-details {
+.bill-kpis {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
-  font-size: 0.8rem;
 }
 
-.bill-amount, .balance {
+.bill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  border-radius: 999px;
   padding: 3px 8px;
-  border-radius: 4px;
-  font-weight: 500;
-  color: red;
+  font-size: 0.73rem;
+  font-weight: 600;
+}
+
+.bill-chip-primary {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #312e81;
+}
+
+.chip-label {
+  color: #64748b;
+  font-weight: 700;
+  font-size: 0.66rem;
+  text-transform: uppercase;
 }
 
 /* Bill Actions */
 .bill-actions {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 90px;
+  justify-content: center;
+  gap: 6px;
+  min-width: 128px;
+  align-items: flex-end;
+  align-self: center;
+}
+
+.bill-row-action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
   align-items: flex-end;
 }
 
-.action-buttons {
-  display: flex;
-  flex-direction: column;
+.action-button,
+.undo-button {
+  min-width: 106px !important;
+  height: 28px !important;
+  border-radius: 7px !important;
+  font-weight: 600 !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  transition: all 0.15s ease !important;
+  padding: 0 10px !important;
 }
 
 .receive-button {
-  background: #22c55e !important;
+  background: #4b6b92 !important;
   color: white !important;
-  font-weight: 500 !important;
-  font-size: 0.75rem !important;
-  padding: 6px 12px !important;
-  border-radius: 4px !important;
-  text-transform: none !important;
-  letter-spacing: 0 !important;
-  transition: all 0.2s ease !important;
   border: none !important;
 }
 
 .receive-button:hover {
+  background: #3f5b7d !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.return-action-button {
+  background: #b45a5a !important;
+  color: white !important;
+  border: none !important;
+}
+
+.return-action-button:hover {
+  background: #9f4e4e !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.with-party-button {
+  background: #8a7a53 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.with-party-button:hover {
+  background: #766847 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.receive-return-button {
+  background: #0ea5e9 !important;
+  color: white !important;
+  border: none !important;
+}
+
+.receive-return-button:hover {
+  background: #0284c7 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.undo-neutral-button {
   background: #16a34a !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.return-button {
-  background: #f59e0b !important;
-  color: white !important;
-  font-weight: 500 !important;
-  font-size: 0.75rem !important;
-  padding: 6px 12px !important;
-  border-radius: 4px !important;
-  text-transform: none !important;
-  letter-spacing: 0 !important;
-  transition: all 0.2s ease !important;
-  border: none !important;
-}
-
-.return-button:hover {
-  background: #d97706 !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-.undo-button {
-  font-weight: 500 !important;
-  font-size: 0.75rem !important;
-  padding: 6px 12px !important;
-  border-radius: 4px !important;
-  text-transform: none !important;
-  letter-spacing: 0 !important;
-  transition: all 0.2s ease !important;
-  border: none !important;
-}
-
-.undo-button.received {
-  background: #6b7280 !important;
   color: white !important;
 }
 
-.undo-button.returned {
-  background: #ef4444 !important;
+.undo-danger-button {
+  background: #16a34a !important;
   color: white !important;
 }
 
@@ -264,25 +298,30 @@
 }
 
 
-.payment-inputs {
+.payment-section-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payment-compact-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(4, minmax(85px, 1fr));
+  gap: 8px;
 }
 
 .payment-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 
 
 
 .payment-label {
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.66rem;
+  font-weight: 600;
   color: #374151;
   text-transform: none;
   letter-spacing: 0;
@@ -290,13 +329,13 @@
 
 .payment-input {
   width: 100%;
-  height: 32px;
-  font-size: 0.85rem;
+  height: 30px;
+  font-size: 0.8rem;
   border-radius: 4px;
   border: 1px solid #d1d5db;
   transition: all 0.2s ease;
   background: #ffffff;
-  padding: 0 8px;
+  padding: 0 6px;
 }
 
 .payment-input:focus {
@@ -311,10 +350,10 @@
   border-color: #e5e7eb;
 }
 
-.additional-inputs {
+.payment-secondary-row {
   display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 12px;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(200px, 1.4fr);
+  gap: 8px;
 }
 
 .input-group {
@@ -323,8 +362,8 @@
 }
 
 .input-label {
-  font-size: 0.7rem;
-  font-weight: 500;
+  font-size: 0.66rem;
+  font-weight: 600;
   color: #374151;
   text-transform: none;
   letter-spacing: 0;
@@ -332,11 +371,11 @@
 
 .input-group input,
 .input-group .fui-DatePicker {
-  height: 32px;
-  font-size: 0.85rem;
+  height: 30px;
+  font-size: 0.8rem;
   border-radius: 4px;
   transition: all 0.2s ease;
-  padding: 0 8px;
+  padding: 0 6px;
 }
 
 .input-group input:focus,
@@ -431,6 +470,9 @@
 @media (max-width: 768px) {
   .receive-sr-container {
     padding: 8px;
+    --rsr-bill-row-columns: 1fr;
+    --rsr-bill-row-gap: 8px;
+    --rsr-bill-row-padding: 10px;
   }
   
   .header-section {
@@ -441,27 +483,24 @@
     font-size: 1.1rem;
   }
   
-  .bill-header {
-    flex-direction: column;
-    gap: 6px;
-  }
-  
   .bill-actions {
     width: 100%;
     min-width: auto;
+    align-items: stretch;
   }
   
-  .action-buttons {
-    flex-direction: row;
-    justify-content: space-between;
+  .bill-row-action-buttons {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
   }
   
-  .payment-inputs {
+  .payment-compact-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 6px;
   }
   
-  .additional-inputs {
+  .payment-secondary-row {
     grid-template-columns: 1fr;
     gap: 6px;
   }
@@ -470,11 +509,6 @@
     flex-direction: column;
     gap: 8px;
     text-align: center;
-  }
-  
-  .bill-details {
-    flex-direction: column;
-    gap: 3px;
   }
   
   .title-sr {
@@ -491,32 +525,21 @@
 @media (max-width: 480px) {
   .receive-sr-container {
     padding: 6px;
+    --rsr-bill-row-padding: 8px;
   }
   
   .header-section {
     padding: 10px;
   }
   
-  .payment-inputs {
+  .payment-compact-grid {
     grid-template-columns: 1fr;
     gap: 6px;
   }
   
-  .action-buttons {
+  .bill-row-action-buttons {
     flex-direction: column;
     gap: 4px;
-  }
-  
-  .bill-details {
-    font-size: 0.7rem;
-  }
-  
-  .bill-amount, .balance {
-    padding: 2px 4px;
-  }
-  
-  .receivesr-bill-row {
-    padding: 8px;
   }
   
   .party-bills-container {

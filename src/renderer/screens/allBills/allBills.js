@@ -119,7 +119,7 @@ export default function AllBillsScreen() {
       );
     }
 
-    dynamicQuery = query(dynamicQuery, limit(10));
+    dynamicQuery = query(dynamicQuery, limit(100));
     // Fetch parties based on the dynamic query
     const fetchData = async () => {
       setLoading(true);

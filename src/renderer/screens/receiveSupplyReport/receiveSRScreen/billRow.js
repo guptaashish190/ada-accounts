@@ -51,6 +51,13 @@ export default function BillRow({
   isReturned,
   onReturn,
   onUndo,
+  allowReceiveReturned = false,
+  isReturnReceived = false,
+  onReceiveReturned,
+  onUndoReturnReceived,
+  isWithParty = false,
+  onWithParty,
+  onUndoWithParty,
 }) {
   const [cash, setCash] = useState('');
   const [cheque, setCheque] = useState('');
@@ -140,7 +147,7 @@ export default function BillRow({
 
     onReceive(tempBill);
   };
-  const disabled = isReceived || isReturned;
+  const disabled = isReceived || isReturned || isReturnReceived || isWithParty;
 
   const isReceivedIndex = supplyReport.orderDetails?.findIndex(
     (x) => x.billId === data.id,
@@ -161,24 +168,32 @@ export default function BillRow({
       <Toaster toasterId={toasterId} />
 
       <div className="bill-header">
-        <div className="bill-info">
+        <div className="bill-info-compact">
           <div className="bill-number">
-            <span className="bill-number-text">{data.billNumber}</span>
-            {isReceived1 && <span className="received-badge">RECEIVED</span>}
+            <span className="bill-number-text">{data.billNumber || '--'}</span>
+            {isReceived1 && <span className="received-badge">Received</span>}
           </div>
-          <div className="bill-details">
-            <span className="bill-amount">
-              Amount: {globalUtils.getCurrencyFormat(data.orderAmount)}
+          <div className="bill-kpis">
+            <span className="bill-chip">
+              <span className="chip-label">Amt</span>{' '}
+              {globalUtils.getCurrencyFormat(data.orderAmount)}
             </span>
-            <span className="balance">
-              Balance: {globalUtils.getCurrencyFormat(data.balance)}
+            <span className="bill-chip bill-chip-primary">
+              <span className="chip-label">Bal</span>{' '}
+              {globalUtils.getCurrencyFormat(data.balance)}
+            </span>
+            <span className="bill-chip">
+              <span className="chip-label">Date</span>{' '}
+              {data.creationTime
+                ? globalUtils.getTimeFormat(data.creationTime, true)
+                : '--'}
             </span>
           </div>
         </div>
       </div>
 
-      <div className="payment-section">
-        <div className="payment-inputs">
+      <div className="payment-section-compact">
+        <div className="payment-compact-grid">
           <div className="payment-group">
             <div className="payment-label">Cash</div>
             <Input
@@ -240,7 +255,7 @@ export default function BillRow({
           </div>
         </div>
 
-        <div className="additional-inputs">
+        <div className="payment-secondary-row">
           <div className="input-group">
             <div className="input-label">Schedule Date</div>
             <DatePicker
@@ -267,34 +282,71 @@ export default function BillRow({
         </div>
       </div>
       <div className="bill-actions">
-        {disabled ? (
+        {isReturnReceived ? (
+          <Button
+            onClick={() => onUndoReturnReceived?.()}
+            appearance="subtle"
+            size="medium"
+            className="undo-button undo-danger-button"
+          >
+            Undo Return Received
+          </Button>
+        ) : isWithParty ? (
+          <Button
+            onClick={() => onUndoWithParty?.()}
+            appearance="subtle"
+            size="medium"
+            className="undo-button undo-danger-button"
+          >
+            Undo With Party
+          </Button>
+        ) : allowReceiveReturned ? (
+          <Button
+            onClick={() => onReceiveReturned?.()}
+            appearance="primary"
+            size="medium"
+            className="action-button receive-return-button"
+          >
+            Receive Return
+          </Button>
+        ) : disabled ? (
           <Button
             onClick={() => onUndo()}
             appearance="subtle"
-            size="small"
-            className={`undo-button ${isReceived ? 'received' : 'returned'}`}
+            size="medium"
+            className={`undo-button ${
+              isReceived ? 'undo-neutral-button' : 'undo-danger-button'
+            }`}
           >
-            UNDO {isReceived ? 'RECEIVED' : 'RETURNED'}
+            Undo {isReceived ? 'Received' : 'Returned'}
           </Button>
         ) : (
-          <div className="action-buttons">
+          <div className="bill-row-action-buttons">
             {!isOld && (
               <Button
                 onClick={onReturn}
-                appearance="subtle"
-                size="small"
-                className="return-button"
+                appearance="secondary"
+                size="medium"
+                className="action-button return-action-button"
               >
-                RETURN
+                Return
               </Button>
             )}
             <Button
               onClick={() => receive()}
               appearance="primary"
-              size="small"
-              className="receive-button"
+              size="medium"
+              className="action-button receive-button"
             >
-              RECEIVE
+              Receive
+            </Button>
+            <Button
+              onClick={() => onWithParty?.()}
+              appearance="secondary"
+              size="medium"
+              className="action-button with-party-button"
+            >
+              With Party
             </Button>
           </div>
         )}

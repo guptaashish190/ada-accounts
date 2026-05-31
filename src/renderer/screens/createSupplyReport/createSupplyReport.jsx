@@ -168,6 +168,8 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       showToast(dispatchToast, 'Please select a supplyman', 'error');
       return;
     }
+
+    setLoading(true);
     try {
 
       const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
@@ -228,7 +230,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           receiptNumber: newSrNumber2,
         };
       }
-      const docRef = setDoc(reportDocRef, supplyReport);
+      await setDoc(reportDocRef, supplyReport);
 
       for (const modifiedBill1 of modifiedBills) {
         const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, modifiedBill1.id);
@@ -248,7 +250,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
             },
           ],
         };
-        updateDoc(orderRef, toUpdateData);
+        await updateDoc(orderRef, toUpdateData);
       }
 
       await globalUtils.incrementReceiptCounter(
@@ -263,7 +265,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       }
 
       getNewSupplyReportNumber();
-      setLoading(false);
     } catch (error) {
       console.error('Error adding document: ', error);
       showToast(
@@ -271,6 +272,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
         `An error occured uploading supply report ${error}`,
         'error',
       );
+    } finally {
       setLoading(false);
     }
   };

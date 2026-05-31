@@ -45,6 +45,7 @@ import UpiScreen from './screens/upi/upiScreen';
 import PrinterSettings from './screens/settings/printers';
 import AutoUpdaterWrapper from './contexts/autoUpdaterContext';
 import RouteSettings from './screens/settings/routes/routeSettings';
+import OutstandingImportScreen from './screens/settings/outstandingImport/outstandingImport';
 import CalculatorWrapper from './contexts/calculatorWrapper';
 import ReceivePendingUser from './screens/receivePendingUser/receivePendingUser';
 import VoucherScreen from './screens/vouchers/vouchersScreen';
@@ -147,6 +148,10 @@ function AppContent() {
           <Route path="/upi" element={<UpiScreen />} />
           <Route path="/printerSettings" element={<PrinterSettings />} />
           <Route path="/routeSettings" element={<RouteSettings />} />
+          <Route
+            path="/outstandingImport"
+            element={<OutstandingImportScreen />}
+          />
           <Route
             path="/companiesManagement"
             element={<CompaniesManagementScreen />}

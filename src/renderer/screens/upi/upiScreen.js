@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   query,
   updateDoc,
   where,
@@ -55,34 +56,33 @@ export default function UpiScreen() {
   const { currentCompanyId } = useCompany();
 
   const fetchUpi = async () => {
+    if (!currentCompanyId) {
+      setReceivedUpiItems([]);
+      return;
+    }
+
     setLoading(true);
     try {
       const upiCollection = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
-      let dynamicQuery = upiCollection;
-
       const dateFrom = new Date(fromDate);
+      dateFrom.setHours(0, 0, 0, 0);
 
       const dateTo = new Date(toDate);
-      dateTo.setHours(23);
-      dateTo.setMinutes(59);
-      dateTo.setSeconds(59);
+      dateTo.setHours(23, 59, 59, 999);
 
-      dynamicQuery = query(
-        dynamicQuery,
+      const dynamicQuery = query(
+        upiCollection,
         where('timestamp', '>=', dateFrom.getTime()),
-        where('isReceived', '==', true),
-      );
-      dynamicQuery = query(
-        dynamicQuery,
         where('timestamp', '<=', dateTo.getTime()),
         where('isReceived', '==', true),
       );
+      
 
       const querySnapshot = await getDocs(dynamicQuery);
 
       const reportsData = [];
       querySnapshot.forEach((doc1) => {
-        reportsData.push({ id: doc.id, ...doc1.data() });
+        reportsData.push({ id: doc1.id, ...doc1.data() });
       });
 
       reportsData.sort((rd1, rd2) => rd2.timestamp - rd1.timestamp);
@@ -99,41 +99,49 @@ export default function UpiScreen() {
   };
   useEffect(() => {
     fetchUpi();
-    fetcUnreceived();
+    if (!currentCompanyId) return undefined;
+
+    setLoading(true);
+    const unreceivedQuery = query(
+      getCompanyCollection(currentCompanyId, DB_NAMES.UPI),
+      where('isReceived', '==', false),
+    );
+
+    const unsubscribe = onSnapshot(
+      unreceivedQuery,
+      async (querySnapshot) => {
+        try {
+          const documents = [];
+
+          querySnapshot.forEach((doc1) => {
+            documents.push({ id: doc1.id, ...doc1.data() });
+          });
+
+          const dataWithParty = await globalUtils.fetchPartyInfoForOrders(
+            documents,
+            currentCompanyId,
+          );
+          setUnReceivedUpiItems(
+            dataWithParty.filter(
+              (x) => x.type === 'upi' || x.type === 'neft' || x.type === undefined,
+            ),
+          );
+          setUnReceivedChequeItems(
+            dataWithParty.filter((x) => x.type === 'cheque'),
+          );
+        } catch (error) {
+          console.error('Error fetching pending payments stream:', error);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error listening to pending payments:', error);
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
   }, [currentCompanyId]);
-
-  const fetcUnreceived = async () => {
-    try {
-      setLoading(true);
-      const q = query(
-        getCompanyCollection(currentCompanyId, DB_NAMES.UPI),
-        where('isReceived', '==', false),
-      );
-
-      const querySnapshot = await getDocs(q);
-
-      const documents = [];
-
-      querySnapshot.forEach((doc1) => {
-        // You can access the document data here using doc.data()
-        documents.push({ id: doc1.id, ...doc1.data() });
-      });
-
-      const dataWithParty = await globalUtils.fetchPartyInfoForOrders(
-        documents,
-        currentCompanyId,
-      );
-      setUnReceivedUpiItems(
-        dataWithParty.filter((x) => x.type === 'upi' || x.type === undefined),
-      );
-      setUnReceivedChequeItems(
-        dataWithParty.filter((x) => x.type === 'cheque'),
-      );
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-    setLoading(false);
-  };
 
   return (
     <center>
@@ -186,7 +194,6 @@ export default function UpiScreen() {
                 return (
                   <UpiItemRow
                     refreshData={() => {
-                      fetcUnreceived();
                       fetchUpi();
                     }}
                     key={`cheque-list-${uri.id}`}
@@ -227,6 +234,9 @@ function UpiItemRow({ data, refreshData }) {
       <td>{allUsers.find((x) => x.uid === data?.createdBy)?.username}</td>
       <td>
         {data?.type === 'cheque' ? (
+          data.isReceived ? (
+            <Text size={200}>--</Text>
+          ) : (
           <ChequeEntryDialog
             onClose={() => {
               if (loading) return;
@@ -253,6 +263,7 @@ function UpiItemRow({ data, refreshData }) {
               amount: data.amount,
             }}
           />
+          )
         ) : (
           <UPIDialog
             createdBy={
@@ -310,7 +321,7 @@ function UPIDialog({ data, createdBy }) {
           amount: data.amount,
           adjustedBills: adjustedBills.map((x) => x.id),
           timestamp: Timestamp.now().toMillis(),
-          mode: 'UPI',
+          mode: (data.type || 'upi').toUpperCase(),
         },
       ];
       updateDoc(partyRef, {

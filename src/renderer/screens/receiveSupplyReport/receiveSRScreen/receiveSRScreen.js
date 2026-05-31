@@ -30,6 +30,7 @@ import { showToast } from '../../../common/toaster';
 import './style.css';
 import { firebaseAuth } from '../../../firebaseInit';
 import { useCompany } from '../../../contexts/companyContext';
+import { useSettingsContext } from '../../../contexts/settingsContext';
 import {
   getCompanyCollection,
   getCompanyDoc,
@@ -49,13 +50,18 @@ export default function ReceiveSRScreen() {
   const [groupedSupplementaryBills, setGroupedSupplementaryBills] = useState(
     [],
   );
+  const [supplymanUser, setSupplymanUser] = useState();
   const [receivedBills, setReceivedBills] = useState([]);
   const [returnedBills, setReturnedBills] = useState([]);
+  const [receivedReturnedBillIds, setReceivedReturnedBillIds] = useState([]);
+  const [withPartyBillIds, setWithPartyBillIds] = useState([]);
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
   const { currentCompanyId } = useCompany();
+  const { settings } = useSettingsContext();
+  const billWithPartyUserId = settings?.billWithParty?.userId || '';
 
   const dbName = isBundle ? DB_NAMES.BILL_BUNDLES : DB_NAMES.SUPPLY_REPORTS;
   const dbBills = isBundle ? supplyReport.bills : supplyReport.orders;
@@ -126,6 +132,16 @@ export default function ReceiveSRScreen() {
 
   const init = async () => {
     setLoading(true);
+    if (supplyReport?.supplymanId) {
+      try {
+        const supplymanUserData = await globalUtils.fetchUserById(
+          supplyReport.supplymanId,
+        );
+        setSupplymanUser(supplymanUserData);
+      } catch (e) {
+        console.error('Failed to fetch supplyman user:', e);
+      }
+    }
     if (isBundle) {
       const obg = await getGroupedBills(supplyReport.bills);
 
@@ -152,13 +168,42 @@ export default function ReceiveSRScreen() {
   }, []);
 
   const receiveBill = (bi) => {
-    setReceivedBills((r) => [...r, bi]);
+    setReceivedBills((r) => {
+      if (r.find((bill) => bill.id === bi.id)) return r;
+      return [...r, bi];
+    });
   };
 
-  const allBillsReceived =
+  const addReturnedBill = (bill) => {
+    setReturnedBills((current) => {
+      if (current.find((existing) => existing.id === bill.id)) return current;
+      return [...current, bill];
+    });
+  };
+
+  const addWithPartyBill = (bill) => {
+    if (!billWithPartyUserId) {
+      showToast(
+        dispatchToast,
+        'Set "Bill With Party" user in Settings first',
+        'error',
+      );
+      return;
+    }
+    setWithPartyBillIds((current) => {
+      if (current.includes(bill.id)) return current;
+      return [...current, bill.id];
+    });
+  };
+
+  const processedBillsCount =
     receivedBills.length +
-      returnedBills.length +
-      (supplyReport.orderDetails?.length || 0) ===
+    receivedReturnedBillIds.length +
+    withPartyBillIds.length +
+    (supplyReport.orderDetails?.length || 0);
+
+  const allBillsReceived =
+    processedBillsCount ===
     [
       ...dbBills,
       ...(supplyReport.supplementaryBills || []),
@@ -170,6 +215,16 @@ export default function ReceiveSRScreen() {
     setLoading(true);
 
     try {
+      if (withPartyBillIds.length > 0 && !billWithPartyUserId) {
+        showToast(
+          dispatchToast,
+          'Set "Bill With Party" user in Settings first',
+          'error',
+        );
+        setLoading(false);
+        return;
+      }
+
       const supplyReportRef = getCompanyDoc(
         currentCompanyId,
         dbName,
@@ -192,6 +247,10 @@ export default function ReceiveSRScreen() {
               ? { schedulePaymentDate: rb.schedulePaymentDate }
               : {}),
             with: rb.with,
+          })),
+          ...withPartyBillIds.map((billId) => ({
+            billId,
+            with: billWithPartyUserId,
           })),
         ],
         ...(!isBundle
@@ -222,12 +281,12 @@ export default function ReceiveSRScreen() {
             {
               employeeId: firebaseAuth.currentUser.uid,
               timestamp: Timestamp.now().toMillis(),
-              type: 'Received Bill',
+              type: constants.firebase.billFlowTypes.RECEIVED_BILL,
             },
           ],
           payments: [...paymentsObj, ...rb2.payments],
           flowCompleted: true,
-          orderStatus: 'Received Bill',
+          orderStatus: constants.firebase.billFlowTypes.RECEIVED_BILL,
           with: rb2.with,
           ...(rb2.schedulePaymentDate
             ? { schedulePaymentDate: rb2.schedulePaymentDate }
@@ -236,8 +295,44 @@ export default function ReceiveSRScreen() {
         });
       }
 
+      for await (const billId of withPartyBillIds) {
+        const selectedBill =
+          allBills.find((bill) => bill.id === billId) ||
+          returnedBills.find((bill) => bill.id === billId) ||
+          Object.values(groupedOldBills)
+            .flat()
+            .find((bill) => bill.id === billId) ||
+          Object.values(groupedSupplementaryBills)
+            .flat()
+            .find((bill) => bill.id === billId);
+
+        if (!selectedBill) continue;
+
+        const orderRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.ORDERS,
+          selectedBill.id,
+        );
+
+        await updateDoc(orderRef, {
+          flow: [
+            ...(selectedBill.flow || []),
+            {
+              employeeId: firebaseAuth.currentUser.uid,
+              timestamp: Timestamp.now().toMillis(),
+              type: constants.firebase.billFlowTypes.BILL_WITH_PARTY,
+            },
+          ],
+          flowCompleted: true,
+          orderStatus: constants.firebase.billFlowTypes.BILL_WITH_PARTY,
+          with: billWithPartyUserId,
+        });
+      }
+
       // update returned bills
-      for await (const rb2 of returnedBills) {
+      for await (const rb2 of returnedBills.filter((bill) =>
+        receivedReturnedBillIds.includes(bill.id),
+      )) {
         const orderRef = getCompanyDoc(
           currentCompanyId,
           DB_NAMES.ORDERS,
@@ -250,12 +345,13 @@ export default function ReceiveSRScreen() {
             {
               employeeId: firebaseAuth.currentUser.uid,
               timestamp: Timestamp.now().toMillis(),
-              type: 'Goods Returned',
+              type: constants.firebase.billFlowTypes.GOODS_RETURN_RECD,
             },
           ],
           balance: 0,
           flowCompleted: true,
-          orderStatus: 'Goods Returned',
+          orderStatus: constants.firebase.billFlowTypes.GOODS_RETURN_RECD,
+          with: 'Accounts',
           accountsNotes: rb2.notes || '',
         });
       }
@@ -318,6 +414,11 @@ export default function ReceiveSRScreen() {
             Receive {isBundle ? 'Bundle' : 'Supply Report'}:{' '}
             {supplyReport.receiptNumber}
           </h3>
+          {!isBundle && (
+            <Text>
+              Supplyman: <b>{supplymanUser?.username || '--'}</b>
+            </Text>
+          )}
           {supplyReport.dispatchAccountNotes && (
             <div className="accounts-notes">
               <Text className="notes-label">Accounts Notes:</Text>
@@ -345,16 +446,52 @@ export default function ReceiveSRScreen() {
                 </div>
 
                 <div className="party-bills-container">
+                  {(() => {
+                    const isBillReturned =
+                      returnedBills.findIndex((x) => x.id === bill.id) !== -1;
+                    const isReturnReceived = receivedReturnedBillIds.includes(
+                      bill.id,
+                    );
+                    return (
                   <BillRow
                     supplyReport={supplyReport}
-                    isReturned={
-                      returnedBills.findIndex((x) => x.id === bill.id) !== -1
-                    }
+                    isReturned={isBillReturned}
+                    allowReceiveReturned={isBillReturned}
+                    isReturnReceived={isReturnReceived}
+                    onReceiveReturned={() => {
+                      setReceivedReturnedBillIds((ids) => {
+                        if (ids.includes(bill.id)) return ids;
+                        return [...ids, bill.id];
+                      });
+                    }}
+                    onUndoReturnReceived={() => {
+                      setReceivedReturnedBillIds((ids) =>
+                        ids.filter((id) => id !== bill.id),
+                      );
+                      setReturnedBills((existing) =>
+                        existing.filter((x) => x.id !== bill.id),
+                      );
+                    }}
+                    isWithParty={withPartyBillIds.includes(bill.id)}
+                    onWithParty={() => {
+                      addWithPartyBill(bill);
+                    }}
+                    onUndoWithParty={() => {
+                      setWithPartyBillIds((ids) =>
+                        ids.filter((id) => id !== bill.id),
+                      );
+                    }}
                     onReturn={() => {
-                      setReturnedBills((x) => [...x, bill]);
+                      addReturnedBill(bill);
+                      setWithPartyBillIds((ids) =>
+                        ids.filter((id) => id !== bill.id),
+                      );
                     }}
                     onReceive={(x) => {
                       receiveBill(x);
+                      setWithPartyBillIds((ids) =>
+                        ids.filter((id) => id !== bill.id),
+                      );
                     }}
                     key={`rsr-${bill.id}`}
                     data={bill}
@@ -368,23 +505,64 @@ export default function ReceiveSRScreen() {
                       setReturnedBills((b) =>
                         b.filter((tb) => tb.id !== bill.id),
                       );
+                      setReceivedReturnedBillIds((ids) =>
+                        ids.filter((id) => id !== bill.id),
+                      );
+                      setWithPartyBillIds((ids) =>
+                        ids.filter((id) => id !== bill.id),
+                      );
                     }}
                   />
+                    );
+                  })()}
                   {groupedOldBills[bill.partyId]?.map((oldBill) => {
+                    const isBillReturned =
+                      returnedBills.findIndex((x) => x.id === oldBill.id) !==
+                      -1;
+                    const isReturnReceived = receivedReturnedBillIds.includes(
+                      oldBill.id,
+                    );
                     return (
                       <BillRow
                         supplyReport={supplyReport}
                         isOld
-                        isReturned={
-                          returnedBills.findIndex(
-                            (x) => x.id === oldBill.id,
-                          ) !== -1
-                        }
+                        isReturned={isBillReturned}
+                        allowReceiveReturned={isBillReturned}
+                        isReturnReceived={isReturnReceived}
+                        onReceiveReturned={() => {
+                          setReceivedReturnedBillIds((ids) => {
+                            if (ids.includes(oldBill.id)) return ids;
+                            return [...ids, oldBill.id];
+                          });
+                        }}
+                        onUndoReturnReceived={() => {
+                          setReceivedReturnedBillIds((ids) =>
+                            ids.filter((id) => id !== oldBill.id),
+                          );
+                          setReturnedBills((existing) =>
+                            existing.filter((x) => x.id !== oldBill.id),
+                          );
+                        }}
+                        isWithParty={withPartyBillIds.includes(oldBill.id)}
+                        onWithParty={() => {
+                          addWithPartyBill(oldBill);
+                        }}
+                        onUndoWithParty={() => {
+                          setWithPartyBillIds((ids) =>
+                            ids.filter((id) => id !== oldBill.id),
+                          );
+                        }}
                         onReturn={() => {
-                          setReturnedBills((x) => [...x, oldBill]);
+                          addReturnedBill(oldBill);
+                          setWithPartyBillIds((ids) =>
+                            ids.filter((id) => id !== oldBill.id),
+                          );
                         }}
                         onReceive={(x) => {
                           receiveBill(x);
+                          setWithPartyBillIds((ids) =>
+                            ids.filter((id) => id !== oldBill.id),
+                          );
                         }}
                         key={`rsr-${oldBill.id}`}
                         data={oldBill}
@@ -399,6 +577,12 @@ export default function ReceiveSRScreen() {
                           );
                           setReturnedBills((b) =>
                             b.filter((tb) => tb.id !== oldBill.id),
+                          );
+                          setReceivedReturnedBillIds((ids) =>
+                            ids.filter((id) => id !== oldBill.id),
+                          );
+                          setWithPartyBillIds((ids) =>
+                            ids.filter((id) => id !== oldBill.id),
                           );
                         }}
                       />
@@ -423,20 +607,53 @@ export default function ReceiveSRScreen() {
                 <div className="party-bills-container">
                   {groupedSupplementaryBills[bills[0].partyId]?.map(
                     (oldBill) => {
+                      const isBillReturned =
+                        returnedBills.findIndex((x) => x.id === oldBill.id) !==
+                        -1;
+                      const isReturnReceived = receivedReturnedBillIds.includes(
+                        oldBill.id,
+                      );
                       return (
                         <BillRow
                           supplyReport={supplyReport}
                           isOld
-                          isReturned={
-                            returnedBills.findIndex(
-                              (x) => x.id === oldBill.id,
-                            ) !== -1
-                          }
+                          isReturned={isBillReturned}
+                          allowReceiveReturned={isBillReturned}
+                          isReturnReceived={isReturnReceived}
+                          onReceiveReturned={() => {
+                            setReceivedReturnedBillIds((ids) => {
+                              if (ids.includes(oldBill.id)) return ids;
+                              return [...ids, oldBill.id];
+                            });
+                          }}
+                          onUndoReturnReceived={() => {
+                            setReceivedReturnedBillIds((ids) =>
+                              ids.filter((id) => id !== oldBill.id),
+                            );
+                            setReturnedBills((existing) =>
+                              existing.filter((x) => x.id !== oldBill.id),
+                            );
+                          }}
+                          isWithParty={withPartyBillIds.includes(oldBill.id)}
+                          onWithParty={() => {
+                            addWithPartyBill(oldBill);
+                          }}
+                          onUndoWithParty={() => {
+                            setWithPartyBillIds((ids) =>
+                              ids.filter((id) => id !== oldBill.id),
+                            );
+                          }}
                           onReturn={() => {
-                            setReturnedBills((x) => [...x, oldBill]);
+                            addReturnedBill(oldBill);
+                            setWithPartyBillIds((ids) =>
+                              ids.filter((id) => id !== oldBill.id),
+                            );
                           }}
                           onReceive={(x) => {
                             receiveBill(x);
+                            setWithPartyBillIds((ids) =>
+                              ids.filter((id) => id !== oldBill.id),
+                            );
                           }}
                           key={`rsr-${oldBill.id}`}
                           data={oldBill}
@@ -451,6 +668,12 @@ export default function ReceiveSRScreen() {
                             );
                             setReturnedBills((b) =>
                               b.filter((tb) => tb.id !== oldBill.id),
+                            );
+                            setReceivedReturnedBillIds((ids) =>
+                              ids.filter((id) => id !== oldBill.id),
+                            );
+                            setWithPartyBillIds((ids) =>
+                              ids.filter((id) => id !== oldBill.id),
                             );
                           }}
                         />
@@ -467,9 +690,7 @@ export default function ReceiveSRScreen() {
           <div className="progress-info">
             <Text className="progress-text">
               Progress:{' '}
-              {receivedBills.length +
-                returnedBills.length +
-                (supplyReport.orderDetails?.length || 0)}{' '}
+              {processedBillsCount}{' '}
               /{' '}
               {
                 [
@@ -490,7 +711,7 @@ export default function ReceiveSRScreen() {
                 appearance="primary"
                 className="complete-button"
               >
-                COMPLETED
+                Complete
               </Button>
             ) : (
               <Button
@@ -498,7 +719,7 @@ export default function ReceiveSRScreen() {
                 size="large"
                 className="save-button"
               >
-                SAVE PROGRESS
+                Save Progress
               </Button>
             )}
           </div>

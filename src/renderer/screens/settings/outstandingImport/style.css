@@ -1,0 +1,103 @@
+.outstanding-import-page {
+  width: 92%;
+  margin: 0 auto;
+}
+
+.outstanding-import-header {
+  margin-bottom: 12px;
+}
+
+.outstanding-import-card {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.outstanding-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.outstanding-file-name {
+  color: var(--colorNeutralForeground3);
+}
+
+.outstanding-toggle-row {
+  display: flex;
+  gap: 24px;
+}
+
+.outstanding-zero-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.outstanding-majority-fix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.outstanding-zero-warning {
+  color: #a15c00;
+}
+
+.outstanding-majority-note {
+  color: var(--colorNeutralForeground3);
+}
+
+.outstanding-loading {
+  padding: 12px 0;
+}
+
+.outstanding-error {
+  color: #c5221f;
+  font-size: 13px;
+}
+
+.outstanding-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.outstanding-table-wrap {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.outstanding-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-matched {
+  color: #157f3b;
+  font-weight: 600;
+}
+
+.status-create {
+  color: #0f6cbd;
+  font-weight: 600;
+}
+
+.status-ambiguous,
+.status-invalid {
+  color: #c5221f;
+  font-weight: 600;
+}
+
+.outstanding-result {
+  background: #f8fafc;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+  padding: 12px;
+}
+

@@ -354,6 +354,7 @@ ipcMain.on('new-window', (event, args) => {
           isReceiveSupplyReport ||
           isCreateSupplyReport,
         nodeIntegration: true,
+        webSecurity: true,
         contextIsolation: true,
         preload: app.isPackaged
           ? path.join(__dirname, 'preload.js')

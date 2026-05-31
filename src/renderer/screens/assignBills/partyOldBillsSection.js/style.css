@@ -39,7 +39,7 @@
 .party-old-bills {
   display: grid;
   text-align: left;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 0.7fr 1fr 1fr 1fr 1fr 1fr 1fr;
 }
 
 .old-bill.amount {
