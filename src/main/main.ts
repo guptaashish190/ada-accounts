@@ -32,11 +32,51 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
-let childWindow: BrowserWindow | null = null;
+const childWindows = new Map<string, BrowserWindow>();
 let allPrinters: Array<Object>;
 const store = new Store();
 let selectedPrinter: string;
 let printerOptions: string = '{}';
+
+const getChildWindowKey = (args: any): string => {
+  const type = args?.type || 'UNKNOWN';
+  const data = args?.data || {};
+
+  if (data.windowInstanceId) {
+    return `${type}:${data.windowInstanceId}`;
+  }
+
+  if (type === 'VIEW_SUPPLY_REPORT') {
+    const reportId = data?.prefillSupplyReport?.id || data?.supplyReportId;
+    return reportId ? `${type}:${reportId}` : `${type}:${Date.now()}`;
+  }
+
+  if (type === 'RECEIVE_SUPPLY_REPORT') {
+    const entityId = data?.supplyReport?.id;
+    const scope = data?.isBundle ? 'bundle' : 'sr';
+    return entityId ? `${type}:${scope}:${entityId}` : `${type}:${Date.now()}`;
+  }
+
+  if (type === 'VIEW_VOUCHER') {
+    const voucherId = data?.voucherData?.id;
+    return voucherId ? `${type}:${voucherId}` : `${type}:${Date.now()}`;
+  }
+
+  if (type === 'MR_DETAIL') {
+    const mrUid = data?.mrUid || 'unknown';
+    const selectedDate = data?.selectedDate || 'today';
+    const isSupplyman = data?.isSupplyman ? 'supply' : 'mr';
+    return `${type}:${isSupplyman}:${mrUid}:${selectedDate}`;
+  }
+
+  // For forms/workflows, default to unique instances so in-progress work
+  // is never overridden by a fresh open action.
+  if (type === 'CREATE_SUPPLY_REPORT' || type === 'ASSIGN_BILLS') {
+    return `${type}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  return `${type}:${Date.now()}:${Math.random().toString(36).slice(2, 7)}`;
+};
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
@@ -334,43 +374,49 @@ ipcMain.on('new-window', (event, args) => {
         ? 'Receive Supply Report'
         : 'Child Window';
 
-  if (childWindow) {
-    childWindow.setSize(winWidth, winHeight);
-    childWindow.setTitle(childTitle);
-    childWindow.show();
-    childWindow.webContents.send('child-window-args', args);
-  } else {
-    childWindow = new BrowserWindow({
-      width: winWidth,
-      height: winHeight,
-      title: childTitle,
-      webPreferences: {
-        devTools:
-          isMrDetail ||
-          isViewSupplyReport ||
-          isPrintCashReceipt ||
-          isAssignBills ||
-          isViewVoucher ||
-          isReceiveSupplyReport ||
-          isCreateSupplyReport,
-        nodeIntegration: true,
-        webSecurity: true,
-        contextIsolation: true,
-        preload: app.isPackaged
-          ? path.join(__dirname, 'preload.js')
-          : path.join(__dirname, '../../.erb/dll/preload.js'),
-      },
-    });
-    childWindow.loadURL(resolveHtmlPath('childindex.html'));
+  const childWindowKey = getChildWindowKey(args);
+  const existingWindow = childWindows.get(childWindowKey);
 
-    childWindow.webContents.on('did-finish-load', () => {
-      childWindow?.webContents.send('child-window-args', args);
-    });
-
-    childWindow.on('closed', () => {
-      childWindow = null;
-    });
+  if (existingWindow && !existingWindow.isDestroyed()) {
+    if (existingWindow.isMinimized()) {
+      existingWindow.restore();
+    }
+    existingWindow.focus();
+    return;
   }
+
+  const newChildWindow = new BrowserWindow({
+    width: winWidth,
+    height: winHeight,
+    title: childTitle,
+    webPreferences: {
+      devTools:
+        isMrDetail ||
+        isViewSupplyReport ||
+        isPrintCashReceipt ||
+        isAssignBills ||
+        isViewVoucher ||
+        isReceiveSupplyReport ||
+        isCreateSupplyReport,
+      nodeIntegration: true,
+      webSecurity: true,
+      contextIsolation: true,
+      preload: app.isPackaged
+        ? path.join(__dirname, 'preload.js')
+        : path.join(__dirname, '../../.erb/dll/preload.js'),
+    },
+  });
+
+  childWindows.set(childWindowKey, newChildWindow);
+  newChildWindow.loadURL(resolveHtmlPath('childindex.html'));
+
+  newChildWindow.webContents.on('did-finish-load', () => {
+    newChildWindow.webContents.send('child-window-args', args);
+  });
+
+  newChildWindow.on('closed', () => {
+    childWindows.delete(childWindowKey);
+  });
 });
 
 app

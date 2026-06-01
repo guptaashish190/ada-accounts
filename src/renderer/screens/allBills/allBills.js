@@ -169,7 +169,7 @@ export default function AllBillsScreen() {
             >
               Accounts
             </Option>
-            <Option text={null} value={null} key="accounts-none-dropdown">
+            <Option text="None" value="" key="accounts-none-dropdown">
               None
             </Option>
             {allUsers

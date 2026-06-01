@@ -3,7 +3,6 @@ import { getDocs, limit, query, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import {
   Button,
-  Card,
   Dropdown,
   Input,
   Option,
@@ -42,8 +41,19 @@ export default function AllSupplyReportsScreen() {
 
   // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
+  const toDateMin = fromDate ? new Date(fromDate) : undefined;
+  const toDateMax = fromDate
+    ? new Date(
+        new Date(fromDate).getFullYear(),
+        new Date(fromDate).getMonth(),
+        new Date(fromDate).getDate() + 30,
+      )
+    : undefined;
+  const isDateRangeSelected = Boolean(fromDate && toDate);
 
   const onSearch = (clear) => {
+    if (!clear && !isDateRangeSelected) return;
+
     const supplyReportRef = getCompanyCollection(currentCompanyId, DB_NAMES.SUPPLY_REPORTS);
 
     // Build the query dynamically based on non-empty filter fields
@@ -104,8 +114,9 @@ export default function AllSupplyReportsScreen() {
         dynamicQuery,
         where('timestamp', '<=', dateTo.getTime()),
       );
+      
     }
-    dynamicQuery = query(dynamicQuery);
+    dynamicQuery = query(dynamicQuery, limit(100));
     // Fetch parties based on the dynamic query
     const fetchData = async () => {
       setLoading(true);
@@ -118,7 +129,7 @@ export default function AllSupplyReportsScreen() {
         supplyReportData = supplyReportData.sort(
           (rd1, rd2) => rd2.receiptNumber.slice(3) - rd1.receiptNumber.slice(3),
         );
-        setSupplyReports(supplyReportData);
+        setSupplyReports(supplyReportData.slice(0, 100));
       } catch (error) {
         console.error('Error fetching supply reports:', error);
       }
@@ -224,7 +235,24 @@ export default function AllSupplyReportsScreen() {
               <DatePicker
                 onSelectDate={(t) => {
                   setFromDate(t);
-                  setToDate(t);
+                  if (!t) {
+                    setToDate();
+                    return;
+                  }
+
+                  const selectedFromDate = new Date(t);
+                  const maxAllowedToDate = new Date(
+                    selectedFromDate.getFullYear(),
+                    selectedFromDate.getMonth(),
+                    selectedFromDate.getDate() + 30,
+                  );
+
+                  setToDate((prevToDate) => {
+                    if (!prevToDate) return selectedFromDate;
+                    if (prevToDate < selectedFromDate) return selectedFromDate;
+                    if (prevToDate > maxAllowedToDate) return maxAllowedToDate;
+                    return prevToDate;
+                  });
                 }}
                 placeholder="From"
                 value={fromDate}
@@ -235,6 +263,9 @@ export default function AllSupplyReportsScreen() {
                 onSelectDate={setToDate}
                 placeholder="To"
                 value={toDate}
+                minDate={toDateMin}
+                maxDate={toDateMax}
+                disabled={!fromDate}
                 size="small"
                 style={{ width: '100px' }}
               />
@@ -246,6 +277,7 @@ export default function AllSupplyReportsScreen() {
               onClick={() => onSearch()}
               appearance="primary"
               size="small"
+              disabled={!isDateRangeSelected}
             >
               Search
             </Button>
@@ -278,12 +310,12 @@ export default function AllSupplyReportsScreen() {
           </div>
         ) : (
           <div className="supply-reports-list">
-            {supplyReports.map((sr, i) => {
+            {supplyReports.map((sr) => {
               return (
-                <SupplyReportCard
+                <SupplyReportRow
                   key={`supply-report-all-list-${sr.id}`}
-                  index={i}
                   data={sr}
+                  currentCompanyId={currentCompanyId}
                 />
               );
             })}
@@ -312,22 +344,78 @@ function openViewSupplyReportWindow(supplyReport) {
   });
 }
 
-function SupplyReportCard({ data, index }) {
+function SupplyReportRow({ data, currentCompanyId }) {
   const [supplyman, setSupplyman] = useState();
+  const [billRows, setBillRows] = useState([]);
+  const [loadingBills, setLoadingBills] = useState(false);
+  const primaryPaymentTypes = ['cash', 'cheque', 'upi'];
 
   const getSupplyman = async () => {
     const user = await globalUtils.fetchUserById(data.supplymanId);
     setSupplyman(user);
   };
 
+  const getBills = async () => {
+    const allBillIds = [
+      ...(data.orders || []),
+      ...(data.attachedBills || []),
+      ...(data.supplementaryBills || []),
+    ];
+
+    if (allBillIds.length === 0) {
+      setBillRows([]);
+      return;
+    }
+
+    setLoadingBills(true);
+    try {
+      let fetchedOrders = await globalUtils.fetchOrdersByIds(
+        allBillIds,
+        currentCompanyId,
+      );
+      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
+      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
+        fetchedOrders,
+        currentCompanyId,
+      );
+      setBillRows(fetchedOrders);
+    } catch (error) {
+      console.error('Error fetching supply report bills:', error);
+      setBillRows([]);
+    }
+    setLoadingBills(false);
+  };
+
   useEffect(() => {
     getSupplyman();
-  }, []);
+    getBills();
+  }, [data.id, currentCompanyId]);
 
   const totalBills =
-    data.orders.length +
+    (data.orders?.length || 0) +
     (data.attachedBills?.length || 0) +
     (data.supplementaryBills?.length || 0);
+  const reportDate = globalUtils.getTimeFormat(data.timestamp, true) || '--';
+  const getPaymentAmountByType = (orderDetail, paymentType) => {
+    const payments = orderDetail?.payments || [];
+    const amount = payments
+      .filter((payment) => (payment?.type || '').toLowerCase() === paymentType)
+      .reduce((acc, payment) => acc + (Number(payment?.amount) || 0), 0);
+
+    return amount > 0 ? amount : undefined;
+  };
+
+  const getOtherPaymentAmount = (orderDetail) => {
+    const payments = orderDetail?.payments || [];
+    const amount = payments
+      .filter(
+        (payment) =>
+          !primaryPaymentTypes.includes((payment?.type || '').toLowerCase()),
+      )
+      .reduce((acc, payment) => acc + (Number(payment?.amount) || 0), 0);
+
+    return amount > 0 ? amount : undefined;
+  };
 
   return (
     <div
@@ -341,37 +429,23 @@ function SupplyReportCard({ data, index }) {
         }
       }}
     >
-      <div className="card-header">
-        <div className="sr-info">
-          <div className="user-info">
-            <div className="profile-picture-container">
-              {supplyman?.profilePicture ? (
-                <img
-                  src={supplyman.profilePicture}
-                  alt={supplyman.username}
-                  className="profile-picture"
-                />
-              ) : (
-                <div className="profile-picture-placeholder">
-                  <Text size={300} weight="bold" style={{ color: '#ffffff' }}>
-                    {supplyman?.username?.charAt(0)?.toUpperCase() || '?'}
-                  </Text>
-                </div>
-              )}
-            </div>
-            <div className="user-details">
-              <Text size={400} weight="bold" style={{ color: '#0078d4' }}>
-                {supplyman?.username || 'Loading...'}
-              </Text>
-              <Text size={200} style={{ color: '#605e5c' }}>
-                {globalUtils.getTimeFormat(data.timestamp, true)}
-              </Text>
-            </div>
-          </div>
+      <div className="supply-report-row-header">
+        <div className="sr-header-content">
+          <Text size={400} weight="bold" className="sr-title">
+            {data.receiptNumber}
+            <span className="sr-title-separator"> - </span>
+            <span className="sr-title-supplyman">
+              {supplyman?.username || 'Loading...'}
+            </span>
+          </Text>
+          <Text size={200} className="sr-subtitle">
+            {reportDate} | {totalBills}{' '}
+            {totalBills === 1 ? 'Bill' : 'Bills'}
+          </Text>
         </div>
         <div
           className="status-badge"
-          style={{ backgroundColor: statusColors[data.status] }}
+          style={{ backgroundColor: statusColors[data.status] || '#6b6b6b' }}
         >
           <Text size={200} weight="medium" style={{ color: 'white' }}>
             {data?.status?.toUpperCase()}
@@ -379,23 +453,79 @@ function SupplyReportCard({ data, index }) {
         </div>
       </div>
 
-      <div className="card-details">
-        <div className="detail-item">
-          <Text size={200} style={{ color: '#605e5c' }}>
-            SR Number:
+      <div className="supply-report-bills">
+        {loadingBills ? (
+          <Text size={200} className="bills-loading-text">
+            Loading bills...
           </Text>
-          <Text size={200} weight="semibold" style={{ color: '#323130' }}>
-            {data.receiptNumber}
+        ) : billRows.length === 0 ? (
+          <Text size={200} className="bills-empty-text">
+            No bills in this report
           </Text>
-        </div>
-        <div className="detail-item">
-          <Text size={200} style={{ color: '#605e5c' }}>
-            Total Bills:
-          </Text>
-          <Text size={200} weight="semibold" style={{ color: '#323130' }}>
-            {totalBills}
-          </Text>
-        </div>
+        ) : (
+          <div className="app-table-wrapper sr-bills-table-wrapper">
+            <table className="app-table">
+              <colgroup>
+                <col className="col-index" />
+                <col className="col-party" />
+                <col className="col-bill-number" />
+                <col className="col-money" />
+                <col className="col-money" />
+                <col className="col-money" />
+                <col className="col-money" />
+                <col className="col-money" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>PARTY</th>
+                  <th>BILL NUMBER</th>
+                  <th className="num">AMOUNT</th>
+                  <th className="num">CASH</th>
+                  <th className="num">CHEQUE</th>
+                  <th className="num">UPI</th>
+                  <th className="num">OTHERS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {billRows.map((bill, billIndex) => {
+                  const orderDetail = data.orderDetails?.find(
+                    (detail) => detail.billId === bill.id,
+                  );
+                  const cashAmount = getPaymentAmountByType(orderDetail, 'cash');
+                  const chequeAmount = getPaymentAmountByType(orderDetail, 'cheque');
+                  const upiAmount = getPaymentAmountByType(orderDetail, 'upi');
+                  const otherAmount = getOtherPaymentAmount(orderDetail);
+
+                  return (
+                    <tr key={`sr-bill-row-${data.id}-${bill.id}-${billIndex}`}>
+                      <td>{billIndex + 1}</td>
+                      <td className="party-col">{bill.party?.name || '--'}</td>
+                      <td>{bill.billNumber?.toUpperCase() || '--'}</td>
+                      <td className="num amount-col">
+                        {globalUtils.getCurrencyFormat(
+                          bill.orderAmount ?? bill.billAmount ?? bill.amount,
+                        )}
+                      </td>
+                      <td className="num amount-col">
+                        {globalUtils.getCurrencyFormat(cashAmount)}
+                      </td>
+                      <td className="num amount-col">
+                        {globalUtils.getCurrencyFormat(chequeAmount)}
+                      </td>
+                      <td className="num amount-col">
+                        {globalUtils.getCurrencyFormat(upiAmount)}
+                      </td>
+                      <td className="num amount-col">
+                        {globalUtils.getCurrencyFormat(otherAmount)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

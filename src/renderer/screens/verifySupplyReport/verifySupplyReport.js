@@ -648,6 +648,7 @@ function PartySection({
   const [oldBills, setOldBills] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showOldBills, setShowOldBills] = useState(false);
+  const [showAllOldBills, setShowAllOldBills] = useState(false);
   const [creditDaysInput, setCreditDaysInput] = useState(
     creditDays != null ? creditDays.toString() : '',
   );
@@ -867,7 +868,12 @@ function PartySection({
           if (oldBills.length === 0) {
             fetchData();
           }
-          setShowOldBills((x) => !x);
+          setShowOldBills((x) => {
+            if (x) {
+              setShowAllOldBills(false);
+            }
+            return !x;
+          });
         }}
         appearance="transparent"
       >
@@ -888,7 +894,7 @@ function PartySection({
         <div className="party-old-bills-header">NOTE</div>
         <div className="party-old-bills-header" />
         {!loading ? (
-          oldBills.map((ob, i) => {
+          (showAllOldBills ? oldBills : oldBills.slice(0, 5)).map((ob, i) => {
             return (
               <OldBillRow
                 key={`ob-${ob.id}`}
@@ -912,6 +918,25 @@ function PartySection({
           })
         ) : (
           <Loader />
+        )}
+        {!loading && oldBills.length > 5 && (
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              display: 'flex',
+              justifyContent: 'center',
+              marginTop: 8,
+            }}
+          >
+            <Button
+              appearance="subtle"
+              onClick={() => setShowAllOldBills((x) => !x)}
+            >
+              {showAllOldBills
+                ? 'Show first 5 bills'
+                : `Show all ${oldBills.length} bills`}
+            </Button>
+          </div>
         )}
       </div>
     </div>

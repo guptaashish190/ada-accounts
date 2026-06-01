@@ -69,9 +69,9 @@
 }
 
 .supply-reports-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .no-results {
@@ -86,89 +86,110 @@
 /* Supply Report Card */
 .supply-report-card {
   background: #ffffff;
-  border: 1px solid #e1dfdd;
-  border-radius: 8px;
-  padding: 16px;
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  padding: 14px 16px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .supply-report-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
   border-color: #0078d4;
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
-.card-header {
+.supply-report-row-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
   border-bottom: 1px solid #f3f2f1;
 }
 
-.sr-info {
+.sr-header-content {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.profile-picture-container {
-  flex-shrink: 0;
-}
-
-.profile-picture {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #e1dfdd;
-}
-
-.profile-picture-placeholder {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
-  border: 2px solid #e1dfdd;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.user-details {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
+.sr-title {
+  color: #1f2937;
+}
+
+.sr-title-separator {
+  color: #6b7280;
+}
+
+.sr-title-supplyman {
+  color: #334155;
+  font-weight: 600;
+}
+
+.sr-subtitle {
+  color: #6b7280;
+}
+
 .status-badge {
-  padding: 4px 8px;
-  border-radius: 12px;
+  padding: 5px 9px;
+  border-radius: 14px;
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.card-details {
+.supply-report-bills {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.bills-loading-text,
+.bills-empty-text {
+  color: #6b7280;
+  padding: 6px 2px;
+}
+
+.sr-bills-table-wrapper {
+  max-height: none;
+  overflow: visible;
+}
+
+.sr-bills-table-wrapper .app-table {
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.sr-bills-table-wrapper .col-index {
+  width: 5%;
+}
+
+.sr-bills-table-wrapper .col-party {
+  width: 27%;
+}
+
+.sr-bills-table-wrapper .col-bill-number {
+  width: 18%;
+}
+
+.sr-bills-table-wrapper .col-money {
+  width: 10%;
+}
+
+.party-col {
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.amount-col {
+  font-weight: 600;
 }
 
 /* Responsive Design */
@@ -192,13 +213,13 @@
     justify-content: center;
   }
   
-  .supply-reports-list {
-    grid-template-columns: 1fr;
-  }
-  
   .date-range {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .sr-bills-table-wrapper {
+    max-height: none;
   }
 }
 
@@ -215,7 +236,7 @@
     padding: 12px;
   }
   
-  .card-header {
+  .supply-report-row-header {
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
@@ -224,14 +245,8 @@
   .status-badge {
     align-self: flex-start;
   }
-  
-  .user-info {
-    gap: 8px;
-  }
-  
-  .profile-picture,
-  .profile-picture-placeholder {
-    width: 32px;
-    height: 32px;
+
+  .sr-bills-table-wrapper .app-table {
+    min-width: 100%;
   }
 }
