@@ -6,7 +6,7 @@ import globalUtils from '../services/globalUtils';
 import firebaseApp, { firebaseDB } from '../firebaseInit';
 import Loader from '../common/loader';
 
-const Context = createContext('');
+const Context = createContext({ settings: undefined });
 
 export const useSettingsContext = () => {
   return useContext(Context);

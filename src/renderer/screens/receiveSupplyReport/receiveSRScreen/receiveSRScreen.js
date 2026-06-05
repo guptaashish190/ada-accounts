@@ -39,6 +39,11 @@ import {
 import AdjustAmountDialog from '../adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../../constants';
 import BillRow from './billRow';
+import {
+  getErpBalance,
+  getHandoverBalance,
+  mergeHandoverOntoBills,
+} from '../../../services/handoverBalanceUtils';
 
 // for bill bundles and supply reports
 export default function ReceiveSRScreen() {
@@ -55,6 +60,23 @@ export default function ReceiveSRScreen() {
   const [returnedBills, setReturnedBills] = useState([]);
   const [receivedReturnedBillIds, setReceivedReturnedBillIds] = useState([]);
   const [withPartyBillIds, setWithPartyBillIds] = useState([]);
+  // { [partyId]: { cash, cheque, upi, other, scheduleDate, notes } }
+  const [partyPaymentInputs, setPartyPaymentInputs] = useState(() => {
+    const collections = supplyReport.partyCollections || [];
+    if (collections.length === 0) return {};
+    const prefill = {};
+    for (const col of collections) {
+      const { partyId, payments = [] } = col;
+      if (!prefill[partyId]) {
+        prefill[partyId] = { cash: '', cheque: '', upi: '', other: '' };
+      }
+      for (const p of payments) {
+        const prev = parseInt(prefill[partyId][p.type] || '0') || 0;
+        prefill[partyId][p.type] = String(prev + (parseInt(p.amount) || 0));
+      }
+    }
+    return prefill;
+  });
 
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
@@ -84,7 +106,7 @@ export default function ReceiveSRScreen() {
       console.error(e);
     }
   };
-  const getGroupedBills = async (orderIds) => {
+  const getGroupedBills = async (orderIds, assignmentDetails = []) => {
     try {
       let fetchedOrders = await globalUtils.fetchOrdersByIds(
         orderIds,
@@ -95,6 +117,12 @@ export default function ReceiveSRScreen() {
         fetchedOrders,
         currentCompanyId,
       );
+      if (assignmentDetails?.length) {
+        fetchedOrders = mergeHandoverOntoBills(
+          fetchedOrders,
+          assignmentDetails,
+        );
+      }
       const groupedOrders = {};
       for (const element of fetchedOrders) {
         if (groupedOrders[element.partyId] !== undefined) {
@@ -143,7 +171,10 @@ export default function ReceiveSRScreen() {
       }
     }
     if (isBundle) {
-      const obg = await getGroupedBills(supplyReport.bills);
+      const obg = await getGroupedBills(
+        supplyReport.bills,
+        supplyReport.assignmentDetails || [],
+      );
 
       setGroupedSupplementaryBills(obg || []);
     } else {
@@ -196,6 +227,13 @@ export default function ReceiveSRScreen() {
     });
   };
 
+  const updatePartyPayment = (partyId, field, value) => {
+    setPartyPaymentInputs((prev) => ({
+      ...prev,
+      [partyId]: { ...(prev[partyId] || {}), [field]: value },
+    }));
+  };
+
   const processedBillsCount =
     receivedBills.length +
     receivedReturnedBillIds.length +
@@ -232,27 +270,62 @@ export default function ReceiveSRScreen() {
       );
       const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
       console.log(dbName, supplyReport.id);
-      // update supply report for all the bill rec details
+      // Build partyPayments from partyPaymentInputs for parties with received bills
+      const receivedPartyIds = [
+        ...new Set(receivedBills.map((rb) => rb.partyId)),
+      ];
+      const partyPaymentsToWrite = receivedPartyIds
+        .map((partyId) => {
+          const input = partyPaymentInputs[partyId] || {};
+          const payments = [
+            input.cash > 0 && { type: 'cash', amount: parseInt(input.cash || '0') },
+            input.cheque > 0 && { type: 'cheque', amount: parseInt(input.cheque || '0') },
+            input.upi > 0 && { type: 'upi', amount: parseInt(input.upi || '0') },
+            input.other > 0 && { type: 'other', amount: parseInt(input.other || '0') },
+          ].filter(Boolean);
+          return {
+            partyId,
+            payments,
+            ...(input.scheduleDate
+              ? { schedulePaymentDate: input.scheduleDate.getTime() }
+              : {}),
+            notes: input.notes || '',
+            receivedBy: firebaseAuth.currentUser.uid,
+            timestamp: Timestamp.now().toMillis(),
+          };
+        })
+        .filter((pp) => pp.payments.length > 0);
+
+      // update supply report / bundle for all the bill rec details
       await updateDoc(supplyReportRef, {
         ...(allBillsReceived
-          ? { status: constants.firebase.supplyReportStatus.COMPLETED }
+          ? {
+              status: isBundle
+                ? constants.firebase.billBundleFlowStatus.COMPLETED
+                : constants.firebase.supplyReportStatus.COMPLETED,
+            }
           : {}),
         orderDetails: [
           ...(supplyReportDataNew.orderDetails || []),
           ...receivedBills.map((rb) => ({
             billId: rb.id,
             ...(rb.accountsNotes ? { accountsNotes: rb.accountsNotes } : {}),
-            payments: rb.payments,
-            ...(rb.schedulePaymentDate
-              ? { schedulePaymentDate: rb.schedulePaymentDate }
-              : {}),
             with: rb.with,
+            ...(isBundle
+              ? {
+                  handoverBalance: getHandoverBalance(rb),
+                  erpBalanceAtReceive: getErpBalance(rb),
+                }
+              : {}),
           })),
           ...withPartyBillIds.map((billId) => ({
             billId,
             with: billWithPartyUserId,
           })),
         ],
+        ...(partyPaymentsToWrite.length > 0
+          ? { partyPayments: [...(supplyReportDataNew.partyPayments || []), ...partyPaymentsToWrite] }
+          : {}),
         ...(!isBundle
           ? {
               returnedBills: [
@@ -273,8 +346,6 @@ export default function ReceiveSRScreen() {
           DB_NAMES.ORDERS,
           rb2.id,
         );
-        const orderData = await getDoc(orderRef);
-        const paymentsObj = orderData.data().payments || [];
         await updateDoc(orderRef, {
           flow: [
             ...rb2.flow,
@@ -284,13 +355,9 @@ export default function ReceiveSRScreen() {
               type: constants.firebase.billFlowTypes.RECEIVED_BILL,
             },
           ],
-          payments: [...paymentsObj, ...rb2.payments],
           flowCompleted: true,
           orderStatus: constants.firebase.billFlowTypes.RECEIVED_BILL,
           with: rb2.with,
-          ...(rb2.schedulePaymentDate
-            ? { schedulePaymentDate: rb2.schedulePaymentDate }
-            : {}),
           accountsNotes: rb2.accountsNotes || '',
         });
       }
@@ -368,14 +435,13 @@ export default function ReceiveSRScreen() {
   const onCreateCashReceipt = () => {
     const prItems = {};
 
-    receivedBills.forEach((cRBill) => {
-      if (cRBill.payments?.length) {
-        cRBill.payments.forEach((crBillP) => {
-          if (crBillP.type === 'cash') {
-            prItems[cRBill.partyId] =
-              (prItems[cRBill.partyId] || 0) + parseInt(crBillP.amount);
-          }
-        });
+    // Read cash amounts from party-level payment inputs
+    const receivedPartyIds = [...new Set(receivedBills.map((rb) => rb.partyId))];
+    receivedPartyIds.forEach((partyId) => {
+      const input = partyPaymentInputs[partyId] || {};
+      const cashAmt = parseInt(input.cash || '0');
+      if (cashAmt > 0) {
+        prItems[partyId] = (prItems[partyId] || 0) + cashAmt;
       }
     });
 
@@ -430,6 +496,7 @@ export default function ReceiveSRScreen() {
         </div>
         <div className="bills-section">
           {allBills.map((bill) => {
+            const partyInput = partyPaymentInputs[bill.partyId] || {};
             return (
               <div
                 key={`party-${bill.partyId}`}
@@ -445,6 +512,43 @@ export default function ReceiveSRScreen() {
                   </span>
                 </div>
 
+                <div className="party-payment-inputs">
+                  <div className="party-payment-row">
+                    <div className="payment-group">
+                      <div className="payment-label">Cash</div>
+                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
+                        value={partyInput.cash || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'cash', e.value)} />
+                    </div>
+                    <div className="payment-group">
+                      <div className="payment-label">Cheque</div>
+                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
+                        value={partyInput.cheque || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'cheque', e.value)} />
+                    </div>
+                    <div className="payment-group">
+                      <div className="payment-label">UPI</div>
+                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
+                        value={partyInput.upi || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'upi', e.value)} />
+                    </div>
+                    <div className="payment-group">
+                      <div className="payment-label">Other</div>
+                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
+                        value={partyInput.other || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'other', e.value)} />
+                    </div>
+                    <div className="payment-row-divider" />
+                    <div className="input-group input-group-date">
+                      <div className="input-label">Schedule Date</div>
+                      <DatePicker size="small" placeholder="Select date"
+                        value={partyInput.scheduleDate || null}
+                        onSelectDate={(d) => updatePartyPayment(bill.partyId, 'scheduleDate', d)} />
+                    </div>
+                    <div className="input-group input-group-notes">
+                      <div className="input-label">Notes</div>
+                      <Input size="small" placeholder="Accounts notes..."
+                        value={partyInput.notes || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'notes', e.value)} />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="party-bills-container">
                   {(() => {
                     const isBillReturned =
@@ -455,6 +559,7 @@ export default function ReceiveSRScreen() {
                     return (
                   <BillRow
                     supplyReport={supplyReport}
+                    useHandoverBalance={isBundle}
                     isReturned={isBillReturned}
                     allowReceiveReturned={isBillReturned}
                     isReturnReceived={isReturnReceived}
@@ -525,6 +630,7 @@ export default function ReceiveSRScreen() {
                     return (
                       <BillRow
                         supplyReport={supplyReport}
+                        useHandoverBalance={isBundle}
                         isOld
                         isReturned={isBillReturned}
                         allowReceiveReturned={isBillReturned}
@@ -593,17 +699,57 @@ export default function ReceiveSRScreen() {
             );
           })}
           {Object.values(groupedSupplementaryBills).map((bills) => {
+            const partyId = bills[0].partyId;
+            const partyInput = partyPaymentInputs[partyId] || {};
             return (
               <div
-                key={`supp-${bills[0].partyId}`}
+                key={`supp-${partyId}`}
                 className="party-section-receive-sr"
               >
                 <div className="title-sr">
                   <span className="party-name">{bills[0].party?.name}</span>
                   <span className="supplementary-label">
-                    Supplementary Bills
+                    {isBundle ? 'Bundle Bills' : 'Supplementary Bills'}
                   </span>
                 </div>
+
+                <div className="party-payment-inputs">
+                  <div className="party-payment-row">
+                    <div className="payment-group">
+                      <div className="payment-label">Cash</div>
+                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
+                        value={partyInput.cash || ''} onChange={(_, e) => updatePartyPayment(partyId, 'cash', e.value)} />
+                    </div>
+                    <div className="payment-group">
+                      <div className="payment-label">Cheque</div>
+                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
+                        value={partyInput.cheque || ''} onChange={(_, e) => updatePartyPayment(partyId, 'cheque', e.value)} />
+                    </div>
+                    <div className="payment-group">
+                      <div className="payment-label">UPI</div>
+                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
+                        value={partyInput.upi || ''} onChange={(_, e) => updatePartyPayment(partyId, 'upi', e.value)} />
+                    </div>
+                    <div className="payment-group">
+                      <div className="payment-label">Other</div>
+                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
+                        value={partyInput.other || ''} onChange={(_, e) => updatePartyPayment(partyId, 'other', e.value)} />
+                    </div>
+                    <div className="payment-row-divider" />
+                    <div className="input-group input-group-date">
+                      <div className="input-label">Schedule Date</div>
+                      <DatePicker size="small" placeholder="Select date"
+                        value={partyInput.scheduleDate || null}
+                        onSelectDate={(d) => updatePartyPayment(partyId, 'scheduleDate', d)} />
+                    </div>
+                    <div className="input-group input-group-notes">
+                      <div className="input-label">Notes</div>
+                      <Input size="small" placeholder="Accounts notes..."
+                        value={partyInput.notes || ''} onChange={(_, e) => updatePartyPayment(partyId, 'notes', e.value)} />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="party-bills-container">
                   {groupedSupplementaryBills[bills[0].partyId]?.map(
                     (oldBill) => {
@@ -616,6 +762,7 @@ export default function ReceiveSRScreen() {
                       return (
                         <BillRow
                           supplyReport={supplyReport}
+                          useHandoverBalance={isBundle}
                           isOld
                           isReturned={isBillReturned}
                           allowReceiveReturned={isBillReturned}

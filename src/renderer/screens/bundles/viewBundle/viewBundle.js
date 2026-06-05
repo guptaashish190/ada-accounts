@@ -29,6 +29,7 @@ import constants from '../../../constants';
 import supplyReportFormatGenerator from '../../../common/printerDataGenerator/supplyReportFormatGenerator';
 import supplyReportRecievingFormatGenerator from '../../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
 import { firebaseAuth } from '../../../firebaseInit';
+import { mergeHandoverOntoBills } from '../../../services/handoverBalanceUtils';
 
 export default function ViewBundleScreen() {
   const [bundle, setBundle] = useState();
@@ -73,7 +74,12 @@ export default function ViewBundleScreen() {
         fetchedOrders,
         currentCompanyId,
       );
-      setAllBills(fetchedOrders);
+      setAllBills(
+        mergeHandoverOntoBills(
+          fetchedOrders,
+          bundleData.assignmentDetails || [],
+        ),
+      );
 
       setLoading(false);
     } catch (e) {
@@ -252,6 +258,7 @@ export default function ViewBundleScreen() {
                 <tr>
                   <th>BILL NO.</th>
                   <th>PARTY</th>
+                  <th>HANDOVER</th>
                   <th>AMOUNT</th>
                   <th>CASH</th>
                   <th>CHEQUE</th>
@@ -268,6 +275,7 @@ export default function ViewBundleScreen() {
                         bundle.orderDetails &&
                         bundle.orderDetails.find((x) => x.billId === bill.id)
                       }
+                      partyPayments={bundle.partyPayments || []}
                       key={`rsr-${bill.id}`}
                       data={bill}
                       index={i}
@@ -293,15 +301,13 @@ export default function ViewBundleScreen() {
   );
 }
 
-function BillRow({ data, index, orderDetail }) {
+function BillRow({ data, index, orderDetail, partyPayments = [] }) {
   const navigate = useNavigate();
 
-  const getBalance = () => {
-    return (
-      data.orderAmount -
-      (data.payments?.reduce((acc, cur) => acc + parseInt(cur.amount), 0) || 0)
-    );
-  };
+  // Look up party-level payment for this bill's party (new schema).
+  // Falls back to orderDetail.payments for legacy records.
+  const partyPayment = partyPayments.find((pp) => pp.partyId === data.partyId);
+  const payments = partyPayment?.payments || orderDetail?.payments || [];
 
   return (
     <tr >
@@ -314,26 +320,38 @@ function BillRow({ data, index, orderDetail }) {
         </div>
       </td>
       <td>
+        <b>{globalUtils.getCurrencyFormat(data.handoverBalance ?? data.balance)}</b>
+        {data.erpBalance != null &&
+        data.handoverBalance !== data.erpBalance ? (
+          <div style={{ color: 'grey', fontSize: '0.85em' }}>
+            BAL: {globalUtils.getCurrencyFormat(data.erpBalance)}
+          </div>
+        ) : null}
+      </td>
+      <td>
         <b>{globalUtils.getCurrencyFormat(data.orderAmount)}</b>
       </td>
       <td>
         {globalUtils.getCurrencyFormat(
-          orderDetail?.payments?.find((x) => x.type === 'cash')?.amount,
+          payments.find((x) => x.type === 'cash')?.amount,
         ) || '--'}
       </td>
       <td>
         {globalUtils.getCurrencyFormat(
-          orderDetail?.payments?.find((x) => x.type === 'cheque')?.amount,
+          payments.find((x) => x.type === 'cheque')?.amount,
         ) || '--'}
       </td>
       <td>
         {globalUtils.getCurrencyFormat(
-          orderDetail?.payments?.find((x) => x.type === 'upi')?.amount,
+          payments.find((x) => x.type === 'upi')?.amount,
         ) || '--'}
       </td>
       <td>
-        {orderDetail?.schedulePaymentDate
-          ? globalUtils?.getTimeFormat(orderDetail.schedulePaymentDate, true)
+        {(partyPayment?.schedulePaymentDate || orderDetail?.schedulePaymentDate)
+          ? globalUtils?.getTimeFormat(
+              partyPayment?.schedulePaymentDate ?? orderDetail.schedulePaymentDate,
+              true,
+            )
           : '--'}
       </td>
       <td>{orderDetail?.accountsNotes || '--'}</td>

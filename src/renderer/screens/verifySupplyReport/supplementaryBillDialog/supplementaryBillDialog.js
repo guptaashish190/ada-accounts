@@ -234,7 +234,7 @@ export default function SupplementaryBillDialog({
           return (
             <BillRow
               key={`supp-diag-row-${sr.id}`}
-              addSupplementaryBill={() => addSupplementaryBill(sr)}
+              addSupplementaryBill={(b) => addSupplementaryBill(b)}
               data={sr}
               index={index}
               isAttached={
@@ -294,7 +294,7 @@ function BillRow({ data, index, isAttached, addSupplementaryBill }) {
           disabled={isAttached || withUser !== 'Accounts'}
           size="small"
           appearance="subtle"
-          onClick={() => addSupplementaryBill()}
+          onClick={() => addSupplementaryBill({ ...data, party })}
           style={{
             color: isAttached || withUser !== 'Accounts' ? 'grey' : '#F25C54',
           }}

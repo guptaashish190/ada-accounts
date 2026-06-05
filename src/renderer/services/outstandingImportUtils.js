@@ -244,11 +244,22 @@ export const matchOutstandingRow = (row, orders) => {
 
 export const buildOrderUpdatePayload = (
   row,
+  matchedOrder,
   { updateAmount, updateBalance } = {},
 ) => {
   const payload = {};
-  if (updateAmount) payload.orderAmount = row.orderAmount;
-  if (updateBalance) payload.balance = row.balance;
+  if (
+    updateAmount
+    && Number(row.orderAmount || 0) !== Number(matchedOrder?.orderAmount || 0)
+  ) {
+    payload.orderAmount = row.orderAmount;
+  }
+  if (
+    updateBalance
+    && Number(row.balance || 0) !== Number(matchedOrder?.balance || 0)
+  ) {
+    payload.balance = row.balance;
+  }
   return payload;
 };
 

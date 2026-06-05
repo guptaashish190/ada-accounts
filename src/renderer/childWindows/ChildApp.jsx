@@ -169,11 +169,13 @@ export default function App({ args }) {
       <FluentProvider theme={webLightTheme}>
         <CompanyProvider>
           <AllUsersContext>
-            <MemoryRouter initialEntries={['/assignBills']}>
-              <Routes>
-                <Route path="/assignBills" element={<AssignBillScreen />} />
-              </Routes>
-            </MemoryRouter>
+            <SettingsContext>
+              <MemoryRouter initialEntries={['/assignBills']}>
+                <Routes>
+                  <Route path="/assignBills" element={<AssignBillScreen />} />
+                </Routes>
+              </MemoryRouter>
+            </SettingsContext>
           </AllUsersContext>
         </CompanyProvider>
       </FluentProvider>

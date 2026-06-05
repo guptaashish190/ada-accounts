@@ -31,6 +31,7 @@ import {
 } from '@fluentui/react-icons';
 import {
   Timestamp,
+  addDoc,
   arrayUnion,
   doc,
   getDoc,
@@ -54,6 +55,11 @@ import {
   DB_NAMES,
 } from '../../services/firestoreHelpers';
 import firebaseApp, { firebaseAuth, firebaseDB } from '../../firebaseInit';
+import {
+  buildAssignmentDetails,
+  getHandoverBalance,
+} from '../../services/handoverBalanceUtils';
+import TableCustomCell from '../../common/tableCustomCell';
 import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import SupplementaryBillDialog from './supplementaryBillDialog/supplementaryBillDialog';
@@ -89,6 +95,7 @@ export default function VerifySupplyReport() {
 
   const [isSupplementBillAddDialogOpen, setIsSupplementBillAddDialogOpen] =
     useState(false);
+  const [dispatchConfirmOpen, setDispatchConfirmOpen] = useState(false);
 
   // Fetch MR routes from Firestore
   const fetchMrRoutes = async () => {
@@ -204,13 +211,16 @@ export default function VerifySupplyReport() {
 
   // Update MR assignment for a specific order
   const updateMrAssignment = (orderId, field, value) => {
-    setOrderMrAssignments((prev) => ({
-      ...prev,
-      [orderId]: {
-        ...prev[orderId],
-        [field]: value,
-      },
-    }));
+    const partyId = bills.find((b) => b.id === orderId)?.partyId;
+    setOrderMrAssignments((prev) => {
+      const updated = { ...prev };
+      bills.forEach((b) => {
+        if (b.partyId === partyId) {
+          updated[b.id] = { ...updated[b.id], [field]: value };
+        }
+      });
+      return updated;
+    });
   };
 
   // Validate MR assignments and payment terms before dispatch
@@ -360,12 +370,10 @@ export default function VerifySupplyReport() {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
         dispatchTimestamp: Timestamp.now().toMillis(),
         dispatchAccountNotes: accountsNotes,
-        attachedBills: attachedBills
-          .filter((x) => x.balance !== 0)
-          .map((b) => b.id),
-        supplementaryBills: supplementaryBills
-          .filter((x) => x.balance !== 0)
-          .map((b) => b.id),
+        attachedBills: [],
+        supplementaryBills: [],
+        partyCollections: [],
+        partyPayments: [],
       });
 
       await Promise.all(
@@ -397,12 +405,47 @@ export default function VerifySupplyReport() {
         }),
       );
 
+      const extraBills = [...attachedBills, ...supplementaryBills].filter(
+        (x) => x.balance !== 0,
+      );
+      await createBundleForExtraBills(extraBills);
+
       setLoading(false);
       navigate(-1);
     } catch (e) {
       console.log(e);
       setLoading(false);
     }
+  };
+
+  const createBundleForExtraBills = async (extraBills) => {
+    if (!extraBills.length) return;
+
+    const bundleNumber = await globalUtils.getNewReceiptNumber(
+      constants.newReceiptCounters.BUNDLES,
+      currentCompanyId,
+    );
+
+    const billBundlesRef = getCompanyCollection(
+      currentCompanyId,
+      DB_NAMES.BILL_BUNDLES,
+    );
+    await addDoc(billBundlesRef, {
+      status: constants.firebase.billBundleFlowStatus.HANDOVER,
+      timestamp: Timestamp.now().toMillis(),
+      assignedTo: supplyReport.supplymanId,
+      receiptNumber: bundleNumber,
+      bills: extraBills.map((b) => b.id),
+      assignmentDetails: buildAssignmentDetails(extraBills),
+      partyCollections: [],
+      partyPayments: [],
+      sourceSupplyReport: supplyReport.id,
+    });
+
+    await globalUtils.incrementReceiptCounter(
+      constants.newReceiptCounters.BUNDLES,
+      currentCompanyId,
+    );
   };
   const updateOrder = async (bill1) => {
     try {
@@ -459,10 +502,10 @@ export default function VerifySupplyReport() {
         modifiedBill1.id,
       );
 
-      // Update the "orderStatus" field in the order document to "dispatched"
       await updateDoc(orderRef, {
         accountsNotes: modifiedBill1.notes || '',
         with: supplyReport.supplymanId,
+        lastHandoverBalance: getHandoverBalance(modifiedBill1),
       });
 
       console.log(`Order status updated to "dispatched"`);
@@ -514,29 +557,39 @@ export default function VerifySupplyReport() {
               Add Supplementary Bill
             </Button>
             <VerticalSpace1 />
-            {supplementaryBills.map((b, i) => {
-              return (
-                <SupplementaryBillRow
-                  key={`supp-${b.id}`}
-                  oldbill={b}
-                  saveBill={(newB) => {
-                    let updatedSuppBills = [...supplementaryBills];
-                    updatedSuppBills = updatedSuppBills.map((x) => {
-                      if (x.id === newB.id) {
-                        return newB;
-                      }
-                      return x;
-                    });
-                    setSupplementaryBills(updatedSuppBills);
-                  }}
-                  removeAttachedBill={() => {
-                    setSupplementaryBills((sb) =>
-                      sb.filter((x) => x.id !== b.id),
-                    );
-                  }}
-                />
-              );
-            })}
+            {supplementaryBills.length > 0 && (
+              <table className="app-table compact" style={{ width: '90%' }}>
+                <thead>
+                  <tr>
+                    <th>Bill Number</th>
+                    <th>Date</th>
+                    <th>Days</th>
+                    <th>Party</th>
+                    <th>Handover Bal</th>
+                    <th>Notes</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {supplementaryBills.map((b) => (
+                    <SupplementaryBillRow
+                      key={`supp-${b.id}`}
+                      oldbill={b}
+                      saveBill={(newB) => {
+                        setSupplementaryBills((sb) =>
+                          sb.map((x) => (x.id === newB.id ? newB : x)),
+                        );
+                      }}
+                      removeAttachedBill={() => {
+                        setSupplementaryBills((sb) =>
+                          sb.filter((x) => x.id !== b.id),
+                        );
+                      }}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
           <VerticalSpace2 />
           <Textarea
@@ -549,6 +602,7 @@ export default function VerifySupplyReport() {
           <br />
           <br />
           <Button
+            appearance="primary"
             onClick={() => {
               const uniqueParties = [];
               bills.forEach((x) =>
@@ -557,7 +611,6 @@ export default function VerifySupplyReport() {
                   : uniqueParties.push(x.partyId),
               );
 
-              // Validate credit days - all parties must have credit days set
               const partiesWithoutCreditDays = uniqueParties.filter(
                 (partyId) => allPartiesCreditDays[partyId] == null,
               );
@@ -570,34 +623,136 @@ export default function VerifySupplyReport() {
                 return;
               }
 
-              // Validate MR assignments
               const mrValidation = validateMrAssignments();
               if (!mrValidation.isValid) {
                 showToast(dispatchToast, mrValidation.message, 'error');
                 return;
               }
 
-              confirmAlert({
-                title: 'Confirm to submit',
-                message: 'Are you sure to do this.',
-                buttons: [
-                  {
-                    label: 'Yes',
-                    onClick: () => {
-                      onDispatch();
-                    },
-                  },
-                  {
-                    label: 'No',
-                    onClick: () => {},
-                  },
-                ],
-              });
+              setDispatchConfirmOpen(true);
             }}
-            appearance="primary"
           >
             Dispatch
           </Button>
+
+          <Dialog open={dispatchConfirmOpen}>
+            <DialogSurface style={{ maxWidth: '760px', width: '90vw' }}>
+              <DialogTitle>Confirm Dispatch</DialogTitle>
+              <DialogBody>
+                <DialogContent>
+                  <VerticalSpace1 />
+
+                  {/* SR bills (new) */}
+                  <Label>
+                    <b>Supply Report — {bills.length} bill{bills.length !== 1 ? 's' : ''} assigned to {supplymanUser?.username}</b>
+                  </Label>
+                  <VerticalSpace1 />
+                  <table className="app-table compact">
+                    <thead>
+                      <tr>
+                        <th>Bill Number</th>
+                        <th>Date</th>
+                        <th>Days</th>
+                        <th>Party</th>
+                        <th>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...bills]
+                        .sort((a, b) => (a.billCreationTime || 0) - (b.billCreationTime || 0))
+                        .map((b) => (
+                          <tr key={`dispatch-sr-${b.id}`}>
+                            <TableCustomCell>{b.billNumber}</TableCustomCell>
+                            <TableCustomCell>
+                              {globalUtils.getTimeFormat(b.billCreationTime, true)}
+                            </TableCustomCell>
+                            <TableCustomCell>
+                              {b.billCreationTime != null
+                                ? globalUtils.getDaysPassed(b.billCreationTime)
+                                : '--'}
+                            </TableCustomCell>
+                            <TableCustomCell>{b.party?.name}</TableCustomCell>
+                            <TableCustomCell>
+                              {globalUtils.getCurrencyFormat(b.orderAmount)}
+                            </TableCustomCell>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+
+                  {/* Extra bills (attached + supplementary) → auto-bundle */}
+                  {(() => {
+                    const extraBills = [...attachedBills, ...supplementaryBills].filter(
+                      (x) => x.balance !== 0,
+                    );
+                    if (extraBills.length === 0) return null;
+                    return (
+                      <>
+                        <VerticalSpace2 />
+                        <Label>
+                          <b>
+                            Bundle — {extraBills.length} bill{extraBills.length !== 1 ? 's' : ''} assigned to {supplymanUser?.username}
+                          </b>
+                        </Label>
+                        <VerticalSpace1 />
+                        <table className="app-table compact">
+                          <thead>
+                            <tr>
+                              <th>Bill Number</th>
+                              <th>Date</th>
+                              <th>Days</th>
+                              <th>Party</th>
+                              <th>Handover Bal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {extraBills
+                              .sort((a, b) => (a.creationTime || 0) - (b.creationTime || 0))
+                              .map((eb) => (
+                                <tr key={`dispatch-extra-${eb.id}`}>
+                                  <TableCustomCell>{eb.billNumber}</TableCustomCell>
+                                  <TableCustomCell>
+                                    {globalUtils.getTimeFormat(eb.creationTime, true)}
+                                  </TableCustomCell>
+                                  <TableCustomCell>
+                                    {eb.creationTime != null
+                                      ? globalUtils.getDaysPassed(eb.creationTime)
+                                      : '--'}
+                                  </TableCustomCell>
+                                  <TableCustomCell>
+                                    {eb.party?.name || eb.partyName}
+                                  </TableCustomCell>
+                                  <TableCustomCell>
+                                    {globalUtils.getCurrencyFormat(getHandoverBalance(eb))}
+                                  </TableCustomCell>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </>
+                    );
+                  })()}
+                </DialogContent>
+                <DialogActions>
+                  <Button
+                    appearance="secondary"
+                    onClick={() => setDispatchConfirmOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    appearance="primary"
+                    onClick={() => {
+                      setDispatchConfirmOpen(false);
+                      onDispatch();
+                    }}
+                  >
+                    Confirm Dispatch
+                  </Button>
+                </DialogActions>
+              </DialogBody>
+            </DialogSurface>
+          </Dialog>
         </center>
         <Dialog open={isSupplementBillAddDialogOpen}>
           <DialogSurface>
@@ -888,9 +1043,8 @@ function PartySection({
         <div className="party-old-bills-header">BILL DATE</div>
         <div className="party-old-bills-header">WITH</div>
         <div className="party-old-bills-header">AMOUNT</div>
-        <div className="party-old-bills-header">BALANCE</div>
+        <div className="party-old-bills-header">HANDOVER BAL</div>
         <div className="party-old-bills-header">AGE</div>
-        <div className="party-old-bills-header">DUE STATUS</div>
         <div className="party-old-bills-header">NOTE</div>
         <div className="party-old-bills-header" />
         {!loading ? (
@@ -951,7 +1105,7 @@ function OldBillRow({
   saveBill,
   creditDays,
 }) {
-  const [newBalance, setNewBalance] = useState('');
+  const [handoverInput, setHandoverInput] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [withUser, setWithUser] = useState();
 
@@ -990,8 +1144,8 @@ function OldBillRow({
     if (newNotes && newNotes.length > 0) {
       modifiedBill.notes = newNotes;
     }
-    if (newBalance && newBalance.length > 0) {
-      modifiedBill.balance = parseInt(newBalance, 10);
+    if (handoverInput && handoverInput.length > 0) {
+      modifiedBill.handoverBalance = parseInt(handoverInput, 10);
     }
     attachBill(modifiedBill);
   };
@@ -1022,17 +1176,23 @@ function OldBillRow({
       </div>
 
       <div className="old-bill amount">
-        {globalUtils.getCurrencyFormat(oldbill.balance)}
+        <Input
+          disabled={disabled}
+          size="small"
+          style={{ width: '90px' }}
+          appearance="underline"
+          contentBefore="₹"
+          value={handoverInput}
+          placeholder={`${getHandoverBalance(oldbill)}`}
+          onChange={(_, d) => setHandoverInput(d.value)}
+        />
       </div>
 
-      <div className="old-bill">
-        {globalUtils.getDaysPassed(oldbill.billCreationTime)}d
-      </div>
       <div
-        className="old-bill due-status"
-        style={{ color: dueStatus.color, fontWeight: 'bold' }}
+        className="old-bill"
+        style={{ color: dueStatus.color, fontWeight: 600 }}
       >
-        {dueStatus.text}
+        {globalUtils.getDaysPassed(oldbill.billCreationTime)}d
       </div>
       <Tooltip content={oldbill.note}>
         <Input
@@ -1077,121 +1237,71 @@ function OldBillRow({
   );
 }
 
-function SupplementaryBillRow({
-  oldbill,
-  isAttached,
-  removeAttachedBill,
-  saveBill,
-}) {
-  const [newBalance, setNewBalance] = useState('');
-  const [newNotes, setNewNotes] = useState(oldbill.accountsNotes);
-  const [scheduledData, setScheduledDate] = useState();
-  const [isSaved, setIsSaved] = useState(false);
-
+function SupplementaryBillRow({ oldbill, removeAttachedBill, saveBill }) {
+  const [newNotes, setNewNotes] = useState(oldbill.accountsNotes || '');
+  const [handoverInput, setHandoverInput] = useState('');
   const [party, setParty] = useState();
 
-  const getParty = async () => {
-    const party1 = await globalUtils.fetchPartyInfo(oldbill.partyId);
-    setParty(party1);
-  };
-  const scheduledForPaymentDate = () => {
-    if (oldbill.schedulePaymentDate) {
-      const date = new Date(oldbill.schedulePaymentDate);
-      return date.toLocaleDateString();
-    }
-    return '--';
-  };
+  useEffect(() => {
+    globalUtils.fetchPartyInfo(oldbill.partyId).then(setParty);
+  }, []);
 
-  const onSaveBill = (save) => {
+  const update = (notes, handover) => {
     const modifiedBill = { ...oldbill };
-    if (newNotes && newNotes.length > 0) {
-      modifiedBill.notes = newNotes;
-    }
-    if (newBalance && newBalance.length > 0) {
-      modifiedBill.balance = parseInt(newBalance, 10);
-    }
-    console.log(modifiedBill);
+    if (notes.length > 0) modifiedBill.notes = notes;
+    if (handover.length > 0)
+      modifiedBill.handoverBalance = parseInt(handover, 10);
     saveBill(modifiedBill);
   };
 
-  useEffect(() => {
-    getParty();
-  }, []);
   return (
-    <div>
-      <VerticalSpace1 />
-      <div style={{ width: '80%', textAlign: 'left', marginBottom: '5px' }}>
-        {party?.name}
-      </div>
-      <div className="supplementary-bill-row">
-        <Text size={200} className="old-bill bill-number">
-          {oldbill.billNumber || '--'}
-        </Text>
-        <Text size={200} className="old-bill bill-number">
-          {new Date(oldbill.creationTime).toLocaleDateString()}
-        </Text>
-        <div className="old-bill amount">₹{oldbill.orderAmount}</div>
-
-        <div>{globalUtils.getDaysPassed(oldbill.creationTime)} Days</div>
-
-        <Tooltip content={`₹${oldbill.balance}`}>
-          <Input
-            disabled={isSaved}
-            style={{ width: '100px' }}
-            size="small"
-            value={newBalance}
-            contentBefore="₹"
-            appearance="underline"
-            placeholder={`${oldbill.balance}`}
-            className="old-bill amount"
-            onChange={(_, d) => setNewBalance(d.value)}
-          />
-        </Tooltip>
-        <Tooltip content={oldbill.accountsNotes}>
-          <Input
-            disabled={isSaved}
-            style={{ width: '100px' }}
-            size="small"
-            className="old-bill notes"
-            value={newNotes}
-            appearance="underline"
-            placeholder={oldbill.accountsNotes || 'Notes'}
-            onChange={(_, t) => setNewNotes(t.value)}
-          />
-        </Tooltip>
-        <span style={{ display: 'flex' }}>
-          {isSaved ? (
-            <Button
-              className="old-bill"
-              appearance="subtle"
-              onClick={() => {
-                setIsSaved(false);
-              }}
-            >
-              <Edit12Filled />
-            </Button>
-          ) : (
-            <Button
-              className="old-bill"
-              appearance="subtle"
-              style={{ color: '#00A9A5' }}
-              onClick={() => {
-                onSaveBill();
-                setIsSaved(true);
-              }}
-            >
-              <Checkmark12Filled />
-            </Button>
-          )}
-          <Button
-            className="old-bill"
-            appearance="subtle"
-            onClick={() => removeAttachedBill()}
-          >
-            <DeleteRegular />
-          </Button>
-        </span>
-      </div>
-    </div>
+    <tr>
+      <TableCustomCell>{oldbill.billNumber || '--'}</TableCustomCell>
+      <TableCustomCell>
+        {globalUtils.getTimeFormat(oldbill.creationTime, true)}
+      </TableCustomCell>
+      <TableCustomCell>
+        {oldbill.creationTime != null
+          ? globalUtils.getDaysPassed(oldbill.creationTime)
+          : '--'}
+      </TableCustomCell>
+      <TableCustomCell>{party?.name}</TableCustomCell>
+      <td>
+        <Input
+          size="small"
+          style={{ width: '90px' }}
+          appearance="underline"
+          contentBefore="₹"
+          value={handoverInput}
+          placeholder={`${getHandoverBalance(oldbill)}`}
+          onChange={(_, d) => {
+            setHandoverInput(d.value);
+            update(newNotes, d.value);
+          }}
+        />
+      </td>
+      <td>
+        <Input
+          size="small"
+          value={newNotes}
+          appearance="underline"
+          placeholder="Notes"
+          style={{ width: '110px' }}
+          onChange={(_, t) => {
+            setNewNotes(t.value);
+            update(t.value, handoverInput);
+          }}
+        />
+      </td>
+      <td>
+        <Button
+          appearance="subtle"
+          size="small"
+          onClick={() => removeAttachedBill()}
+        >
+          <DeleteRegular />
+        </Button>
+      </td>
+    </tr>
   );
 }

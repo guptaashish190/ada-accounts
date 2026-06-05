@@ -478,11 +478,6 @@ function SupplyReportOrderRow({
   if (loading) return <Spinner />;
   if (!order) return <div>Error loading order</div>;
 
-  const getPaymentSum = order.payments?.reduce(
-    (acc, current) => acc + (parseInt(current.amount, 10) || 0),
-    0,
-  );
-
   return (
     <tbody
       style={{ backgroundColor: isDefaulter ? '#ff000077' : 'white' }}

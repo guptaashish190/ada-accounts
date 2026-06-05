@@ -143,7 +143,7 @@ export default function OutstandingImportScreen() {
       const decision = matchOutstandingRow(row, matchedOrders);
       let status = decision.status;
       if (decision.status === 'unmatched') {
-        if (isTSeriesBill) {
+        if (!row.isOldBill && isTSeriesBill) {
           status = 'skipped_old_unmatched';
         } else {
           status = row.hasValidBillDate ? 'create' : 'invalid';
@@ -380,13 +380,16 @@ export default function OutstandingImportScreen() {
       for (const row of rows) {
         if (row.status === 'matched' && row.matchedOrder?.id) {
           const updatePayload = {
-            ...buildOrderUpdatePayload(row, {
+            ...buildOrderUpdatePayload(row, row.matchedOrder, {
               updateAmount,
               updateBalance,
             }),
           };
           const transferCandidate = transferByOrderId.get(row.matchedOrder.id);
-          if (transferCandidate?.toPartyId) {
+          if (
+            transferCandidate?.toPartyId
+            && transferCandidate.toPartyId !== row.matchedOrder.partyId
+          ) {
             updatePayload.partyId = transferCandidate.toPartyId;
           }
 
@@ -415,7 +418,7 @@ export default function OutstandingImportScreen() {
           pendingOps += 1;
           stats.created += 1;
         } else {
-          
+
           stats.skipped += 1;
           if (row.status === 'ambiguous') stats.ambiguous += 1;
           if (row.status === 'invalid') stats.invalid += 1;

@@ -1,6 +1,7 @@
 /* eslint-disable no-restricted-syntax */
 import _ from 'lodash';
 import globalUtils from '../../services/globalUtils';
+import { pushNoteLineIfPresent } from './printerFormatHelpers';
 
 export default (data, isBundle) => {
   const commands = [];
@@ -41,23 +42,17 @@ export default (data, isBundle) => {
       fontFamily: 'Arial',
     },
   });
-  commands.push({
-    type: 'text',
-    value: `Dispatch Notes: ${data.dispatchNotes}`,
-    style: {
-      fontSize: '12px',
-      fontFamily: 'Arial',
-    },
-  });
-
-  commands.push({
-    type: 'text',
-    value: `Account Notes: ${data.accountDispatchNotes}`,
-    style: {
-      fontSize: '12px',
-      fontFamily: 'Arial',
-    },
-  });
+  const noteLineStyle = {
+    fontSize: '12px',
+    fontFamily: 'Arial',
+  };
+  pushNoteLineIfPresent(commands, 'Dispatch Notes', data.dispatchNotes, noteLineStyle);
+  pushNoteLineIfPresent(
+    commands,
+    'Account Notes',
+    data.accountDispatchNotes,
+    noteLineStyle,
+  );
 
   commands.push({
     type: 'text',

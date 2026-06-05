@@ -74,14 +74,40 @@ describe('matchOutstandingRow', () => {
 });
 
 describe('payload builders', () => {
-  test('respects toggles for update payload', () => {
+  test('respects toggles and only includes changed fields', () => {
     const row = { orderAmount: 1200, balance: 450 };
+    const matchedOrder = { orderAmount: 1200, balance: 400 };
+
     expect(
-      buildOrderUpdatePayload(row, { updateAmount: true, updateBalance: false }),
-    ).toEqual({ orderAmount: 1200 });
+      buildOrderUpdatePayload(row, matchedOrder, {
+        updateAmount: true,
+        updateBalance: false,
+      }),
+    ).toEqual({});
     expect(
-      buildOrderUpdatePayload(row, { updateAmount: false, updateBalance: true }),
+      buildOrderUpdatePayload(row, matchedOrder, {
+        updateAmount: false,
+        updateBalance: true,
+      }),
     ).toEqual({ balance: 450 });
+    expect(
+      buildOrderUpdatePayload(row, matchedOrder, {
+        updateAmount: true,
+        updateBalance: true,
+      }),
+    ).toEqual({ balance: 450 });
+  });
+
+  test('returns empty payload when matched order already matches row values', () => {
+    const row = { orderAmount: 1200, balance: 450 };
+    const matchedOrder = { orderAmount: 1200, balance: 450 };
+
+    expect(
+      buildOrderUpdatePayload(row, matchedOrder, {
+        updateAmount: true,
+        updateBalance: true,
+      }),
+    ).toEqual({});
   });
 
   test('creates new-order payload with required bill fields', () => {
@@ -130,6 +156,20 @@ describe('parseOutstandingRows', () => {
     expect(parsed[0].sectionId).toBe('section-1');
     expect(parsed[0].sectionLabel).toContain('AMAN MEDICAL STORE');
     expect(parsed[0].sectionTotalBalance).toBe(12348);
+  });
+
+  test('marks last-year bill numbers with isOldBill', () => {
+    const rows = [
+      ['', 'Bill Number', 'Bill Date', 'Amount', '', 'Balance'],
+      ['', '*T-001585', '23-May-25', '1320', '', '320'],
+      ['', 'T-001586', '24-May-26', '500', '', '100'],
+    ];
+    const parsed = parseOutstandingRows(rows);
+
+    expect(parsed[0].billNumber).toBe('*T-001585');
+    expect(parsed[0].isOldBill).toBe(true);
+    expect(parsed[1].billNumber).toBe('T-001586');
+    expect(parsed[1].isOldBill).toBe(false);
   });
 });
 

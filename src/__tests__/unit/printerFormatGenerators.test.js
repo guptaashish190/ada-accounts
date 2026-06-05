@@ -189,6 +189,82 @@ describe('supplyReportFormatGenerator', () => {
     expect(title).toBeDefined();
   });
 
+  test('when isBundle=true, prints handoverBalance not erp balance', () => {
+    const bundleData = {
+      ...SUPPLY_REPORT_DATA,
+      bills: [],
+      oldBills: [
+        {
+          party: { name: 'ABC Medical', area: 'CP' },
+          billNumber: 'B-1001',
+          balance: 5000,
+          handoverBalance: 4950,
+        },
+      ],
+    };
+    const bundleCommands = supplyReportFormatGenerator(bundleData, true);
+    const billLine = bundleCommands.find(
+      (c) => c.type === 'text' && String(c.value).includes('B-1001'),
+    );
+    expect(billLine.value).toContain('₹4950');
+    expect(billLine.value).not.toContain('₹5000');
+  });
+
+  test('omits dispatch and account note rows when values are empty', () => {
+    const commands = supplyReportFormatGenerator(
+      {
+        ...SUPPLY_REPORT_DATA,
+        dispatchNotes: undefined,
+        accountDispatchNotes: '',
+      },
+      false,
+    );
+    expect(
+      commands.some(
+        (c) => c.type === 'text' && String(c.value).startsWith('Dispatch Notes:'),
+      ),
+    ).toBe(false);
+    expect(
+      commands.some(
+        (c) => c.type === 'text' && String(c.value).startsWith('Account Notes:'),
+      ),
+    ).toBe(false);
+  });
+
+  test('when isBundle=true, omits bills with zero handover from print', () => {
+    const bundleData = {
+      ...SUPPLY_REPORT_DATA,
+      bills: [],
+      oldBills: [
+        {
+          partyId: 'p1',
+          party: { name: 'ABC Medical', area: 'CP' },
+          billNumber: 'B-0001',
+          balance: 500,
+          handoverBalance: 0,
+        },
+        {
+          partyId: 'p1',
+          party: { name: 'ABC Medical', area: 'CP' },
+          billNumber: 'B-0002',
+          balance: 500,
+          handoverBalance: 2000,
+        },
+      ],
+    };
+    const bundleCommands = supplyReportFormatGenerator(bundleData, true);
+    expect(
+      bundleCommands.some(
+        (c) => c.type === 'text' && String(c.value).includes('B-0001'),
+      ),
+    ).toBe(false);
+    expect(
+      bundleCommands.some(
+        (c) => c.type === 'text' && String(c.value).includes('B-0002'),
+      ),
+    ).toBe(true);
+  });
+
   test('matches snapshot (isBundle=false)', () => {
     expect(commands).toMatchSnapshot();
   });

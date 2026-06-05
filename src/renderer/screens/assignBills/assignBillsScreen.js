@@ -5,32 +5,25 @@ import {
   doc,
   getDoc,
   getDocs,
-  onSnapshot,
   updateDoc,
 } from 'firebase/firestore';
 import {
   Dropdown,
   Option,
-  Input,
   Dialog,
   DialogActions,
   DialogBody,
   DialogContent,
-  Textarea,
   DialogSurface,
   DialogTitle,
-  DialogTrigger,
   Button,
   Card,
   Divider,
-  Table,
-  TableHeader,
-  td,
-  TableRow,
-  TableBody,
   Tooltip,
-  tdLayout,
   Spinner,
+  Toaster,
+  useId,
+  useToastController,
 } from '@fluentui/react-components';
 import PartySelector from '../../common/partySelector';
 import { firebaseDB } from '../../firebaseInit';
@@ -40,9 +33,18 @@ import PartySection from './partyOldBillsSection.js/partyOldBillsSection';
 import SelectUserDropdown from '../../common/selectUser';
 import constants from '../../constants';
 import globalUtils from '../../services/globalUtils';
+import { showToast } from '../../common/toaster';
 import './style.css';
+import { firebaseAuth } from '../../firebaseInit';
 import { useCompany } from '../../contexts/companyContext';
+import { useSettingsContext } from '../../contexts/settingsContext';
 import { getCompanyCollection, getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
+import {
+  buildAssignmentDetails,
+  canCreateBundle,
+  getHandoverBalance,
+} from '../../services/handoverBalanceUtils';
+import TableCustomCell from '../../common/tableCustomCell';
 
 export default function AssignBillScreen() {
   const [fileNumbers, setFileNumbers] = useState([]);
@@ -52,9 +54,31 @@ export default function AssignBillScreen() {
   const [selectedUser, setSelectedUser] = useState();
   const [creatingLoading, setCreatingLoading] = useState(false);
   const [bundleNumber, setBundleNumber] = useState();
+  const [withPartyBillIds, setWithPartyBillIds] = useState([]);
+
+  const toasterId = useId('assign-bills-toaster');
+  const { dispatchToast } = useToastController(toasterId);
 
   // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
+  const { settings } = useSettingsContext();
+  const billWithPartyUserId = settings?.billWithParty?.userId || '';
+
+  const addWithPartyBill = (bill) => {
+    if (!billWithPartyUserId) {
+      showToast(
+        dispatchToast,
+        'Set "Bill With Party" user in Settings first',
+        'error',
+      );
+      return;
+    }
+    setWithPartyBillIds((current) => {
+      if (current.includes(bill.id)) return current;
+      return [...current, bill.id];
+    });
+    setAddedBills((current) => current.filter((b) => b.id !== bill.id));
+  };
 
   const getFileNumbers = async () => {
     const fileNumbersDoc = doc(firebaseDB, 'settings', 'fileNumbers');
@@ -70,38 +94,105 @@ export default function AssignBillScreen() {
     );
     setBundleNumber(srNumber1);
   };
+  const updateWithPartyBills = async (billIds) => {
+    if (!billIds.length) return;
+
+    const fetchedOrders = await globalUtils.fetchOrdersByIds(
+      billIds,
+      currentCompanyId,
+    );
+
+    for await (const selectedBill of fetchedOrders.filter((b) => !b.error)) {
+      const orderRef = getCompanyDoc(
+        currentCompanyId,
+        DB_NAMES.ORDERS,
+        selectedBill.id,
+      );
+
+      await updateDoc(orderRef, {
+        flow: [
+          ...(selectedBill.flow || []),
+          {
+            employeeId: firebaseAuth.currentUser.uid,
+            timestamp: Timestamp.now().toMillis(),
+            type: constants.firebase.billFlowTypes.BILL_WITH_PARTY,
+          },
+        ],
+        flowCompleted: true,
+        orderStatus: constants.firebase.billFlowTypes.BILL_WITH_PARTY,
+        with: billWithPartyUserId,
+      });
+    }
+  };
+
   const onCreateBundle = async () => {
     if (creatingLoading) return;
-    if (!addedBills.length || !selectedUser) {
+
+    const { hasBundleBills, hasWithParty: hasWithPartyBills, bundleBills: billsToAssign } =
+      canCreateBundle(addedBills, withPartyBillIds);
+
+    if (!hasBundleBills && !hasWithPartyBills) {
       return;
     }
+    if (hasBundleBills && !selectedUser) {
+      showToast(dispatchToast, 'Select a user to assign the bundle', 'error');
+      return;
+    }
+    if (hasWithPartyBills && !billWithPartyUserId) {
+      showToast(
+        dispatchToast,
+        'Set "Bill With Party" user in Settings first',
+        'error',
+      );
+      return;
+    }
+
     setCreatingLoading(true);
     try {
-      const billBundlesRef = getCompanyCollection(currentCompanyId, DB_NAMES.BILL_BUNDLES);
+      if (hasBundleBills) {
+        const billBundlesRef = getCompanyCollection(
+          currentCompanyId,
+          DB_NAMES.BILL_BUNDLES,
+        );
 
-      addDoc(billBundlesRef, {
-        status: constants.firebase.billBundleFlowStatus.CREATED,
-        timestamp: Timestamp.now().toMillis(),
-        assignedTo: selectedUser.uid,
-        receiptNumber: bundleNumber,
-        bills: addedBills.filter((x) => x.balance !== 0).map((x) => x.id),
-      });
+        const bundleBillList = billsToAssign.filter(
+          (b) => !withPartyBillIds.includes(b.id),
+        );
 
-      await addedBills.forEach(async (bill1) => {
-        await updateBills(bill1);
-      });
+        await addDoc(billBundlesRef, {
+          status: constants.firebase.billBundleFlowStatus.CREATED,
+          timestamp: Timestamp.now().toMillis(),
+          assignedTo: selectedUser.uid,
+          receiptNumber: bundleNumber,
+          bills: bundleBillList.map((x) => x.id),
+          assignmentDetails: buildAssignmentDetails(bundleBillList),
+          partyCollections: [],
+          partyPayments: [],
+        });
+
+        for await (const bill1 of billsToAssign.filter(
+          (b) => !withPartyBillIds.includes(b.id),
+        )) {
+          await updateBills(bill1);
+        }
+
+        await globalUtils.incrementReceiptCounter(
+          constants.newReceiptCounters.BUNDLES,
+          currentCompanyId,
+        );
+
+        getNewBundleReceiptNumber();
+      }
+
+      if (hasWithPartyBills) {
+        await updateWithPartyBills(withPartyBillIds);
+      }
+
       setCreatingLoading(false);
       setAddedBills([]);
       setAddedParties([]);
+      setWithPartyBillIds([]);
       setSelectedUser();
-
-      await globalUtils.incrementReceiptCounter(
-        constants.newReceiptCounters.BUNDLES,
-        currentCompanyId,
-      );
-
-      getNewBundleReceiptNumber();
-      // navigate(-1);
     } catch (e) {
       console.log(e);
       setCreatingLoading(false);
@@ -117,6 +208,7 @@ export default function AssignBillScreen() {
       updateDoc(orderRef, {
         accountsNotes: modifiedBill1.accountsNotes || '',
         with: selectedUser.uid,
+        lastHandoverBalance: getHandoverBalance(modifiedBill1),
       });
 
       console.log(`Order status updated to "dispatched"`);
@@ -132,6 +224,7 @@ export default function AssignBillScreen() {
 
   return (
     <div className="assign-bills-screen">
+      <Toaster toasterId={toasterId} />
       <center>
         <h3>Create Bill Bundle</h3>
         {bundleNumber}
@@ -152,6 +245,7 @@ export default function AssignBillScreen() {
         <VerticalSpace1 />
         <Divider />
 
+        <div className="assign-bills-parties-list">
         {addedParties.map((ap) => {
           return (
             <PartySection
@@ -159,13 +253,22 @@ export default function AssignBillScreen() {
               setAttachedBills={setAddedBills}
               party={ap}
               key={`billbundlesection${ap.id}`}
-              onRemoveParty={() => {
+              withPartyBillIds={withPartyBillIds}
+              onMarkWithParty={addWithPartyBill}
+              onUndoWithParty={(billId) => {
+                setWithPartyBillIds((ids) => ids.filter((id) => id !== billId));
+              }}
+              onRemoveParty={(partyBillIds = []) => {
                 setAddedBills((x) => x.filter((i) => i.partyId !== ap.id));
+                setWithPartyBillIds((ids) =>
+                  ids.filter((id) => !partyBillIds.includes(id)),
+                );
                 setAddedParties((ap2) => ap2.filter((x) => x.id !== ap.id));
               }}
             />
           );
         })}
+        </div>
         <VerticalSpace1 />
 
         <SelectUserDropdown user={selectedUser} setUser={setSelectedUser} />
@@ -177,6 +280,8 @@ export default function AssignBillScreen() {
           assignedUser={selectedUser}
           onSubmit={onCreateBundle}
           addedBills={addedBills}
+          withPartyBillIds={withPartyBillIds}
+          withPartyBillCount={withPartyBillIds.length}
         />
       </center>
     </div>
@@ -352,12 +457,37 @@ function AddBillDialog() {
   );
 }
 
-function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
+function SummaryDialog({
+  addedBills,
+  onSubmit,
+  assignedUser,
+  loading,
+  withPartyBillIds = [],
+  withPartyBillCount = 0,
+}) {
   const [open, setOpen] = useState(false);
+  const { bundleBills, canSubmit } = canCreateBundle(
+    addedBills,
+    withPartyBillIds,
+  );
+  const bundleBillCount = bundleBills.length;
+  const hasBundleWork = bundleBillCount > 0 && canSubmit;
+  const hasWithPartyWork = withPartyBillCount > 0;
+  const canSubmitFinal =
+    (hasBundleWork && !!assignedUser) || hasWithPartyWork;
+  const canConfirmSubmit =
+    (hasBundleWork || hasWithPartyWork) && (!hasBundleWork || !!assignedUser);
+
   return (
     <>
-      <Button appearance="primary" onClick={() => setOpen(true)}>
-        Create Bundle
+      <Button
+        appearance="primary"
+        onClick={() => setOpen(true)}
+        disabled={!canSubmitFinal}
+      >
+        {withPartyBillCount > 0 && bundleBillCount === 0
+          ? `Apply (${withPartyBillCount} with party)`
+          : 'Create Bundle'}
       </Button>
       <Dialog open={open}>
         <DialogSurface>
@@ -372,16 +502,14 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
                     <th>Date</th>
                     <th>Days</th>
                     <th>Party Name</th>
-                    <th>Amount</th>
-                    <th>Balance</th>
+                    <th>Handover Bal</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {addedBills
-                    .filter((x) => x.balance !== 0)
+                  {bundleBills
                     .sort((a, b) => a.creationTime - b.creationTime)
                     .map((ab) => (
-                      <tr>
+                      <tr key={`summary-${ab.id}`}>
                         <TableCustomCell>{ab.billNumber}</TableCustomCell>
                         <TableCustomCell>
                           {globalUtils.getTimeFormat(ab.creationTime, true)}
@@ -393,21 +521,34 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
                         </TableCustomCell>
                         <TableCustomCell>{ab.party?.name}</TableCustomCell>
                         <TableCustomCell>
-                          {globalUtils.getCurrencyFormat(ab.orderAmount)}
-                        </TableCustomCell>
-                        <TableCustomCell>
-                          {globalUtils.getCurrencyFormat(ab.balance)}
+                          {globalUtils.getCurrencyFormat(getHandoverBalance(ab))}
                         </TableCustomCell>
                       </tr>
                     ))}
                 </tbody>
               </table>
               <VerticalSpace1 />
-              <Card>
-                <div>
-                  Assign To: <b>{assignedUser?.username}</b>
-                </div>
-              </Card>
+              {bundleBillCount > 0 ? (
+                <Card>
+                  <div>
+                    Assign To:{' '}
+                    <b>
+                      {assignedUser?.username || (
+                        <span style={{ color: 'var(--colorPaletteRedForeground1)' }}>
+                          Select user above
+                        </span>
+                      )}
+                    </b>
+                  </div>
+                </Card>
+              ) : null}
+              {withPartyBillCount > 0 ? (
+                <Card>
+                  <div>
+                    Bills marked With Party: <b>{withPartyBillCount}</b>
+                  </div>
+                </Card>
+              ) : null}
             </DialogContent>
             <DialogActions>
               <Button
@@ -424,6 +565,7 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
                   setOpen(false);
                 }}
                 appearance="primary"
+                disabled={!canConfirmSubmit || loading}
               >
                 {loading ? <Spinner /> : 'Create'}
               </Button>
@@ -435,10 +577,3 @@ function SummaryDialog({ addedBills, onSubmit, assignedUser, loading }) {
   );
 }
 
-function TableCustomCell({ children }) {
-  return (
-    <Tooltip content={children}>
-      <td>{children || '--'}</td>
-    </Tooltip>
-  );
-}

@@ -396,8 +396,13 @@ function SupplyReportRow({ data, currentCompanyId }) {
     (data.attachedBills?.length || 0) +
     (data.supplementaryBills?.length || 0);
   const reportDate = globalUtils.getTimeFormat(data.timestamp, true) || '--';
-  const getPaymentAmountByType = (orderDetail, paymentType) => {
-    const payments = orderDetail?.payments || [];
+  // Read payment from partyPayments[] on the SR/bundle document (new schema).
+  // Falls back to orderDetail.payments for legacy records.
+  const getPaymentAmountByType = (orderDetail, paymentType, partyId) => {
+    const partyPayment = (data.partyPayments || []).find(
+      (pp) => pp.partyId === partyId,
+    );
+    const payments = partyPayment?.payments || orderDetail?.payments || [];
     const amount = payments
       .filter((payment) => (payment?.type || '').toLowerCase() === paymentType)
       .reduce((acc, payment) => acc + (Number(payment?.amount) || 0), 0);
@@ -405,8 +410,11 @@ function SupplyReportRow({ data, currentCompanyId }) {
     return amount > 0 ? amount : undefined;
   };
 
-  const getOtherPaymentAmount = (orderDetail) => {
-    const payments = orderDetail?.payments || [];
+  const getOtherPaymentAmount = (orderDetail, partyId) => {
+    const partyPayment = (data.partyPayments || []).find(
+      (pp) => pp.partyId === partyId,
+    );
+    const payments = partyPayment?.payments || orderDetail?.payments || [];
     const amount = payments
       .filter(
         (payment) =>
@@ -492,10 +500,10 @@ function SupplyReportRow({ data, currentCompanyId }) {
                   const orderDetail = data.orderDetails?.find(
                     (detail) => detail.billId === bill.id,
                   );
-                  const cashAmount = getPaymentAmountByType(orderDetail, 'cash');
-                  const chequeAmount = getPaymentAmountByType(orderDetail, 'cheque');
-                  const upiAmount = getPaymentAmountByType(orderDetail, 'upi');
-                  const otherAmount = getOtherPaymentAmount(orderDetail);
+                  const cashAmount = getPaymentAmountByType(orderDetail, 'cash', bill.partyId);
+                  const chequeAmount = getPaymentAmountByType(orderDetail, 'cheque', bill.partyId);
+                  const upiAmount = getPaymentAmountByType(orderDetail, 'upi', bill.partyId);
+                  const otherAmount = getOtherPaymentAmount(orderDetail, bill.partyId);
 
                   return (
                     <tr key={`sr-bill-row-${data.id}-${bill.id}-${billIndex}`}>

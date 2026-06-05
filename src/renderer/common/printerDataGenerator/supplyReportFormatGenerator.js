@@ -1,8 +1,20 @@
 /* eslint-disable no-restricted-syntax */
 import _ from 'lodash';
 import globalUtils from '../../services/globalUtils';
+import {
+  filterBillsForBundlePrint,
+  getPrintBalance,
+} from '../../services/handoverBalanceUtils';
+import { pushNoteLineIfPresent } from './printerFormatHelpers';
 
 export default (data, isBundle) => {
+  const billsForPrint = isBundle
+    ? filterBillsForBundlePrint(data.bills)
+    : data.bills || [];
+  const oldBillsForPrint = isBundle
+    ? filterBillsForBundlePrint(data.oldBills)
+    : data.oldBills || [];
+
   const commands = [];
   commands.push({
     type: 'text',
@@ -59,24 +71,18 @@ export default (data, isBundle) => {
     },
     value: '',
   });
-  commands.push({
-    type: 'text',
-    value: `Dispatch Notes: ${data.dispatchNotes}`,
-    style: {
-      fontSize: '12px',
-      fontFamily: 'Arial',
-    },
-  });
-
-  commands.push({
-    type: 'text',
-    value: `Account Notes: ${data.accountDispatchNotes}`,
-    style: {
-      fontSize: '12px',
-      fontFamily: 'Arial',
-    },
-  });
-  if (data.bills?.length > 0) {
+  const noteLineStyle = {
+    fontSize: '12px',
+    fontFamily: 'Arial',
+  };
+  pushNoteLineIfPresent(commands, 'Dispatch Notes', data.dispatchNotes, noteLineStyle);
+  pushNoteLineIfPresent(
+    commands,
+    'Account Notes',
+    data.accountDispatchNotes,
+    noteLineStyle,
+  );
+  if (billsForPrint.length > 0) {
     commands.push({
       type: 'text',
       value: `Bills in hand`,
@@ -91,7 +97,7 @@ export default (data, isBundle) => {
     });
   }
 
-  data.bills?.forEach((item) => {
+  billsForPrint.forEach((item) => {
     commands.push({
       type: 'text',
       style: {
@@ -110,7 +116,7 @@ export default (data, isBundle) => {
         fontFamily: 'Arial',
       },
       value: `${item.billNumber}(${globalUtils.getCurrencyFormat(
-        item.balance,
+        getPrintBalance(item, isBundle),
       )})`,
     });
     if (!isBundle) {
@@ -136,21 +142,23 @@ export default (data, isBundle) => {
       value: '',
     });
   });
-  commands.push({
-    type: 'text',
-    value: `Old Bills in hand`,
-    style: {
-      fontWeight: '700',
-      textAlign: 'center',
-      fontSize: '14px',
-      fontFamily: 'Arial',
-      marginTop: '10px',
-      marginBottom: '5px',
-    },
-  });
-  if (data.oldBills?.length) {
+  if (!isBundle || oldBillsForPrint.length > 0) {
+    commands.push({
+      type: 'text',
+      value: `Old Bills in hand`,
+      style: {
+        fontWeight: '700',
+        textAlign: 'center',
+        fontSize: '14px',
+        fontFamily: 'Arial',
+        marginTop: '10px',
+        marginBottom: '5px',
+      },
+    });
+  }
+  if (oldBillsForPrint.length) {
     const groupedOrders = {};
-    for (const element of data.oldBills) {
+    for (const element of oldBillsForPrint) {
       if (groupedOrders[element.partyId] !== undefined) {
         groupedOrders[element.partyId] = [
           ...groupedOrders[element.partyId],
@@ -182,7 +190,7 @@ export default (data, isBundle) => {
         value: x
           .map(
             (y) =>
-              `${y.billNumber}(${globalUtils.getCurrencyFormat(y.balance)})`,
+              `${y.billNumber}(${globalUtils.getCurrencyFormat(getPrintBalance(y, isBundle))})`,
           )
           .join(' , '),
       });

@@ -46,6 +46,7 @@ import { useAuthUser } from '../../contexts/allUsersContext';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
 import constants from '../../constants';
+import { getHandoverBalance } from '../../services/handoverBalanceUtils';
 import supplyReportRecievingFormatGenerator from '../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
 import supplyReportFormatGenerator from '../../common/printerDataGenerator/supplyReportFormatGenerator';
 import SelectUserDropdown from '../../common/selectUser';
@@ -410,6 +411,7 @@ export default function ViewSupplyReportScreen({
               <th>BILL NO.</th>
               <th>PARTY</th>
               <th>AMOUNT</th>
+              <th>HANDOVER</th>
               <th>CASH</th>
               <th>CHEQUE</th>
               <th>UPI</th>
@@ -429,6 +431,7 @@ export default function ViewSupplyReportScreen({
                     supplyReport.orderDetails &&
                     supplyReport.orderDetails.find((x) => x.billId === bill.id)
                   }
+                  partyPayments={supplyReport.partyPayments || []}
                   key={`rsr-${bill.id}`}
                   data={bill}
                   index={i}
@@ -448,6 +451,7 @@ export default function ViewSupplyReportScreen({
               <th>BILL NO.</th>
               <th>PARTY</th>
               <th>AMOUNT</th>
+              <th>HANDOVER</th>
               <th>CASH</th>
               <th>CHEQUE</th>
               <th>UPI</th>
@@ -464,6 +468,7 @@ export default function ViewSupplyReportScreen({
                     supplyReport.orderDetails &&
                     supplyReport.orderDetails.find((x) => x.billId === bill.id)
                   }
+                  partyPayments={supplyReport.partyPayments || []}
                   key={`rsr-${bill.id}`}
                   data={bill}
                   index={i}
@@ -567,16 +572,13 @@ function BillRow({
   data,
   index,
   orderDetail,
+  partyPayments = [],
   showStatus,
   editEnabled,
   remove,
 }) {
-  const getBalance = () => {
-    return (
-      data.orderAmount -
-      (data.payments?.reduce((acc, cur) => acc + parseInt(cur.amount), 0) || 0)
-    );
-  };
+  // Look up party-level payment for this bill's party
+  const partyPayment = partyPayments.find((pp) => pp.partyId === data.partyId);
 
   const onRemove = () => {
     const confirm = window.confirm(
@@ -598,29 +600,37 @@ function BillRow({
         <b>{globalUtils.getCurrencyFormat(data.orderAmount)}</b>
       </TableCustomCell>
       <TableCustomCell>
+        <b>{globalUtils.getCurrencyFormat(getHandoverBalance(data))}</b>
+        {data.balance != null && getHandoverBalance(data) !== data.balance ? (
+          <div style={{ color: 'grey', fontSize: '0.85em' }}>
+            BAL: {globalUtils.getCurrencyFormat(data.balance)}
+          </div>
+        ) : null}
+      </TableCustomCell>
+      <TableCustomCell>
         {globalUtils.getCurrencyFormat(
-          orderDetail?.payments?.find((x) => x.type === 'cash')?.amount,
+          partyPayment?.payments?.find((x) => x.type === 'cash')?.amount,
         ) || '--'}
       </TableCustomCell>
       <TableCustomCell>
         {globalUtils.getCurrencyFormat(
-          orderDetail?.payments?.find((x) => x.type === 'cheque')?.amount,
+          partyPayment?.payments?.find((x) => x.type === 'cheque')?.amount,
         ) || '--'}
       </TableCustomCell>
       <TableCustomCell>
         {globalUtils.getCurrencyFormat(
-          orderDetail?.payments?.find((x) => x.type === 'upi')?.amount,
+          partyPayment?.payments?.find((x) => x.type === 'upi')?.amount,
         ) || '--'}
       </TableCustomCell>
       {showStatus ? (
         <TableCustomCell>{data.orderStatus || '--'}</TableCustomCell>
       ) : null}
       <TableCustomCell>
-        {orderDetail?.schedulePaymentDate
-          ? globalUtils?.getTimeFormat(data.schedulePaymentDate, true)
+        {partyPayment?.schedulePaymentDate
+          ? globalUtils?.getTimeFormat(partyPayment.schedulePaymentDate, true)
           : '--'}
       </TableCustomCell>
-      <TableCustomCell>{data?.accountsNotes || '--'}</TableCustomCell>
+      <TableCustomCell>{orderDetail?.accountsNotes || data?.accountsNotes || '--'}</TableCustomCell>
       {/* {editEnabled ? (
         <Button onClick={() => onRemove()}>
           <Dismiss16Filled />

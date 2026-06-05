@@ -1,1 +1,19 @@
 /* Assign-bills confirm dialog uses .app-table compact. */
+
+.assign-bills-screen center {
+  display: block;
+}
+
+.assign-bills-screen h3 {
+  margin: 8px 0 4px;
+  font-size: 1.1rem;
+}
+
+.assign-bills-parties-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 90%;
+  margin: 10px auto 0;
+  text-align: left;
+}

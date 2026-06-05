@@ -1,58 +1,202 @@
-.party-section-container {
-  margin-bottom: 50px;
+.assign-party-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.party-section-container .party-info-header {
+.assign-party-card-header {
   display: flex;
-  flex-direction: row;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  gap: 10px;
+  padding: 6px 10px;
+  min-height: 32px;
+  cursor: pointer;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  user-select: none;
 }
 
-.party-section-container .party-info-header .party-name {
-  width: 20%;
-  text-align: left;
-  margin-left: 20px;
-}
-.party-section-container .party-info-header .bill-number {
-  color: grey;
-  font-weight: bold;
-  text-align: left;
+.assign-party-card.expanded .assign-party-card-header {
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.party-section-container .party-info-header .amount {
-  font-weight: bold;
-  width: 20%;
-  text-align: left;
-}
-.party-old-bills {
-  width: 90%;
+.assign-party-card-header:hover {
+  background: linear-gradient(180deg, #f1f5f9 0%, #e8eef4 100%);
 }
 
-.party-old-bills-header {
-  font-weight: bold;
-  color: rgba(128, 128, 128, 0.379);
-  font-size: 0.9em;
-  margin-bottom: 10px;
+.assign-party-info {
+  flex: 1;
+  min-width: 0;
 }
-.party-old-bills {
+
+.assign-party-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.25;
+}
+
+.assign-party-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.assign-party-badge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  text-transform: uppercase;
+}
+
+.assign-party-meta {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.assign-party-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.assign-party-total {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f766e;
+  white-space: nowrap;
+}
+
+.assign-party-selection-hint {
+  font-size: 10px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.assign-party-chevron {
+  color: #64748b;
+  flex-shrink: 0;
+  transition: transform 0.22s ease;
+}
+
+.assign-party-card.expanded .assign-party-chevron {
+  transform: rotate(180deg);
+}
+
+.assign-party-bills-panel {
   display: grid;
-  text-align: left;
-  grid-template-columns: 1fr 1fr 0.7fr 1fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s ease;
 }
 
-.old-bill.amount {
-}
-.old-bill {
-  padding: 5px 0;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.095);
+.assign-party-card.expanded .assign-party-bills-panel {
+  grid-template-rows: 1fr;
 }
 
-.supplementary-bill-row {
-  width: 90%;
+.assign-party-card:not(.expanded) .assign-party-bills-panel {
+  pointer-events: none;
 }
 
-.supplementary-bill-row * {
-  text-align: left;
+.assign-party-bills-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.assign-party-bills {
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.18s ease 0.04s;
+}
+
+.assign-party-card.expanded .assign-party-bills {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assign-party-bills-panel,
+  .assign-party-bills,
+  .assign-party-chevron {
+    transition: none;
+  }
+}
+
+.assign-party-bills .app-table-wrapper {
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.assign-party-bills-table thead th:last-child,
+.assign-party-bills-table tbody td.assign-bill-actions-cell {
+  white-space: nowrap;
+}
+
+.assign-bill-num {
+  font-weight: 600;
+  color: #334155;
+}
+
+.assign-bill-with {
+  color: #475569;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assign-bill-amount {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.assign-bill-balance {
+  font-weight: 600;
+  color: #b45309;
+}
+
+.assign-bill-notes-cell {
+  min-width: 100px;
+  max-width: 140px;
+}
+
+.assign-bill-notes-input {
+  width: 100%;
+  min-width: 80px;
+}
+
+.assign-bill-actions-cell {
+  padding-top: 4px !important;
+  padding-bottom: 4px !important;
+}
+
+.assign-bill-actions-cell .fui-Button {
+  min-height: 24px;
+  padding: 0 8px;
+}
+
+.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-attached {
+  background: #fffbeb;
+}
+
+.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-attached:hover {
+  background: #fef3c7;
+}
+
+.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-with-party {
+  background: #eff6ff;
+}
+
+.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-with-party:hover {
+  background: #dbeafe;
+}
+
+.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-attached.assign-bill-row-with-party {
+  background: #f0f9ff;
 }
