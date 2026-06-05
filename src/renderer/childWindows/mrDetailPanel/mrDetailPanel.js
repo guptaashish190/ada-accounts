@@ -506,6 +506,7 @@ function MrDetailPanel({ data }) {
       </div>
     );
   }
+  
 
   const dayNames = [
     'Monday', 'Tuesday', 'Wednesday', 'Thursday',
