@@ -36,9 +36,10 @@ export default function BillSelector({
   onAdd,
   onRemove,
   focusFirstElement,
+  defaultOpen = false,
 }) {
   const [ordersList, setOrdersList] = useState([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [showOrderList, setShowOrderList] = useState([]);
   const [searchPartyName, setSearchPartyName] = useState('');
 

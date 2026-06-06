@@ -630,7 +630,7 @@ function BillRow({
           ? globalUtils?.getTimeFormat(partyPayment.schedulePaymentDate, true)
           : '--'}
       </TableCustomCell>
-      <TableCustomCell>{orderDetail?.accountsNotes || data?.accountsNotes || '--'}</TableCustomCell>
+      <TableCustomCell>{partyPayment?.notes || '--'}</TableCustomCell>
       {/* {editEnabled ? (
         <Button onClick={() => onRemove()}>
           <Dismiss16Filled />

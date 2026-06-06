@@ -1,5 +1,5 @@
 import { Combobox, Option, Text } from '@fluentui/react-components';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getDocs, limit, query, where } from 'firebase/firestore';
 import globalUtils, { useDebounce } from '../services/globalUtils';
 import { useCompany } from '../contexts/companyContext';
@@ -9,7 +9,9 @@ export default function PartySelector({
   onPartySelected,
   descriptive,
   clearOnSelect,
+  autoFocus,
 }) {
+  const inputRef = useRef(null);
   const [partyDetails, setPartyDetails] = useState([]);
   const [queryPartyName, setQueryPartyName] = useState('');
   const debouncedValue = useDebounce(queryPartyName, 500);
@@ -43,6 +45,14 @@ export default function PartySelector({
     fetchParties();
   }, [debouncedValue, currentCompanyId]);
 
+  useEffect(() => {
+    if (!autoFocus) return undefined;
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [autoFocus]);
+
   const descriptiveTextStyle = { color: 'grey', textWrap: 'nowrap' };
 
   return (
@@ -53,6 +63,7 @@ export default function PartySelector({
       }}
       freeform
       value={queryPartyName}
+      input={{ ref: inputRef }}
       onOptionSelect={(_, e) => {
         setQueryPartyName(e.optionText);
         onPartySelected(e.optionValue);

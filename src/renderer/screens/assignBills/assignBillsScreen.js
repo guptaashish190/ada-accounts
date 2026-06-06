@@ -289,7 +289,7 @@ export default function AssignBillScreen() {
 }
 
 function AddPartySectionsDialog({ addParties }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [addedParties, setAddedParties] = useState([]);
   const [mrRoutes, setMrRoutes] = useState([]);
   const [selectedMrRoute, setSelectedMrRoute] = useState();
@@ -377,6 +377,7 @@ function AddPartySectionsDialog({ addParties }) {
               ) : null}
               <VerticalSpace1 />
               <PartySelector
+                autoFocus={open}
                 onPartySelected={(p) => {
                   if (p?.id) {
                     setAddedParties((x) => [...x, p]);

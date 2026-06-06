@@ -449,6 +449,9 @@ function MrDetailPanel({ data }) {
           matchedOrder.flow.length > 0 &&
           matchedOrder.flow[0]?.type === BILL_CREATED_FLOW,
         photoUrl,
+        paymentTotal: e.paymentTotal || 0,
+        payments: Array.isArray(e.payments) ? e.payments : [],
+        location: e.location || null,
       };
     });
 
@@ -484,12 +487,16 @@ function MrDetailPanel({ data }) {
   }, 0);
 
   const orderMarkers = registerEntries
-    .filter((e) => e.status === 'Order' && e.location)
+    .filter(
+      (e) =>
+        (e.status === 'Order' || e.status === 'Payment') && e.location,
+    )
     .map((e) => ({
       lat: e.location.latitude ?? e.location._lat,
       lng: e.location.longitude ?? e.location._long,
       timestamp: e.timestamp,
       partyId: e.partyId || '',
+      status: e.status,
     }))
     .filter((m) => m.lat && m.lng);
 
@@ -639,12 +646,24 @@ function MrDetailPanel({ data }) {
                   }
                   const showCallIcon =
                     vp.status === 'Order' && vp.isCallOrder && !vp.isDirectBilling;
+                  const isPayment = vp.status === 'Payment';
+                  const paymentBreakdown = (vp.payments || [])
+                    .map((p) => {
+                      const type = p.type || '';
+                      const amount = p.amount || 0;
+                      return `${type} ${globalUtils.getCurrencyFormat(amount)}`;
+                    })
+                    .join(' • ');
+                  const cardClass =
+                    vp.status === 'Order'
+                      ? 'order-placed'
+                      : isPayment
+                        ? 'payment-collected'
+                        : 'no-order';
                   return (
                     <div
                       key={`${vp.partyId}-${i}`}
-                      className={`visited-card ${
-                        vp.status === 'Order' ? 'order-placed' : 'no-order'
-                      }`}
+                      className={`visited-card ${cardClass}`}
                     >
                       {!vp.isDirectBilling && (
                         <>
@@ -699,6 +718,11 @@ function MrDetailPanel({ data }) {
                             <div className="order-status-badge">{vp.orderStatus}</div>
                           )}
                         </>
+                      ) : isPayment ? (
+                        <div className="visit-outcome payment">
+                          Payment: {globalUtils.getCurrencyFormat(vp.paymentTotal)}
+                          {paymentBreakdown ? ` (${paymentBreakdown})` : ''}
+                        </div>
                       ) : (
                         <div className="visit-outcome no-order">
                           No Order{vp.reason ? ` (${vp.reason})` : ''}

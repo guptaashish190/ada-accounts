@@ -40,6 +40,7 @@ import globalUtils from '../../services/globalUtils';
 import constants from '../../constants';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
+import { PaymentSourceInfo } from '../../common/paymentSourceInfo';
 
 export default function ChequesScreen() {
   const [chequeList, setChequeList] = useState([]);
@@ -342,7 +343,6 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
   const [amount, setAmount] = useState(
     chequeData?.amount !== undefined ? String(chequeData.amount) : '',
   );
-  const [notes, setNotes] = useState('');
   const { currentCompanyId } = useCompany();
   const MIN_ZOOM = 1;
 
@@ -387,7 +387,10 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
         chequeNumber,
         partyId: party.id,
         amount,
-        notes,
+        notes:
+          chequeData?.accountsNotes && chequeData.accountsNotes !== '--'
+            ? chequeData.accountsNotes
+            : '',
         chequeDate: chequeDate.getTime(),
         timestamp: Timestamp.now().toMillis(),
         entryNumber: newEntryNumber,
@@ -450,7 +453,11 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
             {chequeData?.image ? (
               <Image
                 fit="contain"
-                src={chequeData.image}
+                src={
+                  Array.isArray(chequeData.image)
+                    ? chequeData.image[0]
+                    : chequeData.image
+                }
                 style={{
                   height: '25vh',
                   marginBottom: '20px',
@@ -458,6 +465,17 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
                 }}
                 onClick={() => openImageViewer()}
               />
+            ) : null}
+            {chequeData?.sourceRefs?.length > 0 ? (
+              <>
+                <Label>Source</Label>
+                <PaymentSourceInfo
+                  sourceRefs={chequeData.sourceRefs}
+                  partyId={chequeData?.partyId}
+                  showNotes={false}
+                />
+                <VerticalSpace1 />
+              </>
             ) : null}
             <Label>Cheque Number</Label>
             <Input
@@ -497,12 +515,12 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
             />
             <VerticalSpace1 />
 
-            <Label>Notes</Label>
-            <Input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes"
-            />
+            <Label>Account Notes</Label>
+            <Text>
+              {chequeData?.accountsNotes && chequeData.accountsNotes !== '--'
+                ? chequeData.accountsNotes
+                : '--'}
+            </Text>
             <VerticalSpace1 />
             <VerticalSpace1 />
           </DialogContent>
@@ -596,7 +614,11 @@ export function ChequeEntryDialog({ onClose, chequeData }) {
                 }}
               >
                 <img
-                  src={chequeData?.image}
+                  src={
+                    Array.isArray(chequeData?.image)
+                      ? chequeData.image[0]
+                      : chequeData?.image
+                  }
                   alt="Cheque"
                   onDragStart={(e) => e.preventDefault()}
                   onMouseDown={(e) => {

@@ -215,18 +215,6 @@ exports[`supplyReportFormatGenerator matches snapshot (isBundle=false) 1`] = `
   {
     "style": {
       "fontFamily": "Arial",
-      "fontSize": "14px",
-      "fontWeight": "700",
-      "marginBottom": "5px",
-      "marginTop": "10px",
-      "textAlign": "center",
-    },
-    "type": "text",
-    "value": "Old Bills in hand",
-  },
-  {
-    "style": {
-      "fontFamily": "Arial",
       "fontSize": "12px",
       "marginTop": "20px",
     },

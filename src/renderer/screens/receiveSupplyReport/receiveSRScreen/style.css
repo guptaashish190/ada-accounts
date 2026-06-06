@@ -91,8 +91,6 @@
 
 .payment-terms, .supplementary-label {
   font-size: 0.7rem;
-  background: #3b82f6;
-  color: white;
   padding: 3px 8px;
   border-radius: 16px;
   font-weight: 500;
@@ -100,8 +98,15 @@
   letter-spacing: 0.5px;
 }
 
+.payment-terms {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
 .supplementary-label {
   background: #f59e0b;
+  color: white;
 }
 
 .party-bills-container {

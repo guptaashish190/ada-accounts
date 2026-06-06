@@ -55,6 +55,13 @@ export default (data) => {
         item.party.area,
       )} - ${globalUtils.getCurrencyFormat(item.amount)}`,
     });
+    if (item.accountsNotes) {
+      commands.push({
+        type: 'text',
+        style: { fontSize: '11px', fontFamily: 'Arial' },
+        value: `Notes: ${item.accountsNotes}`,
+      });
+    }
 
     commands.push({
       type: 'text',

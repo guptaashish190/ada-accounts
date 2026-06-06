@@ -126,6 +126,7 @@ export default function CreatePaymentReceiptDialog({
         return {
           amount: parseInt(pri1.amount, 10),
           partyId: pri1.partyId,
+          ...(pri1.accountsNotes ? { accountsNotes: pri1.accountsNotes } : {}),
         };
       });
       const createdByName = await resolveUsernameForPersist(
@@ -366,6 +367,7 @@ export default function CreatePaymentReceiptDialog({
                 <th>Area</th>
                 <th>File</th>
                 <th>Amount</th>
+                <th>Notes</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -432,6 +434,7 @@ function PaymentReceiptRow({ pr, setAmount, amount, editable, onDelete }) {
           type="number"
         />
       </td>
+      <td>{pr.accountsNotes || '--'}</td>
       <td>
         <Button
           disabled={!editable}

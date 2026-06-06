@@ -1,22 +1,16 @@
 /* eslint-disable no-restricted-syntax */
 import {
   getDocs,
-  limit,
-  orderBy,
   query,
   updateDoc,
   where,
 } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 
-import { useNavigate } from 'react-router-dom';
 import {
   Button,
-  Card,
   Checkbox,
-  Dropdown,
   Input,
-  Option,
   Spinner,
   Text,
 } from '@fluentui/react-components';
@@ -43,21 +37,19 @@ export default function DaySupplyReportPrint() {
   const [showDefaultersOnly, setShowDefaultersOnly] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const { allUsers } = useAuthUser();
   const { currentCompanyId } = useCompany();
 
   const handlePrint = () => {
     window.print();
   };
 
-  const onSearch = (clear) => {
+  const onSearch = () => {
     const supplyReportRef = getCompanyCollection(
       currentCompanyId,
       DB_NAMES.SUPPLY_REPORTS,
     );
     const ordersRef = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
 
-    // Build the query dynamically based on non-empty filter fields
     let dynamicQuery = supplyReportRef;
     let dynamicQueryOrder = ordersRef;
 
@@ -83,7 +75,6 @@ export default function DaySupplyReportPrint() {
       where('supplyReportId', '==', ''),
     );
 
-    // Fetch parties based on the dynamic query
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -102,6 +93,7 @@ export default function DaySupplyReportPrint() {
         const querySnapshotunsupplier = await getDocs(dynamicQueryOrder);
         const unSuppliedOrders1 = querySnapshotunsupplier.docs.map((doc1) => ({
           ...doc1.data(),
+          id: doc1.id,
         }));
 
         setSupplyReports(supplyReportData);
@@ -125,16 +117,18 @@ export default function DaySupplyReportPrint() {
       return;
     }
     try {
-      Object.keys(newRemarks).forEach(async (orderId) => {
-        const orderRef = getCompanyDoc(
-          currentCompanyId,
-          DB_NAMES.ORDERS,
-          orderId,
-        );
-        await updateDoc(orderRef, {
-          accountsNotes: newRemarks[orderId],
-        });
-      });
+      await Promise.all(
+        Object.keys(newRemarks).map(async (orderId) => {
+          const orderRef = getCompanyDoc(
+            currentCompanyId,
+            DB_NAMES.ORDERS,
+            orderId,
+          );
+          await updateDoc(orderRef, {
+            accountsNotes: newRemarks[orderId],
+          });
+        }),
+      );
       setAllowEditRemarks(false);
       onSearch();
     } catch (e) {
@@ -143,7 +137,7 @@ export default function DaySupplyReportPrint() {
   };
 
   useEffect(() => {
-    onSearch(true);
+    onSearch();
   }, []);
 
   return (
@@ -186,12 +180,11 @@ export default function DaySupplyReportPrint() {
           </div>
         ) : (
           <div>
-            {supplyReports.map((sr, i) => {
+            {supplyReports.map((sr) => {
               return (
                 <SupplyReportRow
                   showDefaultersOnly={showDefaultersOnly}
                   key={`supply-report-all-list-${sr.id}`}
-                  index={i}
                   data={sr}
                   editRemarks={allowEditRemark}
                   setRemarks={setNewRemarks}
@@ -229,6 +222,7 @@ export default function DaySupplyReportPrint() {
                 {unSuppliedOrders?.map((unso) => {
                   return (
                     <SupplyReportOrderRow
+                      key={`unsupplied-${unso.id}`}
                       editRemarks={allowEditRemark}
                       billId={unso.id}
                       setRemarks={setNewRemarks}
@@ -236,9 +230,7 @@ export default function DaySupplyReportPrint() {
                   );
                 })}
               </table>
-            ) : (
-              ''
-            )}
+            ) : null}
           </div>
         )}
         {!loading && supplyReports.length === 0 ? (
@@ -253,13 +245,10 @@ export default function DaySupplyReportPrint() {
 
 function SupplyReportRow({
   data,
-  index,
   editRemarks,
   setRemarks,
   showDefaultersOnly,
 }) {
-  const navigate = useNavigate();
-
   const { allUsers } = useAuthUser();
 
   return (
@@ -298,6 +287,7 @@ function SupplyReportRow({
 
       {data.orders.map((x) => (
         <SupplyReportOrderRow
+          key={`order-${x}`}
           showDefaultersOnly={showDefaultersOnly}
           setRemarks={setRemarks}
           editRemarks={editRemarks}
@@ -352,9 +342,6 @@ function SupplyReportOrderRow({
         DB_NAMES.CHEQUES,
       );
 
-      const PAYMENT_BEFORE_DAYS = 3;
-      const PAYMENT_AFTER_DAYS = 7;
-
       const dateFrom = new Date(orderObj.billCreationTime);
       dateFrom.setDate(dateFrom.getDate() - 3);
       dateFrom.setHours(0);
@@ -400,54 +387,6 @@ function SupplyReportOrderRow({
       setCashReceipts(cashDocs);
       setChequeReceipts(chequeDocs);
       setUpiReceipts(upiDocs);
-
-      // last payment recd
-      const cashQueryLast = query(
-        cashRef,
-        where('parties', 'array-contains', orderObj.partyId),
-        where('timestamp', '<', dateFrom.getTime()),
-        orderBy('timestamp', 'desc'),
-        limit(1),
-      );
-      const chequeQueryLast = query(
-        chequeRef,
-        where('partyId', '==', orderObj.partyId),
-        where('timestamp', '<', dateFrom.getTime()),
-        orderBy('timestamp', 'desc'),
-        limit(1),
-      );
-
-      const upiQueryLast = query(
-        upiRef,
-        where('partyId', '==', orderObj.partyId),
-        where('timestamp', '<', dateFrom.getTime()),
-        orderBy('timestamp', 'desc'),
-        limit(1),
-      );
-      const cashQueryLastDocs = await getDocs(cashQueryLast);
-      const upiQueryLastDocs = await getDocs(upiQueryLast);
-      const chequeQueryLastDocs = await getDocs(chequeQueryLast);
-
-      const cashLastValue =
-        cashQueryLastDocs.docs.length > 0
-          ? cashQueryLastDocs.docs[0].data()
-          : undefined;
-      const upiLastValue =
-        upiQueryLastDocs.docs.length > 0
-          ? upiQueryLastDocs.docs[0].data()
-          : undefined;
-      const chequeLastValue =
-        chequeQueryLastDocs.docs.length > 0
-          ? chequeQueryLastDocs.docs[0].data()
-          : undefined;
-
-      const lastPayment1 = [
-        { ...cashLastValue, type: 'cash' },
-        { ...upiLastValue, type: 'upi' },
-        { ...chequeLastValue, type: 'cheque' },
-      ].sort((x1, x2) => (x2?.timestamp || 0) - (x1?.timestamp || 0))[0];
-
-      setLastPayment(lastPayment1.timestamp ? lastPayment1 : undefined);
     } catch (e) {
       console.log(e);
     }
@@ -465,7 +404,6 @@ function SupplyReportOrderRow({
             upiReceipts,
             chequeReceipts,
             cashReceipts,
-            lastPayment,
             order,
           ),
         );
@@ -491,14 +429,6 @@ function SupplyReportOrderRow({
       </td>
       <td>{order.billNumber}</td>
       <td>{globalUtils.getCurrencyFormat(order.orderAmount)}</td>
-      {/* <td style={{ width: '20vw' }}>
-        {order.bags
-          ? order.bags
-              .filter((x) => x.quantity > 0)
-              .map((x) => `${x.quantity} ${x.bagType}`)
-              .join(',')
-          : ''}
-      </td> */}
 
       <td>{order.party?.creditDays || '--'}</td>
 

@@ -170,4 +170,41 @@ describe('MrDetailPanel component', () => {
     });
     expect(screen.queryByTestId('map')).not.toBeInTheDocument();
   });
+
+  test('renders Payment visit outcome instead of No Order', async () => {
+    const { onSnapshot } = require('firebase/firestore');
+    let snapshotCalls = 0;
+    onSnapshot.mockImplementation((ref, cb) => {
+      snapshotCalls += 1;
+      if (snapshotCalls === 1) {
+        cb({
+          docs: [
+            {
+              data: () => ({
+                partyId: 'party1',
+                status: 'Payment',
+                timestamp: 1700000000000,
+                paymentTotal: 1500,
+                payments: [
+                  { type: 'cash', amount: 1000 },
+                  { type: 'upi', amount: 500 },
+                ],
+                visitImage: 'http://example.com/selfie.jpg',
+              }),
+            },
+          ],
+        });
+      } else {
+        cb({ docs: [], exists: () => false, data: () => ({}) });
+      }
+      return jest.fn();
+    });
+
+    await act(async () => {
+      render(<MrDetailPanel data={defaultData} />);
+    });
+
+    expect(screen.getByText(/Payment: ₹1500/)).toBeInTheDocument();
+    expect(screen.queryByText(/^No Order/)).not.toBeInTheDocument();
+  });
 });

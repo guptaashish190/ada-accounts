@@ -3,7 +3,7 @@
  * (ERP sync owns order.balance via outstanding import).
  */
 
-export const getErpBalance = (bill) => Number(bill?.balance ?? 0);
+export const getErpBalance = (bill) => Number(bill?.orderAmount ?? 0);
 
 export const getStoredLastHandover = (bill) => {
   if (

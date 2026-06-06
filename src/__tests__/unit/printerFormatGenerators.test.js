@@ -231,6 +231,70 @@ describe('supplyReportFormatGenerator', () => {
     ).toBe(false);
   });
 
+  test('when bundle is provided on supply report, appends bundle section', () => {
+    const combinedCommands = supplyReportFormatGenerator(
+      {
+        ...SUPPLY_REPORT_DATA,
+        bundle: {
+          receiptNumber: 'BD-000042',
+          bills: [
+            {
+              partyId: 'p2',
+              party: { name: 'XYZ Pharma', area: 'Karol Bagh' },
+              billNumber: 'B-2001',
+              balance: 5000,
+              handoverBalance: 4800,
+            },
+          ],
+        },
+        includeBarcode: false,
+      },
+      false,
+    );
+
+    const bundleReceipt = combinedCommands.find(
+      (c) => c.type === 'text' && c.value === 'BD-000042',
+    );
+    const bundleBillLine = combinedCommands.find(
+      (c) => c.type === 'text' && String(c.value).includes('B-2001'),
+    );
+
+    const oldBillsLabel = combinedCommands.find(
+      (c) => c.type === 'text' && c.value === 'Old bills in hand',
+    );
+
+    expect(bundleReceipt).toBeDefined();
+    expect(bundleReceipt.style.fontSize).toBe('14px');
+    expect(oldBillsLabel).toBeDefined();
+    expect(oldBillsLabel.style.fontSize).toBe('12px');
+    expect(
+      combinedCommands.some(
+        (c) => c.type === 'text' && c.value === 'Bundle',
+      ),
+    ).toBe(false);
+    expect(
+      combinedCommands.some(
+        (c) =>
+          c.type === 'text' &&
+          String(c.value).startsWith('Assigned to:'),
+      ),
+    ).toBe(false);
+    expect(bundleBillLine.value).toContain('₹4800');
+    expect(
+      combinedCommands.some((c) => c.type === 'barCode'),
+    ).toBe(false);
+  });
+
+  test('when includeBarcode=false, omits barcode command', () => {
+    const noBarcodeCommands = supplyReportFormatGenerator(
+      { ...SUPPLY_REPORT_DATA, includeBarcode: false },
+      false,
+    );
+    expect(
+      noBarcodeCommands.some((c) => c.type === 'barCode'),
+    ).toBe(false);
+  });
+
   test('when isBundle=true, omits bills with zero handover from print', () => {
     const bundleData = {
       ...SUPPLY_REPORT_DATA,

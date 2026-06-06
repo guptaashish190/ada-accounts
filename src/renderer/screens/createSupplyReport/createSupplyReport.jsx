@@ -30,9 +30,8 @@ import {
   doc,
   getDocs,
   query,
-  setDoc,
-  updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import BillSelector from '../../components/billSelector/billSelector';
 import AllUsersContext, { useAuthUser } from '../../contexts/allUsersContext';
@@ -230,11 +229,19 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           receiptNumber: newSrNumber2,
         };
       }
-      await setDoc(reportDocRef, supplyReport);
+      const now = Timestamp.now().toMillis();
+      const employeeId = firebaseAuth.currentUser.uid;
+      const batch = writeBatch(firebaseDB);
 
-      for (const modifiedBill1 of modifiedBills) {
-        const orderRef = getCompanyDoc(currentCompanyId, DB_NAMES.ORDERS, modifiedBill1.id);
-        const toUpdateData = {
+      batch.set(reportDocRef, supplyReport);
+
+      modifiedBills.forEach((modifiedBill1) => {
+        const orderRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.ORDERS,
+          modifiedBill1.id,
+        );
+        batch.update(orderRef, {
           orderStatus: constants.firebase.supplyReportStatus.TOACCOUNTS,
           billNumber: modifiedBill1.billNumber,
           bags: modifiedBill1.bags || [],
@@ -244,14 +251,15 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           flow: [
             ...(modifiedBill1.flow || []),
             {
-              employeeId: firebaseAuth.currentUser.uid,
-              timestamp: Timestamp.now().toMillis(),
+              employeeId,
+              timestamp: now,
               type: constants.firebase.supplyReportStatus.TOACCOUNTS,
             },
           ],
-        };
-        await updateDoc(orderRef, toUpdateData);
-      }
+        });
+      });
+
+      await batch.commit();
 
       await globalUtils.incrementReceiptCounter(
         constants.newReceiptCounters.SUPPLYREPORTS,
@@ -314,6 +322,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           {editable && (
             <div className="add-bill-section">
               <BillSelector
+                defaultOpen={!prefillSupplyReport}
                 focusFirstElement={() => {
                   const inputId = document.getElementById(
                     `createsupreport-bill-${0}`,

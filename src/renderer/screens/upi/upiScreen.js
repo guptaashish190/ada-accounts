@@ -40,6 +40,10 @@ import {
   getCompanyDoc,
   DB_NAMES,
 } from '../../services/firestoreHelpers';
+import { enrichPaymentItems } from '../../services/paymentSourceUtils';
+import {
+  PaymentSourceInfo,
+} from '../../common/paymentSourceInfo';
 
 export default function UpiScreen() {
   const [receivedUpiItems, setReceivedUpiItems] = useState([]);
@@ -90,7 +94,11 @@ export default function UpiScreen() {
         reportsData,
         currentCompanyId,
       );
-      setReceivedUpiItems(dataWithParty2);
+      const enriched = await enrichPaymentItems(
+        currentCompanyId,
+        dataWithParty2,
+      );
+      setReceivedUpiItems(enriched);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching supply reports:', error);
@@ -121,13 +129,17 @@ export default function UpiScreen() {
             documents,
             currentCompanyId,
           );
+          const enriched = await enrichPaymentItems(
+            currentCompanyId,
+            dataWithParty,
+          );
           setUnReceivedUpiItems(
-            dataWithParty.filter(
+            enriched.filter(
               (x) => x.type === 'upi' || x.type === 'neft' || x.type === undefined,
             ),
           );
           setUnReceivedChequeItems(
-            dataWithParty.filter((x) => x.type === 'cheque'),
+            enriched.filter((x) => x.type === 'cheque'),
           );
         } catch (error) {
           console.error('Error fetching pending payments stream:', error);
@@ -181,6 +193,7 @@ export default function UpiScreen() {
                 <th>Type</th>
                 <th>Party</th>
                 <th>Amount</th>
+                <th>Source</th>
                 <th>Status</th>
                 <th>Created By</th>
                 <th>Action</th>
@@ -222,6 +235,7 @@ function UpiItemRow({ data, refreshData }) {
       <td>{data.type?.toUpperCase()}</td>
       <td>{data.party?.name}</td>
       <td>{globalUtils.getCurrencyFormat(data.amount)}</td>
+      <td>{data.sourceLabels || '--'}</td>
       <td
         style={{
           color: data.isReceived
@@ -258,9 +272,14 @@ function UpiItemRow({ data, refreshData }) {
               if (refreshData) refreshData();
             }}
             chequeData={{
-              image: data.imageUrl,
+              image: Array.isArray(data.imageUrl)
+                ? data.imageUrl[0]
+                : data.imageUrl,
               party: data.party,
               amount: data.amount,
+              sourceRefs: data.sourceRefs,
+              partyId: data.partyId,
+              accountsNotes: data.accountsNotes,
             }}
           />
           )
@@ -302,6 +321,10 @@ function UPIDialog({ data, createdBy }) {
     resetImageView();
     setShowImageViewer(true);
   };
+
+  const imageSrc = Array.isArray(data?.imageUrl)
+    ? data.imageUrl[0]
+    : data?.imageUrl;
 
   const onDone = async () => {
     if (loading) return;
@@ -366,7 +389,7 @@ function UPIDialog({ data, createdBy }) {
                   objectFit: 'contain',
                   cursor: 'zoom-in',
                 }}
-                src={data?.imageUrl}
+                src={imageSrc}
                 onClick={() => openImageViewer()}
               />
               <div style={{ marginLeft: '20px' }}>
@@ -386,8 +409,19 @@ function UPIDialog({ data, createdBy }) {
                   Created By: <b>{createdBy}</b>
                 </Text>
                 <VerticalSpace1 />
+                <Text size={400}>Source:</Text>
+                <PaymentSourceInfo
+                  sourceRefs={data.sourceRefs}
+                  partyId={data.partyId}
+                  showNotes={false}
+                />
+                <VerticalSpace1 />
                 <Text size={400}>
-                  Comments: <b>{data.comment}</b>
+                  Account Notes:{' '}
+                  <b>{data.accountsNotes && data.accountsNotes !== '--'
+                    ? data.accountsNotes
+                    : '--'}
+                  </b>
                 </Text>
                 <VerticalSpace1 />
               </div>
@@ -488,7 +522,7 @@ function UPIDialog({ data, createdBy }) {
                 }}
               >
                 <img
-                  src={data?.imageUrl}
+                  src={imageSrc}
                   alt="UPI"
                   onDragStart={(e) => e.preventDefault()}
                   onMouseDown={(e) => {

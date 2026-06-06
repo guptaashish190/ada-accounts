@@ -13,6 +13,7 @@ import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers'
 import constants from '../../constants';
 import { firebaseDB } from '../../firebaseInit';
 import cashReceiptFormatGenerator from '../../common/printerDataGenerator/cashReceiptFormatGenerator';
+import { enrichCashReceipts } from '../../services/paymentSourceUtils';
 
 export default function PaymentReceipts() {
   const navigate = useNavigate();
@@ -51,7 +52,8 @@ export default function PaymentReceipts() {
     });
     receiptData = receiptData.filter((x) => x.status !== 'CANCELLED');
     receiptData.sort((x, y) => y.timestamp - x.timestamp);
-    setReceipts(receiptData);
+    const enriched = await enrichCashReceipts(currentCompanyId, receiptData);
+    setReceipts(enriched);
   };
 
   const { allUsers } = useAuthUser();
@@ -154,6 +156,8 @@ export default function PaymentReceipts() {
               <th>Receipt</th>
               <th>Date</th>
               <th>Username</th>
+              <th>Source</th>
+              <th>Account Notes</th>
               <th>Parties</th>
               <th>Amount</th>
             </tr>
@@ -180,6 +184,8 @@ export default function PaymentReceipts() {
                         ?.username
                     }
                   </td>
+                  <td className="username">{rc.sourceLabel || '--'}</td>
+                  <td className="username">{rc.accountsNotes || '--'}</td>
                   <td className="username">{rc.prItems.length}</td>
                   <td className="username">
                     {globalUtils.getCurrencyFormat(

@@ -236,6 +236,10 @@
   border-left: 4px solid #f7630c;
 }
 
+.visited-card.payment-collected {
+  border-left: 4px solid #0078d4;
+}
+
 .visited-card .party-name {
   font-size: 14px;
   font-weight: 600;
@@ -296,6 +300,11 @@
 
 .visited-card .visit-outcome.no-order {
   color: #9a3a00;
+}
+
+.visited-card .visit-outcome.payment {
+  color: #0078d4;
+  font-weight: 600;
 }
 
 .visited-card .visit-time {

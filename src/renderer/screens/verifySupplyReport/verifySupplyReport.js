@@ -39,8 +39,8 @@ import {
   limitToLast,
   orderBy,
   query,
-  updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import shortid from 'shortid';
 import { evaluate } from 'mathjs';
@@ -64,6 +64,8 @@ import Loader from '../../common/loader';
 import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
 import SupplementaryBillDialog from './supplementaryBillDialog/supplementaryBillDialog';
 import constants from '../../constants';
+import { useAuthUser } from '../../contexts/allUsersContext';
+import supplyReportFormatGenerator from '../../common/printerDataGenerator/supplyReportFormatGenerator';
 
 // BALANCE WILL BE ADDED TO THE ORDER DOCUMENT BEFORE THIS SCREEN FOR A NEW ORDER(BILL)
 // BECAUSE OF THIS, AS THE OLD BILLS ARE FILTERED BASED ON BALANCE, THE NEW BILL SHOULD NOT
@@ -89,6 +91,7 @@ export default function VerifySupplyReport() {
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
   const navigate = useNavigate();
+  const { allUsers } = useAuthUser();
 
   // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
@@ -253,108 +256,145 @@ export default function VerifySupplyReport() {
     return { isValid: true };
   };
 
-  // Update MR routes with party assignments
-  const updateMrRoutesWithParties = async () => {
-    try {
-      const routeUpdates = {};
+  const buildMrRouteBatchUpdates = async () => {
+    const routeUpdates = {};
 
-      // Group parties by MR and day
-      Object.entries(orderMrAssignments).forEach(([orderId, assignment]) => {
-        if (assignment.mrName && assignment.day) {
-          const bill = bills.find((b) => b.id === orderId);
-          if (bill) {
-            const key = `${assignment.mrName}-${assignment.day}`;
-            if (!routeUpdates[key]) {
-              routeUpdates[key] = {
-                mrName: assignment.mrName,
-                day: assignment.day,
-                parties: [],
-              };
-            }
-            routeUpdates[key].parties.push(bill.partyId);
+    Object.entries(orderMrAssignments).forEach(([orderId, assignment]) => {
+      if (assignment.mrName && assignment.day) {
+        const bill = bills.find((b) => b.id === orderId);
+        if (bill) {
+          const key = `${assignment.mrName}-${assignment.day}`;
+          if (!routeUpdates[key]) {
+            routeUpdates[key] = {
+              mrName: assignment.mrName,
+              day: assignment.day,
+              parties: [],
+            };
           }
+          routeUpdates[key].parties.push(bill.partyId);
         }
-      });
+      }
+    });
 
-      // Update each MR route document
-      const updatePromises = Object.entries(routeUpdates).map(
-        async ([key, routeUpdate]) => {
-          // Find the MR route document by name
-          const mrRouteDoc = mrRoutes.find(
-            (route) => route.name === routeUpdate.mrName,
+    const updatesByMrName = {};
+    Object.values(routeUpdates).forEach((routeUpdate) => {
+      if (!updatesByMrName[routeUpdate.mrName]) {
+        updatesByMrName[routeUpdate.mrName] = [];
+      }
+      updatesByMrName[routeUpdate.mrName].push(routeUpdate);
+    });
+
+    const batchEntries = await Promise.all(
+      Object.entries(updatesByMrName).map(async ([mrName, dayUpdates]) => {
+        const mrRouteDoc = mrRoutes.find((route) => route.name === mrName);
+        if (!mrRouteDoc) {
+          console.warn(`MR route ${mrName} not found`);
+          return null;
+        }
+
+        const mrRouteRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.MR_ROUTES,
+          mrRouteDoc.id,
+        );
+        const currentDoc = await getDoc(mrRouteRef);
+        if (!currentDoc.exists()) {
+          console.warn(`MR route document ${mrRouteDoc.id} not found`);
+          return null;
+        }
+
+        const updatedRoute = [...currentDoc.data().route];
+
+        dayUpdates.forEach((routeUpdate) => {
+          const dayIndex = updatedRoute.findIndex(
+            (dayRoute) => dayRoute.day === routeUpdate.day,
           );
-
-          if (!mrRouteDoc) {
-            console.warn(`MR route ${routeUpdate.mrName} not found`);
+          if (dayIndex === -1) {
+            console.warn(
+              `Day ${routeUpdate.day} not found in MR route ${routeUpdate.mrName}`,
+            );
             return;
           }
 
-          const mrRouteRef = getCompanyDoc(
-            currentCompanyId,
-            DB_NAMES.MR_ROUTES,
-            mrRouteDoc.id,
+          const currentParties = updatedRoute[dayIndex].parties || [];
+          const newParties = routeUpdate.parties.filter(
+            (partyId) => !currentParties.includes(partyId),
           );
 
-          try {
-            // Get the current document data
-            const currentDoc = await getDoc(mrRouteRef);
-            if (!currentDoc.exists()) {
-              console.warn(`MR route document ${mrRouteDoc.id} not found`);
-              return;
-            }
+          updatedRoute[dayIndex] = {
+            ...updatedRoute[dayIndex],
+            parties: [...currentParties, ...newParties],
+          };
+        });
 
-            const currentData = currentDoc.data();
-            const updatedRoute = [...currentData.route];
+        return { ref: mrRouteRef, payload: { route: updatedRoute } };
+      }),
+    );
 
-            // Find the day index in the route array
-            const dayIndex = updatedRoute.findIndex(
-              (dayRoute) => dayRoute.day === routeUpdate.day,
-            );
+    return batchEntries.filter(Boolean);
+  };
 
-            if (dayIndex !== -1) {
-              // Get current parties array or initialize empty array
-              const currentParties = updatedRoute[dayIndex].parties || [];
-
-              // Add new parties that aren't already in the array
-              const newParties = routeUpdate.parties.filter(
-                (partyId) => !currentParties.includes(partyId),
-              );
-
-              // Update the parties array
-              updatedRoute[dayIndex] = {
-                ...updatedRoute[dayIndex],
-                parties: [...currentParties, ...newParties],
-              };
-
-              // Update the entire document with the modified route
-              await updateDoc(mrRouteRef, {
-                route: updatedRoute,
-              });
-
-              console.log(
-                `Updated MR route ${routeUpdate.mrName} for day ${routeUpdate.day} with new parties:`,
-                newParties,
-              );
-            } else {
-              console.warn(
-                `Day ${routeUpdate.day} not found in MR route ${routeUpdate.mrName}`,
-              );
-            }
-          } catch (error) {
-            console.error(
-              `Error updating MR route ${routeUpdate.mrName}:`,
-              error,
-            );
-          }
-        },
-      );
-
-      // Wait for all updates to complete
-      await Promise.all(updatePromises);
-    } catch (error) {
-      console.error('Error updating MR routes with parties:', error);
-      showToast(dispatchToast, 'Error updating MR routes', 'error');
+  const buildOrderDispatchUpdate = (bill1, now, employeeId) => {
+    const partyCreditDays = allPartiesCreditDays[bill1.partyId];
+    const billDate = bill1.billCreationTime || now;
+    let dueDate = null;
+    if (partyCreditDays != null) {
+      const billDateObj = new Date(billDate);
+      billDateObj.setDate(billDateObj.getDate() + partyCreditDays);
+      dueDate = billDateObj.getTime();
     }
+
+    return {
+      balance: parseInt(bill1.orderAmount, 10),
+      with: supplyReport.supplymanId,
+      orderStatus: 'Dispatched',
+      supplyReportId: supplyReport.id,
+      creditDays: partyCreditDays,
+      dueDate,
+      schedulePaymentDate: dueDate,
+      paymentStatus: 'NOT_DUE',
+      flow: [
+        ...bill1.flow,
+        {
+          employeeId,
+          timestamp: now,
+          type: 'Dispatched',
+          comment: bill1.notes || '',
+        },
+      ],
+    };
+  };
+
+  const buildOldOrderDispatchUpdate = (modifiedBill1) => ({
+    accountsNotes: modifiedBill1.notes || '',
+    with: supplyReport.supplymanId,
+    lastHandoverBalance: getHandoverBalance(modifiedBill1),
+  });
+
+  const printDispatchReceipt = (dispatchTimestamp, extraBills, bundleNumber) => {
+    window.electron.ipcRenderer.sendMessage(
+      'print',
+      supplyReportFormatGenerator({
+        supplyman: allUsers.find((x) => x.uid === supplyReport.supplymanId)
+          ?.username,
+        dispatchTime: globalUtils.getTimeFormat(dispatchTimestamp),
+        receiptNumber: supplyReport.receiptNumber,
+        bills,
+        oldBills: [...attachedBills, ...supplementaryBills].filter(
+          (b) => b.balance === 0,
+        ),
+        numCases: globalUtils.getTotalCases(bills),
+        numPolybags: globalUtils.getTotalPolyBags(bills),
+        numPackets: globalUtils.getTotalPackets(bills),
+        dispatchNotes: supplyReport.note,
+        accountDispatchNotes: accountsNotes,
+        bundle:
+          extraBills.length > 0
+            ? { receiptNumber: bundleNumber, bills: extraBills }
+            : undefined,
+        includeBarcode: false,
+      }),
+    );
   };
 
   const onDispatch = async () => {
@@ -365,10 +405,15 @@ export default function VerifySupplyReport() {
         DB_NAMES.SUPPLY_REPORTS,
         supplyReport.id,
       );
+      const now = Timestamp.now().toMillis();
+      const employeeId = firebaseAuth.currentUser.uid;
 
-      await updateDoc(supplyReportRef, {
+      const mrRouteBatchUpdates = await buildMrRouteBatchUpdates();
+      const batch = writeBatch(firebaseDB);
+
+      batch.update(supplyReportRef, {
         status: constants.firebase.supplyReportStatus.DISPATCHED,
-        dispatchTimestamp: Timestamp.now().toMillis(),
+        dispatchTimestamp: now,
         dispatchAccountNotes: accountsNotes,
         attachedBills: [],
         supplementaryBills: [],
@@ -376,39 +421,57 @@ export default function VerifySupplyReport() {
         partyPayments: [],
       });
 
-      await Promise.all(
-        bills.map(async (bill1) => {
-          await updateOrder(bill1);
-        }),
-      );
+      bills.forEach((bill1) => {
+        const orderRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.ORDERS,
+          bill1.id,
+        );
+        batch.update(
+          orderRef,
+          buildOrderDispatchUpdate(bill1, now, employeeId),
+        );
+      });
 
-      // update credit days for all parties
-      await Promise.all(
-        Object.keys(allPartiesCreditDays).map(async (creditDaysParty) => {
-          const partyRef = getCompanyDoc(
-            currentCompanyId,
-            DB_NAMES.PARTIES,
-            creditDaysParty,
-          );
-          await updateDoc(partyRef, {
-            creditDays: allPartiesCreditDays[creditDaysParty],
-          });
-        }),
-      );
+      Object.keys(allPartiesCreditDays).forEach((creditDaysParty) => {
+        const partyRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.PARTIES,
+          creditDaysParty,
+        );
+        batch.update(partyRef, {
+          creditDays: allPartiesCreditDays[creditDaysParty],
+        });
+      });
 
-      // Update MR routes with party assignments
-      await updateMrRoutesWithParties();
+      mrRouteBatchUpdates.forEach(({ ref, payload }) => {
+        batch.update(ref, payload);
+      });
 
-      await Promise.all(
-        [...attachedBills, ...supplementaryBills].map(async (bill1) => {
-          await updateOldOrder(bill1);
-        }),
-      );
+      [...attachedBills, ...supplementaryBills].forEach((bill1) => {
+        const orderRef = getCompanyDoc(
+          currentCompanyId,
+          DB_NAMES.ORDERS,
+          bill1.id,
+        );
+        batch.update(orderRef, buildOldOrderDispatchUpdate(bill1));
+      });
+
+      await batch.commit();
 
       const extraBills = [...attachedBills, ...supplementaryBills].filter(
         (x) => x.balance !== 0,
       );
-      await createBundleForExtraBills(extraBills);
+      let bundleNumber = null;
+      if (extraBills.length > 0) {
+        bundleNumber = await globalUtils.getNewReceiptNumber(
+          constants.newReceiptCounters.BUNDLES,
+          currentCompanyId,
+        );
+        await createBundleForExtraBills(extraBills, bundleNumber);
+      }
+
+      printDispatchReceipt(now, extraBills, bundleNumber);
 
       setLoading(false);
       navigate(-1);
@@ -418,13 +481,8 @@ export default function VerifySupplyReport() {
     }
   };
 
-  const createBundleForExtraBills = async (extraBills) => {
+  const createBundleForExtraBills = async (extraBills, bundleNumber) => {
     if (!extraBills.length) return;
-
-    const bundleNumber = await globalUtils.getNewReceiptNumber(
-      constants.newReceiptCounters.BUNDLES,
-      currentCompanyId,
-    );
 
     const billBundlesRef = getCompanyCollection(
       currentCompanyId,
@@ -447,73 +505,6 @@ export default function VerifySupplyReport() {
       currentCompanyId,
     );
   };
-  const updateOrder = async (bill1) => {
-    try {
-      // Create a reference to the specific order document
-      const orderRef = getCompanyDoc(
-        currentCompanyId,
-        DB_NAMES.ORDERS,
-        bill1.id,
-      );
-
-      // Calculate due date based on credit days
-      const partyCreditDays = allPartiesCreditDays[bill1.partyId];
-      const billDate = bill1.billCreationTime || Timestamp.now().toMillis();
-      let dueDate = null;
-      if (partyCreditDays != null) {
-        const billDateObj = new Date(billDate);
-        billDateObj.setDate(billDateObj.getDate() + partyCreditDays);
-        dueDate = billDateObj.getTime();
-      }
-
-      // Update the "orderStatus" field in the order document to "dispatched"
-      await updateDoc(orderRef, {
-        balance: parseInt(bill1.orderAmount, 10),
-        with: supplyReport.supplymanId,
-        orderStatus: 'Dispatched',
-        supplyReportId: supplyReport.id,
-        // Credit days tracking (Story 1.1/1.2)
-        creditDays: partyCreditDays,
-        dueDate,
-        schedulePaymentDate: dueDate,
-        paymentStatus: 'NOT_DUE',
-        flow: [
-          ...bill1.flow,
-          {
-            employeeId: firebaseAuth.currentUser.uid,
-            timestamp: Timestamp.now().toMillis(),
-            type: 'Dispatched',
-            comment: bill1.notes || '',
-          },
-        ],
-      });
-
-      console.log(`Order status updated to "dispatched"`);
-    } catch (error) {
-      console.error(`Error updating order  status:`, error);
-    }
-  };
-  const updateOldOrder = async (modifiedBill1) => {
-    try {
-      // Create a reference to the specific order document
-      const orderRef = getCompanyDoc(
-        currentCompanyId,
-        DB_NAMES.ORDERS,
-        modifiedBill1.id,
-      );
-
-      await updateDoc(orderRef, {
-        accountsNotes: modifiedBill1.notes || '',
-        with: supplyReport.supplymanId,
-        lastHandoverBalance: getHandoverBalance(modifiedBill1),
-      });
-
-      console.log(`Order status updated to "dispatched"`);
-    } catch (error) {
-      console.error(`Error updating order  status:`, error);
-    }
-  };
-
   if (loading) {
     return <Loader />;
   }

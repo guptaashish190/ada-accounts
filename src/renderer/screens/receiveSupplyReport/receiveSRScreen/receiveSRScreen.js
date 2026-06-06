@@ -4,7 +4,7 @@
 /* eslint-disable radix */
 /* eslint-disable no-restricted-syntax */
 
-import { Timestamp, getDoc, updateDoc } from 'firebase/firestore';
+import { Timestamp, getDoc, writeBatch } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { DatePicker, setMonth } from '@fluentui/react-datepicker-compat';
@@ -28,7 +28,7 @@ import { VerticalSpace1 } from '../../../common/verticalSpace';
 import globalUtils from '../../../services/globalUtils';
 import { showToast } from '../../../common/toaster';
 import './style.css';
-import { firebaseAuth } from '../../../firebaseInit';
+import { firebaseAuth, firebaseDB } from '../../../firebaseInit';
 import { useCompany } from '../../../contexts/companyContext';
 import { useSettingsContext } from '../../../contexts/settingsContext';
 import {
@@ -50,17 +50,17 @@ export default function ReceiveSRScreen() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const { supplyReport, isBundle } = state;
-  const [allBills, setAllBills] = useState([]);
-  const [groupedOldBills, setGroupedOldBills] = useState([]);
+  const [groupedPrimaryBills, setGroupedPrimaryBills] = useState({});
+  const [groupedOldBills, setGroupedOldBills] = useState({});
   const [groupedSupplementaryBills, setGroupedSupplementaryBills] = useState(
-    [],
+    {},
   );
   const [supplymanUser, setSupplymanUser] = useState();
   const [receivedBills, setReceivedBills] = useState([]);
   const [returnedBills, setReturnedBills] = useState([]);
   const [receivedReturnedBillIds, setReceivedReturnedBillIds] = useState([]);
   const [withPartyBillIds, setWithPartyBillIds] = useState([]);
-  // { [partyId]: { cash, cheque, upi, other, scheduleDate, notes } }
+  // { [partyId]: { cash, cheque, upi, neft, scheduleDate, notes } }
   const [partyPaymentInputs, setPartyPaymentInputs] = useState(() => {
     const collections = supplyReport.partyCollections || [];
     if (collections.length === 0) return {};
@@ -68,11 +68,12 @@ export default function ReceiveSRScreen() {
     for (const col of collections) {
       const { partyId, payments = [] } = col;
       if (!prefill[partyId]) {
-        prefill[partyId] = { cash: '', cheque: '', upi: '', other: '' };
+        prefill[partyId] = { cash: '', cheque: '', upi: '', neft: '' };
       }
       for (const p of payments) {
-        const prev = parseInt(prefill[partyId][p.type] || '0') || 0;
-        prefill[partyId][p.type] = String(prev + (parseInt(p.amount) || 0));
+        const type = p.type === 'other' ? 'neft' : p.type;
+        const prev = parseInt(prefill[partyId][type] || '0') || 0;
+        prefill[partyId][type] = String(prev + (parseInt(p.amount) || 0));
       }
     }
     return prefill;
@@ -88,24 +89,6 @@ export default function ReceiveSRScreen() {
   const dbName = isBundle ? DB_NAMES.BILL_BUNDLES : DB_NAMES.SUPPLY_REPORTS;
   const dbBills = isBundle ? supplyReport.bills : supplyReport.orders;
   const [loading, setLoading] = useState(false);
-  const getAllBills = async () => {
-    console.log(supplyReport);
-    try {
-      let fetchedOrders = await globalUtils.fetchOrdersByIds(
-        dbBills,
-        currentCompanyId,
-      );
-
-      fetchedOrders = fetchedOrders.filter((fo) => !fo.error);
-      fetchedOrders = await globalUtils.fetchPartyInfoForOrders(
-        fetchedOrders,
-        currentCompanyId,
-      );
-      setAllBills(fetchedOrders);
-    } catch (e) {
-      console.error(e);
-    }
-  };
   const getGroupedBills = async (orderIds, assignmentDetails = []) => {
     try {
       let fetchedOrders = await globalUtils.fetchOrdersByIds(
@@ -138,7 +121,7 @@ export default function ReceiveSRScreen() {
     } catch (e) {
       console.error(e);
     }
-    return [];
+    return {};
   };
   const getAllReturnedBills = async () => {
     try {
@@ -176,19 +159,16 @@ export default function ReceiveSRScreen() {
         supplyReport.assignmentDetails || [],
       );
 
-      setGroupedSupplementaryBills(obg || []);
+      setGroupedSupplementaryBills(obg || {});
     } else {
-      await getAllBills();
-      await getAllReturnedBills();
-    }
-
-    if (!isBundle) {
+      const pbg = await getGroupedBills(supplyReport.orders);
       const obg = await getGroupedBills(supplyReport.attachedBills);
       const sbg = await getGroupedBills(supplyReport.supplementaryBills);
 
-      setGroupedOldBills(obg || []);
-      setGroupedSupplementaryBills(sbg || []);
-      console.log(sbg);
+      setGroupedPrimaryBills(pbg || {});
+      setGroupedOldBills(obg || {});
+      setGroupedSupplementaryBills(sbg || {});
+      await getAllReturnedBills();
     }
     setLoading(false);
   };
@@ -269,7 +249,9 @@ export default function ReceiveSRScreen() {
         supplyReport.id,
       );
       const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
-      console.log(dbName, supplyReport.id);
+      const now = Timestamp.now().toMillis();
+      const employeeId = firebaseAuth.currentUser.uid;
+
       // Build partyPayments from partyPaymentInputs for parties with received bills
       const receivedPartyIds = [
         ...new Set(receivedBills.map((rb) => rb.partyId)),
@@ -281,7 +263,7 @@ export default function ReceiveSRScreen() {
             input.cash > 0 && { type: 'cash', amount: parseInt(input.cash || '0') },
             input.cheque > 0 && { type: 'cheque', amount: parseInt(input.cheque || '0') },
             input.upi > 0 && { type: 'upi', amount: parseInt(input.upi || '0') },
-            input.other > 0 && { type: 'other', amount: parseInt(input.other || '0') },
+            input.neft > 0 && { type: 'neft', amount: parseInt(input.neft || '0') },
           ].filter(Boolean);
           return {
             partyId,
@@ -290,14 +272,15 @@ export default function ReceiveSRScreen() {
               ? { schedulePaymentDate: input.scheduleDate.getTime() }
               : {}),
             notes: input.notes || '',
-            receivedBy: firebaseAuth.currentUser.uid,
-            timestamp: Timestamp.now().toMillis(),
+            receivedBy: employeeId,
+            timestamp: now,
           };
         })
         .filter((pp) => pp.payments.length > 0);
 
-      // update supply report / bundle for all the bill rec details
-      await updateDoc(supplyReportRef, {
+      const batch = writeBatch(firebaseDB);
+
+      batch.update(supplyReportRef, {
         ...(allBillsReceived
           ? {
               status: isBundle
@@ -309,7 +292,6 @@ export default function ReceiveSRScreen() {
           ...(supplyReportDataNew.orderDetails || []),
           ...receivedBills.map((rb) => ({
             billId: rb.id,
-            ...(rb.accountsNotes ? { accountsNotes: rb.accountsNotes } : {}),
             with: rb.with,
             ...(isBundle
               ? {
@@ -336,43 +318,42 @@ export default function ReceiveSRScreen() {
               ],
             }
           : {}),
-        receivedBy: firebaseAuth.currentUser.uid,
+        receivedBy: employeeId,
       });
 
-      // update current bills with balance and updated flow
-      for await (const rb2 of receivedBills) {
+      for (const rb2 of receivedBills) {
         const orderRef = getCompanyDoc(
           currentCompanyId,
           DB_NAMES.ORDERS,
           rb2.id,
         );
-        await updateDoc(orderRef, {
+        batch.update(orderRef, {
           flow: [
             ...rb2.flow,
             {
-              employeeId: firebaseAuth.currentUser.uid,
-              timestamp: Timestamp.now().toMillis(),
+              employeeId,
+              timestamp: now,
               type: constants.firebase.billFlowTypes.RECEIVED_BILL,
             },
           ],
           flowCompleted: true,
           orderStatus: constants.firebase.billFlowTypes.RECEIVED_BILL,
           with: rb2.with,
-          accountsNotes: rb2.accountsNotes || '',
         });
       }
 
-      for await (const billId of withPartyBillIds) {
-        const selectedBill =
-          allBills.find((bill) => bill.id === billId) ||
-          returnedBills.find((bill) => bill.id === billId) ||
-          Object.values(groupedOldBills)
-            .flat()
-            .find((bill) => bill.id === billId) ||
-          Object.values(groupedSupplementaryBills)
-            .flat()
-            .find((bill) => bill.id === billId);
+      const billById = new Map();
+      for (const bill of [
+        ...Object.values(groupedPrimaryBills).flat(),
+        ...returnedBills,
+        ...Object.values(groupedOldBills).flat(),
+        ...Object.values(groupedSupplementaryBills).flat(),
+      ]) {
+        billById.set(bill.id, bill);
+      }
 
+      for (const billId of withPartyBillIds) {
+        const selectedBill = billById.get(billId);
         if (!selectedBill) continue;
 
         const orderRef = getCompanyDoc(
@@ -381,12 +362,12 @@ export default function ReceiveSRScreen() {
           selectedBill.id,
         );
 
-        await updateDoc(orderRef, {
+        batch.update(orderRef, {
           flow: [
             ...(selectedBill.flow || []),
             {
-              employeeId: firebaseAuth.currentUser.uid,
-              timestamp: Timestamp.now().toMillis(),
+              employeeId,
+              timestamp: now,
               type: constants.firebase.billFlowTypes.BILL_WITH_PARTY,
             },
           ],
@@ -396,8 +377,7 @@ export default function ReceiveSRScreen() {
         });
       }
 
-      // update returned bills
-      for await (const rb2 of returnedBills.filter((bill) =>
+      for (const rb2 of returnedBills.filter((bill) =>
         receivedReturnedBillIds.includes(bill.id),
       )) {
         const orderRef = getCompanyDoc(
@@ -406,12 +386,12 @@ export default function ReceiveSRScreen() {
           rb2.id,
         );
 
-        await updateDoc(orderRef, {
+        batch.update(orderRef, {
           flow: [
             ...rb2.flow,
             {
-              employeeId: firebaseAuth.currentUser.uid,
-              timestamp: Timestamp.now().toMillis(),
+              employeeId,
+              timestamp: now,
               type: constants.firebase.billFlowTypes.GOODS_RETURN_RECD,
             },
           ],
@@ -422,6 +402,8 @@ export default function ReceiveSRScreen() {
           accountsNotes: rb2.notes || '',
         });
       }
+
+      await batch.commit();
 
       showToast(dispatchToast, 'All Bills Received', 'success');
       onCreateCashReceipt();
@@ -441,7 +423,10 @@ export default function ReceiveSRScreen() {
       const input = partyPaymentInputs[partyId] || {};
       const cashAmt = parseInt(input.cash || '0');
       if (cashAmt > 0) {
-        prItems[partyId] = (prItems[partyId] || 0) + cashAmt;
+        prItems[partyId] = {
+          amount: cashAmt,
+          accountsNotes: input.notes || '',
+        };
       }
     });
 
@@ -454,7 +439,8 @@ export default function ReceiveSRScreen() {
     const updatedModelPrItems = Object.keys(prItems).map((pri) => {
       return {
         partyId: pri,
-        amount: prItems[pri],
+        amount: prItems[pri].amount,
+        accountsNotes: prItems[pri].accountsNotes,
       };
     });
     setLoading(false);
@@ -470,6 +456,105 @@ export default function ReceiveSRScreen() {
   };
   if (loading) return <Loader />;
 
+  const renderBillRow = (bill, { isOld = false } = {}) => {
+    const isBillReturned =
+      returnedBills.findIndex((x) => x.id === bill.id) !== -1;
+    const isReturnReceived = receivedReturnedBillIds.includes(bill.id);
+
+    return (
+      <BillRow
+        supplyReport={supplyReport}
+        useHandoverBalance={isBundle}
+        isOld={isOld}
+        isReturned={isBillReturned}
+        allowReceiveReturned={isBillReturned}
+        isReturnReceived={isReturnReceived}
+        onReceiveReturned={() => {
+          setReceivedReturnedBillIds((ids) => {
+            if (ids.includes(bill.id)) return ids;
+            return [...ids, bill.id];
+          });
+        }}
+        onUndoReturnReceived={() => {
+          setReceivedReturnedBillIds((ids) =>
+            ids.filter((id) => id !== bill.id),
+          );
+          setReturnedBills((existing) =>
+            existing.filter((x) => x.id !== bill.id),
+          );
+        }}
+        isWithParty={withPartyBillIds.includes(bill.id)}
+        onWithParty={() => {
+          addWithPartyBill(bill);
+        }}
+        onUndoWithParty={() => {
+          setWithPartyBillIds((ids) => ids.filter((id) => id !== bill.id));
+        }}
+        onReturn={() => {
+          addReturnedBill(bill);
+          setWithPartyBillIds((ids) => ids.filter((id) => id !== bill.id));
+        }}
+        onReceive={(x) => {
+          receiveBill(x);
+          setWithPartyBillIds((ids) => ids.filter((id) => id !== bill.id));
+        }}
+        key={`rsr-${bill.id}`}
+        data={bill}
+        isReceived={receivedBills.findIndex((x) => x.id === bill.id) !== -1}
+        onUndo={() => {
+          setReceivedBills((b) => b.filter((tb) => tb.id !== bill.id));
+          setReturnedBills((b) => b.filter((tb) => tb.id !== bill.id));
+          setReceivedReturnedBillIds((ids) =>
+            ids.filter((id) => id !== bill.id),
+          );
+          setWithPartyBillIds((ids) => ids.filter((id) => id !== bill.id));
+        }}
+      />
+    );
+  };
+
+  const renderPartyPaymentInputs = (partyId) => {
+    const partyInput = partyPaymentInputs[partyId] || {};
+    return (
+      <div className="party-payment-inputs">
+        <div className="party-payment-row">
+          <div className="payment-group">
+            <div className="payment-label">Cash</div>
+            <Input size="small" type="number" placeholder="0" contentBefore="₹"
+              value={partyInput.cash || ''} onChange={(_, e) => updatePartyPayment(partyId, 'cash', e.value)} />
+          </div>
+          <div className="payment-group">
+            <div className="payment-label">Cheque</div>
+            <Input size="small" type="number" placeholder="0" contentBefore="₹"
+              value={partyInput.cheque || ''} onChange={(_, e) => updatePartyPayment(partyId, 'cheque', e.value)} />
+          </div>
+          <div className="payment-group">
+            <div className="payment-label">UPI</div>
+            <Input size="small" type="number" placeholder="0" contentBefore="₹"
+              value={partyInput.upi || ''} onChange={(_, e) => updatePartyPayment(partyId, 'upi', e.value)} />
+          </div>
+          <div className="payment-group">
+            <div className="payment-label">NEFT</div>
+            <Input size="small" type="number" placeholder="0" contentBefore="₹"
+              value={partyInput.neft || ''} onChange={(_, e) => updatePartyPayment(partyId, 'neft', e.value)} />
+          </div>
+          <div className="payment-row-divider" />
+          <div className="input-group input-group-date">
+            <div className="input-label">Schedule Date</div>
+            <DatePicker size="small" placeholder="Select date"
+              value={partyInput.scheduleDate || null}
+              onSelectDate={(d) => updatePartyPayment(partyId, 'scheduleDate', d)} />
+          </div>
+          <div className="input-group input-group-notes">
+            <div className="input-label">Notes</div>
+            <Input size="small" placeholder="Accounts notes..."
+              value={partyInput.notes || ''} onChange={(_, e) => updatePartyPayment(partyId, 'notes', e.value)} />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <Toaster toasterId={toasterId} />
@@ -480,6 +565,14 @@ export default function ReceiveSRScreen() {
             Receive {isBundle ? 'Bundle' : 'Supply Report'}:{' '}
             {supplyReport.receiptNumber}
           </h3>
+          <Text>
+            Date:{' '}
+            <b>
+              {supplyReport.timestamp
+                ? globalUtils.getTimeFormat(supplyReport.timestamp, true)
+                : '--'}
+            </b>
+          </Text>
           {!isBundle && (
             <Text>
               Supplyman: <b>{supplymanUser?.username || '--'}</b>
@@ -495,212 +588,60 @@ export default function ReceiveSRScreen() {
           )}
         </div>
         <div className="bills-section">
-          {allBills.map((bill) => {
-            const partyInput = partyPaymentInputs[bill.partyId] || {};
+          {!isBundle && Object.values(groupedPrimaryBills).map((bills) => {
+            const partyId = bills[0].partyId;
             return (
               <div
-                key={`party-${bill.partyId}`}
+                key={`primary-${partyId}`}
                 className="party-section-receive-sr"
               >
                 <div className="title-sr">
-                  <span className="party-name">{bill.party?.name}</span>
+                  <span className="party-name">{bills[0].party?.name}</span>
                   <span className="payment-terms">
                     Payment:{' '}
-                    {bill.party?.creditDays != null
-                      ? `${bill.party.creditDays} days credit`
-                      : bill.party?.paymentTerms || '-'}
+                    {bills[0].party?.creditDays != null
+                      ? `${bills[0].party.creditDays} days credit`
+                      : bills[0].party?.paymentTerms || '-'}
                   </span>
                 </div>
 
-                <div className="party-payment-inputs">
-                  <div className="party-payment-row">
-                    <div className="payment-group">
-                      <div className="payment-label">Cash</div>
-                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
-                        value={partyInput.cash || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'cash', e.value)} />
-                    </div>
-                    <div className="payment-group">
-                      <div className="payment-label">Cheque</div>
-                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
-                        value={partyInput.cheque || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'cheque', e.value)} />
-                    </div>
-                    <div className="payment-group">
-                      <div className="payment-label">UPI</div>
-                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
-                        value={partyInput.upi || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'upi', e.value)} />
-                    </div>
-                    <div className="payment-group">
-                      <div className="payment-label">Other</div>
-                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
-                        value={partyInput.other || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'other', e.value)} />
-                    </div>
-                    <div className="payment-row-divider" />
-                    <div className="input-group input-group-date">
-                      <div className="input-label">Schedule Date</div>
-                      <DatePicker size="small" placeholder="Select date"
-                        value={partyInput.scheduleDate || null}
-                        onSelectDate={(d) => updatePartyPayment(bill.partyId, 'scheduleDate', d)} />
-                    </div>
-                    <div className="input-group input-group-notes">
-                      <div className="input-label">Notes</div>
-                      <Input size="small" placeholder="Accounts notes..."
-                        value={partyInput.notes || ''} onChange={(_, e) => updatePartyPayment(bill.partyId, 'notes', e.value)} />
-                    </div>
-                  </div>
-                </div>
+                {renderPartyPaymentInputs(partyId)}
 
                 <div className="party-bills-container">
-                  {(() => {
-                    const isBillReturned =
-                      returnedBills.findIndex((x) => x.id === bill.id) !== -1;
-                    const isReturnReceived = receivedReturnedBillIds.includes(
-                      bill.id,
-                    );
-                    return (
-                  <BillRow
-                    supplyReport={supplyReport}
-                    useHandoverBalance={isBundle}
-                    isReturned={isBillReturned}
-                    allowReceiveReturned={isBillReturned}
-                    isReturnReceived={isReturnReceived}
-                    onReceiveReturned={() => {
-                      setReceivedReturnedBillIds((ids) => {
-                        if (ids.includes(bill.id)) return ids;
-                        return [...ids, bill.id];
-                      });
-                    }}
-                    onUndoReturnReceived={() => {
-                      setReceivedReturnedBillIds((ids) =>
-                        ids.filter((id) => id !== bill.id),
-                      );
-                      setReturnedBills((existing) =>
-                        existing.filter((x) => x.id !== bill.id),
-                      );
-                    }}
-                    isWithParty={withPartyBillIds.includes(bill.id)}
-                    onWithParty={() => {
-                      addWithPartyBill(bill);
-                    }}
-                    onUndoWithParty={() => {
-                      setWithPartyBillIds((ids) =>
-                        ids.filter((id) => id !== bill.id),
-                      );
-                    }}
-                    onReturn={() => {
-                      addReturnedBill(bill);
-                      setWithPartyBillIds((ids) =>
-                        ids.filter((id) => id !== bill.id),
-                      );
-                    }}
-                    onReceive={(x) => {
-                      receiveBill(x);
-                      setWithPartyBillIds((ids) =>
-                        ids.filter((id) => id !== bill.id),
-                      );
-                    }}
-                    key={`rsr-${bill.id}`}
-                    data={bill}
-                    isReceived={
-                      receivedBills.findIndex((x) => x.id === bill.id) !== -1
-                    }
-                    onUndo={() => {
-                      setReceivedBills((b) =>
-                        b.filter((tb) => tb.id !== bill.id),
-                      );
-                      setReturnedBills((b) =>
-                        b.filter((tb) => tb.id !== bill.id),
-                      );
-                      setReceivedReturnedBillIds((ids) =>
-                        ids.filter((id) => id !== bill.id),
-                      );
-                      setWithPartyBillIds((ids) =>
-                        ids.filter((id) => id !== bill.id),
-                      );
-                    }}
-                  />
-                    );
-                  })()}
-                  {groupedOldBills[bill.partyId]?.map((oldBill) => {
-                    const isBillReturned =
-                      returnedBills.findIndex((x) => x.id === oldBill.id) !==
-                      -1;
-                    const isReturnReceived = receivedReturnedBillIds.includes(
-                      oldBill.id,
-                    );
-                    return (
-                      <BillRow
-                        supplyReport={supplyReport}
-                        useHandoverBalance={isBundle}
-                        isOld
-                        isReturned={isBillReturned}
-                        allowReceiveReturned={isBillReturned}
-                        isReturnReceived={isReturnReceived}
-                        onReceiveReturned={() => {
-                          setReceivedReturnedBillIds((ids) => {
-                            if (ids.includes(oldBill.id)) return ids;
-                            return [...ids, oldBill.id];
-                          });
-                        }}
-                        onUndoReturnReceived={() => {
-                          setReceivedReturnedBillIds((ids) =>
-                            ids.filter((id) => id !== oldBill.id),
-                          );
-                          setReturnedBills((existing) =>
-                            existing.filter((x) => x.id !== oldBill.id),
-                          );
-                        }}
-                        isWithParty={withPartyBillIds.includes(oldBill.id)}
-                        onWithParty={() => {
-                          addWithPartyBill(oldBill);
-                        }}
-                        onUndoWithParty={() => {
-                          setWithPartyBillIds((ids) =>
-                            ids.filter((id) => id !== oldBill.id),
-                          );
-                        }}
-                        onReturn={() => {
-                          addReturnedBill(oldBill);
-                          setWithPartyBillIds((ids) =>
-                            ids.filter((id) => id !== oldBill.id),
-                          );
-                        }}
-                        onReceive={(x) => {
-                          receiveBill(x);
-                          setWithPartyBillIds((ids) =>
-                            ids.filter((id) => id !== oldBill.id),
-                          );
-                        }}
-                        key={`rsr-${oldBill.id}`}
-                        data={oldBill}
-                        isReceived={
-                          receivedBills.findIndex(
-                            (x) => x.id === oldBill.id,
-                          ) !== -1
-                        }
-                        onUndo={() => {
-                          setReceivedBills((b) =>
-                            b.filter((tb) => tb.id !== oldBill.id),
-                          );
-                          setReturnedBills((b) =>
-                            b.filter((tb) => tb.id !== oldBill.id),
-                          );
-                          setReceivedReturnedBillIds((ids) =>
-                            ids.filter((id) => id !== oldBill.id),
-                          );
-                          setWithPartyBillIds((ids) =>
-                            ids.filter((id) => id !== oldBill.id),
-                          );
-                        }}
-                      />
-                    );
-                  })}
+                  {bills.map((bill) => renderBillRow(bill))}
+                  {groupedOldBills[partyId]?.map((oldBill) =>
+                    renderBillRow(oldBill, { isOld: true }),
+                  )}
                 </div>
               </div>
             );
           })}
+          {!isBundle && Object.keys(groupedOldBills)
+            .filter((partyId) => !groupedPrimaryBills[partyId])
+            .map((partyId) => {
+              const oldBills = groupedOldBills[partyId];
+              return (
+                <div
+                  key={`attached-${partyId}`}
+                  className="party-section-receive-sr"
+                >
+                  <div className="title-sr">
+                    <span className="party-name">{oldBills[0].party?.name}</span>
+                    <span className="supplementary-label">Attached Bills</span>
+                  </div>
+
+                  {renderPartyPaymentInputs(partyId)}
+
+                  <div className="party-bills-container">
+                    {oldBills.map((oldBill) =>
+                      renderBillRow(oldBill, { isOld: true }),
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           {Object.values(groupedSupplementaryBills).map((bills) => {
             const partyId = bills[0].partyId;
-            const partyInput = partyPaymentInputs[partyId] || {};
             return (
               <div
                 key={`supp-${partyId}`}
@@ -713,120 +654,10 @@ export default function ReceiveSRScreen() {
                   </span>
                 </div>
 
-                <div className="party-payment-inputs">
-                  <div className="party-payment-row">
-                    <div className="payment-group">
-                      <div className="payment-label">Cash</div>
-                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
-                        value={partyInput.cash || ''} onChange={(_, e) => updatePartyPayment(partyId, 'cash', e.value)} />
-                    </div>
-                    <div className="payment-group">
-                      <div className="payment-label">Cheque</div>
-                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
-                        value={partyInput.cheque || ''} onChange={(_, e) => updatePartyPayment(partyId, 'cheque', e.value)} />
-                    </div>
-                    <div className="payment-group">
-                      <div className="payment-label">UPI</div>
-                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
-                        value={partyInput.upi || ''} onChange={(_, e) => updatePartyPayment(partyId, 'upi', e.value)} />
-                    </div>
-                    <div className="payment-group">
-                      <div className="payment-label">Other</div>
-                      <Input size="small" type="number" placeholder="0" contentBefore="₹"
-                        value={partyInput.other || ''} onChange={(_, e) => updatePartyPayment(partyId, 'other', e.value)} />
-                    </div>
-                    <div className="payment-row-divider" />
-                    <div className="input-group input-group-date">
-                      <div className="input-label">Schedule Date</div>
-                      <DatePicker size="small" placeholder="Select date"
-                        value={partyInput.scheduleDate || null}
-                        onSelectDate={(d) => updatePartyPayment(partyId, 'scheduleDate', d)} />
-                    </div>
-                    <div className="input-group input-group-notes">
-                      <div className="input-label">Notes</div>
-                      <Input size="small" placeholder="Accounts notes..."
-                        value={partyInput.notes || ''} onChange={(_, e) => updatePartyPayment(partyId, 'notes', e.value)} />
-                    </div>
-                  </div>
-                </div>
+                {renderPartyPaymentInputs(partyId)}
 
                 <div className="party-bills-container">
-                  {groupedSupplementaryBills[bills[0].partyId]?.map(
-                    (oldBill) => {
-                      const isBillReturned =
-                        returnedBills.findIndex((x) => x.id === oldBill.id) !==
-                        -1;
-                      const isReturnReceived = receivedReturnedBillIds.includes(
-                        oldBill.id,
-                      );
-                      return (
-                        <BillRow
-                          supplyReport={supplyReport}
-                          useHandoverBalance={isBundle}
-                          isOld
-                          isReturned={isBillReturned}
-                          allowReceiveReturned={isBillReturned}
-                          isReturnReceived={isReturnReceived}
-                          onReceiveReturned={() => {
-                            setReceivedReturnedBillIds((ids) => {
-                              if (ids.includes(oldBill.id)) return ids;
-                              return [...ids, oldBill.id];
-                            });
-                          }}
-                          onUndoReturnReceived={() => {
-                            setReceivedReturnedBillIds((ids) =>
-                              ids.filter((id) => id !== oldBill.id),
-                            );
-                            setReturnedBills((existing) =>
-                              existing.filter((x) => x.id !== oldBill.id),
-                            );
-                          }}
-                          isWithParty={withPartyBillIds.includes(oldBill.id)}
-                          onWithParty={() => {
-                            addWithPartyBill(oldBill);
-                          }}
-                          onUndoWithParty={() => {
-                            setWithPartyBillIds((ids) =>
-                              ids.filter((id) => id !== oldBill.id),
-                            );
-                          }}
-                          onReturn={() => {
-                            addReturnedBill(oldBill);
-                            setWithPartyBillIds((ids) =>
-                              ids.filter((id) => id !== oldBill.id),
-                            );
-                          }}
-                          onReceive={(x) => {
-                            receiveBill(x);
-                            setWithPartyBillIds((ids) =>
-                              ids.filter((id) => id !== oldBill.id),
-                            );
-                          }}
-                          key={`rsr-${oldBill.id}`}
-                          data={oldBill}
-                          isReceived={
-                            receivedBills.findIndex(
-                              (x) => x.id === oldBill.id,
-                            ) !== -1
-                          }
-                          onUndo={() => {
-                            setReceivedBills((b) =>
-                              b.filter((tb) => tb.id !== oldBill.id),
-                            );
-                            setReturnedBills((b) =>
-                              b.filter((tb) => tb.id !== oldBill.id),
-                            );
-                            setReceivedReturnedBillIds((ids) =>
-                              ids.filter((id) => id !== oldBill.id),
-                            );
-                            setWithPartyBillIds((ids) =>
-                              ids.filter((id) => id !== oldBill.id),
-                            );
-                          }}
-                        />
-                      );
-                    },
-                  )}
+                  {bills.map((bill) => renderBillRow(bill, { isOld: true }))}
                 </div>
               </div>
             );
