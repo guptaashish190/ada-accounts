@@ -181,22 +181,22 @@
   padding: 0 8px;
 }
 
-.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-attached {
+.app-table.assign-party-bills-table tbody tr.assign-bill-row-attached {
   background: #fffbeb;
 }
 
-.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-attached:hover {
+.app-table.assign-party-bills-table tbody tr.assign-bill-row-attached:hover {
   background: #fef3c7;
 }
 
-.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-with-party {
+.app-table.assign-party-bills-table tbody tr.assign-bill-row-with-party {
   background: #eff6ff;
 }
 
-.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-with-party:hover {
+.app-table.assign-party-bills-table tbody tr.assign-bill-row-with-party:hover {
   background: #dbeafe;
 }
 
-.app-table.compact.assign-party-bills-table tbody tr.assign-bill-row-attached.assign-bill-row-with-party {
+.app-table.assign-party-bills-table tbody tr.assign-bill-row-attached.assign-bill-row-with-party {
   background: #f0f9ff;
 }

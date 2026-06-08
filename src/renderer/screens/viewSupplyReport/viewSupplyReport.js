@@ -415,6 +415,7 @@ export default function ViewSupplyReportScreen({
               <th>CASH</th>
               <th>CHEQUE</th>
               <th>UPI</th>
+              <th>NEFT</th>
               <th>STATUS</th>
               <th>SCHEDULED</th>
               <th>ACC NOTES</th>
@@ -455,6 +456,7 @@ export default function ViewSupplyReportScreen({
               <th>CASH</th>
               <th>CHEQUE</th>
               <th>UPI</th>
+              <th>NEFT</th>
               <th>SCHEDULED</th>
               <th>ACC NOTES</th>
             </tr>
@@ -579,6 +581,9 @@ function BillRow({
 }) {
   // Look up party-level payment for this bill's party
   const partyPayment = partyPayments.find((pp) => pp.partyId === data.partyId);
+  const neftAmount = (partyPayment?.payments || [])
+    .filter((x) => x.type === 'neft' || x.type === 'other')
+    .reduce((acc, x) => acc + (Number(x.amount) || 0), 0);
 
   const onRemove = () => {
     const confirm = window.confirm(
@@ -621,6 +626,10 @@ function BillRow({
         {globalUtils.getCurrencyFormat(
           partyPayment?.payments?.find((x) => x.type === 'upi')?.amount,
         ) || '--'}
+      </TableCustomCell>
+      <TableCustomCell>
+        {globalUtils.getCurrencyFormat(neftAmount > 0 ? neftAmount : undefined) ||
+          '--'}
       </TableCustomCell>
       {showStatus ? (
         <TableCustomCell>{data.orderStatus || '--'}</TableCustomCell>

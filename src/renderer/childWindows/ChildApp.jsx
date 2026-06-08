@@ -19,6 +19,7 @@ import CreatePaymentReceiptDialog from '../screens/paymentReceipts/createPayment
 import CreateSupplyReportScreen from '../screens/createSupplyReport/createSupplyReport';
 import ViewVoucherScreen from '../screens/vouchers/viewVoucherScreen';
 import AssignBillScreen from '../screens/assignBills/assignBillsScreen';
+import ViewBundleScreen from '../screens/bundles/viewBundle/viewBundle';
 
 export default function App({ args }) {
   const isPrint = args.type === constants.printConstants.PRINT_CASHRECEIPT;
@@ -31,6 +32,7 @@ export default function App({ args }) {
       [constants.windowConstants.CREATE_SUPPLY_REPORT]: 'Create Supply Report',
       [constants.windowConstants.VIEW_VOUCHER]: 'View Voucher',
       [constants.windowConstants.ASSIGN_BILLS]: 'Assign Bills',
+      [constants.windowConstants.VIEW_BUNDLE]: 'View Bundle',
       [constants.printConstants.PRINT_CASHRECEIPT]: 'Print Cash Receipt',
     };
     document.title = titlesByType[args.type] || 'Child Window';
@@ -176,6 +178,31 @@ export default function App({ args }) {
                 </Routes>
               </MemoryRouter>
             </SettingsContext>
+          </AllUsersContext>
+        </CompanyProvider>
+      </FluentProvider>
+    );
+  }
+
+  if (args.type === constants.windowConstants.VIEW_BUNDLE) {
+    const bundleKey = args.data?.bundleId ?? 'view-bundle';
+    return (
+      <FluentProvider theme={webLightTheme}>
+        <CompanyProvider>
+          <AllUsersContext>
+            <MemoryRouter
+              key={bundleKey}
+              initialEntries={[
+                {
+                  pathname: '/viewBundle',
+                  state: { bundleId: args.data?.bundleId },
+                },
+              ]}
+            >
+              <Routes>
+                <Route path="/viewBundle" element={<ViewBundleScreen />} />
+              </Routes>
+            </MemoryRouter>
           </AllUsersContext>
         </CompanyProvider>
       </FluentProvider>

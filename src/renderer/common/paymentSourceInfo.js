@@ -56,7 +56,7 @@ export function PaymentSourceInfo({
   const navigateToSource = (ref) => {
     if (!navigateOnClick) return;
     if (ref.sourceType === 'bundle') {
-      navigate('/bundles', { state: { bundleId: ref.sourceId } });
+      navigate('/viewBundle', { state: { bundleId: ref.sourceId } });
     } else {
       navigate('/viewSupplyReport', {
         state: { supplyReportId: ref.sourceId },

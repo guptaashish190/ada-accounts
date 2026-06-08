@@ -16,12 +16,34 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import globalUtils from '../../../services/globalUtils';
 import './style.css';
+import constants from '../../../constants';
 import { useAuthUser } from '../../../contexts/allUsersContext';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
+
+function openViewBundleWindow(bundleId) {
+  window.electron.ipcRenderer.sendMessage('new-window', {
+    type: constants.windowConstants.VIEW_BUNDLE,
+    data: { bundleId },
+  });
+}
 
 function BillDetailDialog({ order, party, withUser, mrUser }) {
   const { allUsers } = useAuthUser();
   const navigate = useNavigate();
+
+  const openFlowSource = (flowEntry) => {
+    if (flowEntry.bundleId) {
+      openViewBundleWindow(flowEntry.bundleId);
+    } else if (flowEntry.supplyReportId) {
+      navigate('/viewSupplyReport', {
+        state: { supplyReportId: flowEntry.supplyReportId },
+      });
+    }
+  };
+
+  const getFlowLinkId = (flowEntry) =>
+    flowEntry.bundleId || flowEntry.supplyReportId;
+
   console.log(order.id);
   return (
     <DialogBody>
@@ -73,9 +95,25 @@ function BillDetailDialog({ order, party, withUser, mrUser }) {
           <VerticalSpace1 />
           <Text className="label">Flow: </Text>
           <div className="flow-container">
-            {order.flow?.map((fl) => {
+            {order.flow?.map((fl, index) => {
+              const flowLinkId = getFlowLinkId(fl);
+              const flowKey = `bill-flow-${fl.type}-${fl.timestamp}-${index}`;
+
+              if (flowLinkId) {
+                return (
+                  <Button
+                    key={flowKey}
+                    appearance="subtle"
+                    onClick={() => openFlowSource(fl)}
+                  >
+                    {fl.type}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <ArrowExportLtr16Filled />
+                  </Button>
+                );
+              }
+
               return (
-                <Popover>
+                <Popover key={flowKey}>
                   <PopoverTrigger disableButtonEnhancement>
                     <Button appearance="subtle">
                       {fl.type}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;

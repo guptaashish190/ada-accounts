@@ -128,6 +128,7 @@ export default function ViewBundleScreen() {
         employeeId: firebaseAuth.currentUser?.uid || '',
         timestamp: Date.now(),
         type: 'Handover',
+        bundleId,
       };
 
       await updateDoc(orderRef, {

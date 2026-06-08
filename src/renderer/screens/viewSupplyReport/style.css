@@ -12,11 +12,6 @@
 }
 
 .view-supply-report-shell .app-table-wrapper {
-  width: 100%;
-  overflow: auto;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #ffffff;
   margin-bottom: 16px;
 }
 

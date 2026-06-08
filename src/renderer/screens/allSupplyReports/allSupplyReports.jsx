@@ -348,8 +348,6 @@ function SupplyReportRow({ data, currentCompanyId }) {
   const [supplyman, setSupplyman] = useState();
   const [billRows, setBillRows] = useState([]);
   const [loadingBills, setLoadingBills] = useState(false);
-  const primaryPaymentTypes = ['cash', 'cheque', 'upi'];
-
   const getSupplyman = async () => {
     const user = await globalUtils.fetchUserById(data.supplymanId);
     setSupplyman(user);
@@ -410,19 +408,12 @@ function SupplyReportRow({ data, currentCompanyId }) {
     return amount > 0 ? amount : undefined;
   };
 
-  const getOtherPaymentAmount = (orderDetail, partyId) => {
-    const partyPayment = (data.partyPayments || []).find(
-      (pp) => pp.partyId === partyId,
-    );
-    const payments = partyPayment?.payments || orderDetail?.payments || [];
-    const amount = payments
-      .filter(
-        (payment) =>
-          !primaryPaymentTypes.includes((payment?.type || '').toLowerCase()),
-      )
-      .reduce((acc, payment) => acc + (Number(payment?.amount) || 0), 0);
+  const getNeftPaymentAmount = (orderDetail, partyId) => {
+    const neftAmount =
+      (getPaymentAmountByType(orderDetail, 'neft', partyId) || 0) +
+      (getPaymentAmountByType(orderDetail, 'other', partyId) || 0);
 
-    return amount > 0 ? amount : undefined;
+    return neftAmount > 0 ? neftAmount : undefined;
   };
 
   return (
@@ -492,7 +483,7 @@ function SupplyReportRow({ data, currentCompanyId }) {
                   <th className="num">CASH</th>
                   <th className="num">CHEQUE</th>
                   <th className="num">UPI</th>
-                  <th className="num">OTHERS</th>
+                  <th className="num">NEFT</th>
                 </tr>
               </thead>
               <tbody>
@@ -503,7 +494,7 @@ function SupplyReportRow({ data, currentCompanyId }) {
                   const cashAmount = getPaymentAmountByType(orderDetail, 'cash', bill.partyId);
                   const chequeAmount = getPaymentAmountByType(orderDetail, 'cheque', bill.partyId);
                   const upiAmount = getPaymentAmountByType(orderDetail, 'upi', bill.partyId);
-                  const otherAmount = getOtherPaymentAmount(orderDetail, bill.partyId);
+                  const neftAmount = getNeftPaymentAmount(orderDetail, bill.partyId);
 
                   return (
                     <tr key={`sr-bill-row-${data.id}-${bill.id}-${billIndex}`}>
@@ -525,7 +516,7 @@ function SupplyReportRow({ data, currentCompanyId }) {
                         {globalUtils.getCurrencyFormat(upiAmount)}
                       </td>
                       <td className="num amount-col">
-                        {globalUtils.getCurrencyFormat(otherAmount)}
+                        {globalUtils.getCurrencyFormat(neftAmount)}
                       </td>
                     </tr>
                   );

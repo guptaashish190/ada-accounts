@@ -1,4 +1,4 @@
-/* Assign-bills confirm dialog uses .app-table compact. */
+/* Assign-bills tables use global .app-table (see App.css). */
 
 .assign-bills-screen center {
   display: block;

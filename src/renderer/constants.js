@@ -10,6 +10,7 @@ export default {
     CREATE_SUPPLY_REPORT: 'CREATE_SUPPLY_REPORT',
     VIEW_VOUCHER: 'VIEW_VOUCHER',
     ASSIGN_BILLS: 'ASSIGN_BILLS',
+    VIEW_BUNDLE: 'VIEW_BUNDLE',
   },
   paymentOkBuffer: 2,
   paymentTermsListItems: ['Monthly', 'Weekly', 'Cash', 'Bill to Bill'],
