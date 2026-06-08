@@ -1,45 +1,55 @@
+.view-bundle-container,
 .view-supply-report-container {
   width: 90%;
 }
 
+.view-bundle-container .bill-row-top,
 .view-supply-report-container .bill-row-top {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
 }
+
+.view-bundle-container .bill-row-bottom .payment,
 .view-supply-report-container .bill-row-bottom .payment {
   margin: 10px 0;
   display: flex;
   flex-direction: row;
 }
+
+.view-bundle-container .bill-row,
 .view-supply-report-container .bill-row {
   margin-bottom: 30px;
   text-align: left;
 }
 
+.view-bundle-container .bill-row-bottom .payment .label,
 .view-supply-report-container .bill-row-bottom .payment .label {
   font-weight: bold;
   color: gray;
 }
 
+.view-bundle-container .bill-row-bottom .payment .value,
 .view-supply-report-container .bill-row-bottom .payment .value {
   font-weight: bold;
   color: rgb(102, 205, 188);
 }
-/* Table itself now uses .app-table (see App.css). */
 
+.view-bundle-container .vsrc-detail-items,
 .view-supply-report-container .vsrc-detail-items {
   display: flex;
   padding: 10px 0;
   flex-direction: row;
 }
 
+.view-bundle-container .vsrc-detail-items .label,
 .view-supply-report-container .vsrc-detail-items .label {
   font-weight: bold;
   color: #698fffc6;
   margin-right: 10px;
 }
 
+.view-bundle-container .vsrc-detail-items-container,
 .view-supply-report-container .vsrc-detail-items-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -48,6 +58,210 @@
   border-radius: 5px;
 }
 
+.view-bundle-container .vsrc-detail-items-container :nth-child(even),
 .view-supply-report-container .vsrc-detail-items-container :nth-child(even) {
   justify-content: flex-end;
+}
+
+.view-bundle-container .bundle-section-title {
+  color: grey;
+  text-align: left;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.view-bundle-container .print-only {
+  display: none;
+}
+
+.view-bundle-container .bundle-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 12px;
+}
+
+.view-bundle-container .bundle-details-table th,
+.view-bundle-container .bundle-details-table td {
+  border: 1px solid #cbd5e1;
+  padding: 4px 8px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.view-bundle-container .bundle-details-table th {
+  width: 18%;
+  background: #f1f5f9;
+  font-weight: 600;
+}
+
+.view-bundle-container .bundle-bills-table {
+  table-layout: fixed;
+}
+
+.view-bundle-container .bundle-bills-table .col-sno {
+  width: 6%;
+}
+
+.view-bundle-container .bundle-bills-table .col-bill {
+  width: 14%;
+}
+
+.view-bundle-container .bundle-bills-table .col-party {
+  width: 34%;
+}
+
+.view-bundle-container .bundle-bills-table .col-amount {
+  width: 14%;
+}
+
+.view-bundle-container .bundle-bills-table .col-notes {
+  width: 32%;
+}
+
+.view-bundle-container .bundle-bills-table thead th {
+  background: #f1f5f9;
+}
+
+.view-bundle-container .bundle-bills-table tbody td {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.view-bundle-container .bundle-totals-row td {
+  font-weight: 700;
+  background: #f8fafc;
+  border-top: 2px solid #cbd5e1;
+}
+
+.view-bundle-container .bundle-print-footer {
+  margin-top: 12px;
+  text-align: right;
+  font-weight: 600;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 6mm;
+  }
+
+  body,
+  html {
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .tab-navigator .left,
+  .tab-header,
+  .no-print,
+  .screen-only {
+    display: none !important;
+  }
+
+  .tab-navigator,
+  .tab-content,
+  .view-bundle-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .view-bundle-container .print-only {
+    display: block !important;
+  }
+
+  .view-bundle-container .bundle-print-header {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .view-bundle-container .bundle-print-header h2 {
+    margin: 0 0 2px;
+    font-size: 16px !important;
+  }
+
+  .view-bundle-container .bundle-print-header h3 {
+    margin: 0 0 4px;
+    font-size: 13px !important;
+    font-weight: 600;
+  }
+
+  .view-bundle-container .bundle-print-header p {
+    margin: 0;
+    font-size: 12px !important;
+    font-weight: 600;
+  }
+
+  .view-bundle-container .bundle-details-table {
+    margin: 6px 0 10px;
+  }
+
+  .view-bundle-container .bundle-details-table th,
+  .view-bundle-container .bundle-details-table td {
+    padding: 3px 6px !important;
+    font-size: 9px !important;
+  }
+
+  .view-bundle-container .bundle-section-title {
+    color: #000 !important;
+    font-size: 11px !important;
+    margin: 8px 0 4px;
+    text-align: left;
+  }
+
+  .view-bundle-container .bundle-bills-table,
+  .view-bundle-container .bundle-details-table,
+  .view-bundle-container .app-table {
+    width: 100% !important;
+    table-layout: fixed;
+    border-collapse: collapse !important;
+    font-size: 9px !important;
+    page-break-inside: auto;
+  }
+
+  .view-bundle-container .bundle-bills-table th,
+  .view-bundle-container .bundle-bills-table td,
+  .view-bundle-container .app-table th,
+  .view-bundle-container .app-table td {
+    border: 1px solid #000 !important;
+    padding: 2px 4px !important;
+    text-align: left !important;
+    background: #fff !important;
+    color: #000 !important;
+    white-space: normal !important;
+    word-break: break-word;
+    line-height: 1.2 !important;
+  }
+
+  .view-bundle-container .bundle-bills-table thead th,
+  .view-bundle-container .app-table thead th {
+    background: #e2e8f0 !important;
+    font-weight: 700 !important;
+    position: static !important;
+    padding: 3px 4px !important;
+  }
+
+  .view-bundle-container .bundle-bills-table tr,
+  .view-bundle-container .app-table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  .view-bundle-container .bundle-totals-row td {
+    font-weight: 700 !important;
+    background: #f0f0f0 !important;
+    border-top: 2px solid #000 !important;
+  }
+
+  .view-bundle-container .bundle-print-footer {
+    margin-top: 10px;
+    font-size: 10px !important;
+  }
 }

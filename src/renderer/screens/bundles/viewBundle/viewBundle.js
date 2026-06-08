@@ -4,7 +4,7 @@
 
 import { getDoc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   Button,
   Spinner,
@@ -26,8 +26,6 @@ import {
   DB_NAMES,
 } from '../../../services/firestoreHelpers';
 import constants from '../../../constants';
-import supplyReportFormatGenerator from '../../../common/printerDataGenerator/supplyReportFormatGenerator';
-import supplyReportRecievingFormatGenerator from '../../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
 import { firebaseAuth } from '../../../firebaseInit';
 import { mergeHandoverOntoBills } from '../../../services/handoverBalanceUtils';
 
@@ -36,7 +34,6 @@ export default function ViewBundleScreen() {
   const [user, setuser] = useState();
   const { allUsers } = useAuthUser();
   const { state } = useLocation();
-  const navigate = useNavigate();
   const { bundleId } = state;
   const [allBills, setAllBills] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -44,11 +41,19 @@ export default function ViewBundleScreen() {
   const toasterId = useId('toaster');
   const { dispatchToast } = useToastController(toasterId);
 
-  const { currentCompanyId } = useCompany();
+  const { currentCompanyId, getCurrentCompanyName } = useCompany();
+  const [printMode, setPrintMode] = useState('dispatch');
+  const [pendingPrint, setPendingPrint] = useState(false);
 
   useEffect(() => {
     getAllBills();
   }, []);
+
+  useEffect(() => {
+    if (!pendingPrint) return;
+    window.print();
+    setPendingPrint(false);
+  }, [pendingPrint, printMode]);
 
   const getAllBills = async () => {
     if (!bundleId) return;
@@ -174,33 +179,15 @@ export default function ViewBundleScreen() {
     return null;
   };
 
-  const onPrintSupplyReport = () => {
-    const printData = {
-      receivedBy: allUsers.find((x) => x.uid === bundle.receivedBy)?.username,
-      supplyman: allUsers.find((x) => x.uid === bundle.assignedTo)?.username,
-      dispatchTime: globalUtils.getTimeFormat(bundle.timestamp),
-      receiptNumber: bundle.receiptNumber,
-      oldBills: allBills,
-    };
-    window.electron.ipcRenderer.sendMessage(
-      'print',
-      supplyReportFormatGenerator(printData, true),
-    );
+  const triggerPrint = (mode) => {
+    setPrintMode(mode);
+    setPendingPrint(true);
   };
-  const onPrintSupplyReportReceiving = () => {
-    console.log(bundle);
-    const printData = {
-      receivedBy: allUsers.find((x) => x.uid === bundle.receivedBy)?.username,
-      supplyman: allUsers.find((x) => x.uid === bundle.assignedTo)?.username,
-      dispatchTime: globalUtils.getTimeFormat(bundle.timestamp),
-      receiptNumber: bundle.receiptNumber,
-      bills: allBills,
-    };
-    window.electron.ipcRenderer.sendMessage(
-      'print',
-      supplyReportRecievingFormatGenerator(printData, true),
-    );
-  };
+
+  const totalHandoverAmount = allBills.reduce(
+    (sum, bill) => sum + Number(bill.handoverBalance ?? bill.balance ?? 0),
+    0,
+  );
 
   if (loading) {
     return <Spinner />;
@@ -215,12 +202,39 @@ export default function ViewBundleScreen() {
         <Loader />
       ) : (
         <center>
-          <div className="view-supply-report-container">
-            <h3>Bundle ID: {bundle.receiptNumber}</h3>
+          <div className="view-bundle-container">
+            <div className="bundle-print-header print-only">
+              <h2>
+                {printMode === 'receiving' ? 'Bundle Receiving' : 'Bundle'}
+              </h2>
+              <h3>{getCurrentCompanyName()}</h3>
+              <p>Bundle ID: {bundle.receiptNumber}</p>
+            </div>
+
+            <h3 className="screen-only">Bundle ID: {bundle.receiptNumber}</h3>
             <VerticalSpace1 />
-            {getActionButton()}
-            <VerticalSpace1 />
-            <div className="vsrc-detail-items-container">
+            <div className="no-print">
+              {getActionButton()}
+              <VerticalSpace1 />
+            </div>
+            <table className="bundle-details-table print-only">
+              <tbody>
+                <tr>
+                  <th>Received By</th>
+                  <td>
+                    {allUsers.find((x) => x.uid === bundle.receivedBy)
+                      ?.username || '--'}
+                  </td>
+                  <th>Assigned</th>
+                  <td>{user?.username || '--'}</td>
+                  <th>Created</th>
+                  <td>{globalUtils.getTimeFormat(bundle?.timestamp)}</td>
+                  <th>Status</th>
+                  <td>{bundle.status}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="vsrc-detail-items-container screen-only">
               <div className="vsrc-detail-items">
                 <div className="label">Received By: </div>
                 <div className="value">
@@ -245,27 +259,27 @@ export default function ViewBundleScreen() {
               </div>
             </div>
             <VerticalSpace1 />
-            <Button onClick={() => onPrintSupplyReport()}>Print Bundle</Button>
-            &nbsp;&nbsp;
-            {bundle.status ===
-            constants.firebase.billBundleFlowStatus.COMPLETED ? (
-              <Button onClick={() => onPrintSupplyReportReceiving()}>
-                Print Bundle Receiving
+            <div className="no-print">
+              <Button onClick={() => triggerPrint('dispatch')}>
+                Print Bundle
               </Button>
-            ) : null}
-            <h3 style={{ color: 'grey' }}>All Bills</h3>
-            <table className="app-table">
+              &nbsp;&nbsp;
+              {bundle.status ===
+              constants.firebase.billBundleFlowStatus.COMPLETED ? (
+                <Button onClick={() => triggerPrint('receiving')}>
+                  Print Bundle Receiving
+                </Button>
+              ) : null}
+            </div>
+            <h3 className="bundle-section-title">All Bills</h3>
+            <table className="app-table bundle-bills-table">
               <thead>
                 <tr>
-                  <th>BILL NO.</th>
-                  <th>PARTY</th>
-                  <th>HANDOVER</th>
-                  <th>AMOUNT</th>
-                  <th>CASH</th>
-                  <th>CHEQUE</th>
-                  <th>UPI</th>
-                  <th>SCHEDULED</th>
-                  <th>ACC NOTES</th>
+                  <th className="col-sno">S.NO.</th>
+                  <th className="col-bill">BILL NO.</th>
+                  <th className="col-party">PARTY</th>
+                  <th className="col-amount num">AMOUNT</th>
+                  <th className="col-notes">ACC NOTES</th>
                 </tr>
               </thead>
               <tbody>
@@ -276,23 +290,40 @@ export default function ViewBundleScreen() {
                         bundle.orderDetails &&
                         bundle.orderDetails.find((x) => x.billId === bill.id)
                       }
-                      partyPayments={bundle.partyPayments || []}
                       key={`rsr-${bill.id}`}
                       data={bill}
                       index={i}
                     />
                   );
                 })}
+                <tr className="bundle-totals-row">
+                  <td colSpan={3}>
+                    <b>Total ({allBills.length} bills)</b>
+                  </td>
+                  <td className="num">
+                    <b>
+                      {globalUtils.getCurrencyFormat(totalHandoverAmount)}
+                    </b>
+                  </td>
+                  <td />
+                </tr>
               </tbody>
             </table>
             {bundle.otherAdjustedBills?.length ? (
               <>
                 <VerticalSpace2 />
-                <h3 style={{ color: 'grey' }}>Other Adjusted Bills</h3>
+                <h3 className="bundle-section-title">Other Adjusted Bills</h3>
                 <OtherAdjustedBills
                   otherAdjustedBills={bundle.otherAdjustedBills}
                 />
               </>
+            ) : null}
+            {printMode === 'receiving' ? (
+              <div className="bundle-print-footer print-only">
+                Received By:{' '}
+                {allUsers.find((x) => x.uid === bundle.receivedBy)?.username ||
+                  '--'}
+              </div>
             ) : null}
             <VerticalSpace2 />
           </div>
@@ -302,60 +333,22 @@ export default function ViewBundleScreen() {
   );
 }
 
-function BillRow({ data, index, orderDetail, partyPayments = [] }) {
-  const navigate = useNavigate();
-
-  // Look up party-level payment for this bill's party (new schema).
-  // Falls back to orderDetail.payments for legacy records.
-  const partyPayment = partyPayments.find((pp) => pp.partyId === data.partyId);
-  const payments = partyPayment?.payments || orderDetail?.payments || [];
-
+function BillRow({ data, index, orderDetail }) {
   return (
-    <tr >
-      <td>
+    <tr>
+      <td className="col-sno">{index + 1}</td>
+      <td className="col-bill">
         <b>{data.billNumber?.toUpperCase()}</b>
       </td>
-      <td>
-        <div style={{ color: 'grey', fontSize: '0.9em' }}>
-          {data.party.name}
-        </div>
+      <td className="col-party">{data.party?.name || '--'}</td>
+      <td className="col-amount num">
+        <b>
+          {globalUtils.getCurrencyFormat(
+            data.handoverBalance ?? data.balance,
+          )}
+        </b>
       </td>
-      <td>
-        <b>{globalUtils.getCurrencyFormat(data.handoverBalance ?? data.balance)}</b>
-        {data.erpBalance != null &&
-        data.handoverBalance !== data.erpBalance ? (
-          <div style={{ color: 'grey', fontSize: '0.85em' }}>
-            BAL: {globalUtils.getCurrencyFormat(data.erpBalance)}
-          </div>
-        ) : null}
-      </td>
-      <td>
-        <b>{globalUtils.getCurrencyFormat(data.orderAmount)}</b>
-      </td>
-      <td>
-        {globalUtils.getCurrencyFormat(
-          payments.find((x) => x.type === 'cash')?.amount,
-        ) || '--'}
-      </td>
-      <td>
-        {globalUtils.getCurrencyFormat(
-          payments.find((x) => x.type === 'cheque')?.amount,
-        ) || '--'}
-      </td>
-      <td>
-        {globalUtils.getCurrencyFormat(
-          payments.find((x) => x.type === 'upi')?.amount,
-        ) || '--'}
-      </td>
-      <td>
-        {(partyPayment?.schedulePaymentDate || orderDetail?.schedulePaymentDate)
-          ? globalUtils?.getTimeFormat(
-              partyPayment?.schedulePaymentDate ?? orderDetail.schedulePaymentDate,
-              true,
-            )
-          : '--'}
-      </td>
-      <td>{orderDetail?.accountsNotes || '--'}</td>
+      <td className="col-notes">{orderDetail?.accountsNotes || '--'}</td>
     </tr>
   );
 }
@@ -375,7 +368,13 @@ function OtherAdjustedBills({ otherAdjustedBills }) {
       </thead>
       <tbody>
         {otherAdjustedBills?.map((bill, i) => {
-          return <OtherAdjustedBillsRow data={bill} index={i} />;
+          return (
+            <OtherAdjustedBillsRow
+              key={`other-adjusted-${bill.billId || i}`}
+              data={bill}
+              index={i}
+            />
+          );
         })}
       </tbody>
     </table>

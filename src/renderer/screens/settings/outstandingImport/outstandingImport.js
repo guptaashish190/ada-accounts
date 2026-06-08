@@ -336,6 +336,7 @@ export default function OutstandingImportScreen() {
       partyBalanceSynced: 0,
       skipped: 0,
       ambiguous: 0,
+      ambiguousBills: [],
       invalid: 0,
     };
     const touchedOrderIds = new Set();
@@ -420,7 +421,16 @@ export default function OutstandingImportScreen() {
         } else {
 
           stats.skipped += 1;
-          if (row.status === 'ambiguous') stats.ambiguous += 1;
+          if (row.status === 'ambiguous') {
+            stats.ambiguous += 1;
+            stats.ambiguousBills.push({
+              rowIndex: row.rowIndex,
+              billNumber: row.billNumber,
+              billDateDisplay: row.billDateDisplay,
+              orderAmount: row.orderAmount,
+              balance: row.balance,
+            });
+          }
           if (row.status === 'invalid') stats.invalid += 1;
         }
 
@@ -670,6 +680,37 @@ export default function OutstandingImportScreen() {
             <div>Skipped: {result.skipped}</div>
             <div>Ambiguous: {result.ambiguous}</div>
             <div>Invalid: {result.invalid}</div>
+            {result.ambiguousBills?.length > 0 && (
+              <div className="outstanding-ambiguous-list">
+                <Text weight="semibold" size={200}>
+                  Skipped ambiguous bills
+                </Text>
+                <div className="outstanding-table-wrap outstanding-ambiguous-table">
+                  <table className="app-table compact">
+                    <thead>
+                      <tr>
+                        <th>Row</th>
+                        <th>Bill Number</th>
+                        <th>Bill Date</th>
+                        <th>Amount</th>
+                        <th>Balance</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.ambiguousBills.map((bill) => (
+                        <tr key={`ambiguous-${bill.rowIndex}-${bill.billNumber}`}>
+                          <td>{bill.rowIndex}</td>
+                          <td>{bill.billNumber}</td>
+                          <td>{bill.billDateDisplay}</td>
+                          <td>{bill.orderAmount}</td>
+                          <td>{bill.balance}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card>
