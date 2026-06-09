@@ -292,7 +292,7 @@ export default function ReceiveSRScreen() {
           ...(supplyReportDataNew.orderDetails || []),
           ...receivedBills.map((rb) => ({
             billId: rb.id,
-            with: rb.with,
+            with: 'Accounts',
             ...(isBundle
               ? {
                   handoverBalance: getHandoverBalance(rb),
@@ -338,7 +338,7 @@ export default function ReceiveSRScreen() {
           ],
           flowCompleted: true,
           orderStatus: constants.firebase.billFlowTypes.RECEIVED_BILL,
-          with: rb2.with,
+          with: 'Accounts',
         });
       }
 
