@@ -119,8 +119,14 @@ export default function ReceivePendingUser() {
       <VerticalSpace2 />
       <h3>Bundles</h3>
       <div className="all-bundles-container">
-        {pendingBundles.map((bu, i) => {
-          return <BundlesRow key={`bundle-row-${bu.id}`} index={i} data={bu} />;
+        {pendingBundles.map((bu) => {
+          return (
+            <BundlesRow
+              key={`bundle-row-${bu.id}`}
+              data={bu}
+              currentCompanyId={currentCompanyId}
+            />
+          );
         })}
       </div>
       {!loading && pendingBundles.length === 0 ? (

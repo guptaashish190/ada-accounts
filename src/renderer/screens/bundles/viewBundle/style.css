@@ -70,6 +70,29 @@
   margin-bottom: 6px;
 }
 
+.view-bundle-container .bundle-party-section {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.view-bundle-container .bundle-party-heading {
+  color: #698fffc6;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 10px 0 6px;
+  text-align: left;
+}
+
+.view-bundle-container .bundle-party-totals-row td {
+  font-weight: 600;
+  background: #f8fafc;
+  border-top: 1px solid #cbd5e1;
+}
+
+.view-bundle-container .bundle-grand-totals-table {
+  margin-top: 4px;
+}
+
 .view-bundle-container .print-only {
   display: none;
 }
@@ -99,23 +122,23 @@
 }
 
 .view-bundle-container .bundle-bills-table .col-sno {
-  width: 6%;
+  width: 5%;
 }
 
 .view-bundle-container .bundle-bills-table .col-bill {
   width: 14%;
 }
 
-.view-bundle-container .bundle-bills-table .col-party {
-  width: 34%;
+.view-bundle-container .bundle-bills-table .col-amount {
+  width: 11%;
 }
 
-.view-bundle-container .bundle-bills-table .col-amount {
-  width: 14%;
+.view-bundle-container .bundle-bills-table .col-payment {
+  width: 9%;
 }
 
 .view-bundle-container .bundle-bills-table .col-notes {
-  width: 32%;
+  width: 22%;
 }
 
 .view-bundle-container .bundle-bills-table thead th {
@@ -214,6 +237,16 @@
     font-size: 11px !important;
     margin: 8px 0 4px;
     text-align: left;
+  }
+
+  .view-bundle-container .bundle-party-heading {
+    color: #000 !important;
+    font-size: 10px !important;
+    margin: 6px 0 3px;
+  }
+
+  .view-bundle-container .bundle-party-section {
+    page-break-inside: avoid;
   }
 
   .view-bundle-container .bundle-bills-table,

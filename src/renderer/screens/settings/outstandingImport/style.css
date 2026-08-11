@@ -89,9 +89,78 @@
 }
 
 .status-ambiguous,
-.status-invalid {
+.status-invalid,
+.status-skipped_no_party,
+.status-skipped_old_unmatched {
   color: #c5221f;
   font-weight: 600;
+}
+
+.status-no_changes {
+  color: #a15c00;
+  font-weight: 600;
+}
+
+.outstanding-party-assignments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #dbe5ef;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.outstanding-party-assignments-note {
+  color: var(--colorNeutralForeground3);
+}
+
+.outstanding-party-assignment-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.outstanding-party-assignment-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+}
+
+.outstanding-party-assignment-selector {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.outstanding-party-assigned {
+  color: #157f3b;
+}
+
+.outstanding-not-synced-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.outstanding-not-synced-table {
+  max-height: 280px;
+  border-color: #f1c4c0;
+  background: #fff8f7;
+}
+
+.outstanding-skip-reason {
+  color: #8a2c24;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .outstanding-result {

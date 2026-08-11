@@ -157,41 +157,58 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     }
 
     const billNumbers = modifiedBills.map((bi) => bi.billNumber).filter(Boolean);
-    const uniqueBillNumbers = new Set(billNumbers);
-    if (uniqueBillNumbers.size !== billNumbers.length) {
-      showToast(dispatchToast, 'Duplicate bill numbers entered', 'error');
+    const seenBillNumbers = new Set();
+    const duplicateBillNumbers = new Set();
+    billNumbers.forEach((num) => {
+      if (seenBillNumbers.has(num)) {
+        duplicateBillNumbers.add(num);
+      }
+      seenBillNumbers.add(num);
+    });
+    if (duplicateBillNumbers.size > 0) {
+      showToast(
+        dispatchToast,
+        `Duplicate bill numbers entered: ${[...duplicateBillNumbers].join(', ')}`,
+        'error',
+      );
       return;
-    } 
+    }
 
     if (!selectedSupplyman) {
       showToast(dispatchToast, 'Please select a supplyman', 'error');
       return;
     }
 
+    const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
+    const existingBillsQuery = query(
+      ordersCollection,
+      where('billNumber', 'in', billNumbers),
+    );
+    const existingBillsSnapshot = await getDocs(existingBillsQuery);
+    const currentOrderIds = new Set(modifiedBills.map((b) => b.id));
+    const conflictingBills = existingBillsSnapshot.docs.filter(
+      (d) => !currentOrderIds.has(d.id),
+    );
+    if (conflictingBills.length > 0) {
+      const conflictDetails = conflictingBills
+        .map((d) => {
+          const data = d.data();
+          const date = data.creationTime
+            ? globalUtils.getTimeFormat(data.creationTime, true)
+            : '--';
+          return `${data.billNumber} (${date})`;
+        })
+        .join(', ');
+      showToast(
+        dispatchToast,
+        `Bill number(s) already exist: ${conflictDetails}`,
+        'error',
+      );
+      return;
+    }
+
     setLoading(true);
     try {
-
-      const ordersCollection = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
-      const existingBillsQuery = query(
-        ordersCollection,
-        where('billNumber', 'in', billNumbers),
-      );
-      const existingBillsSnapshot = await getDocs(existingBillsQuery);
-      const currentOrderIds = new Set(modifiedBills.map((b) => b.id));
-      const conflictingBills = existingBillsSnapshot.docs.filter(
-        (d) => !currentOrderIds.has(d.id),
-      );
-      if (conflictingBills.length > 0) {
-        const conflictNums = conflictingBills
-          .map((d) => d.data().billNumber)
-          .join(', ');
-        showToast(
-          dispatchToast,
-          `Bill number(s) already exists: ${conflictNums}`,
-          'error',
-        );
-        return;
-      }
       const newSrNumber2 = await getNewSupplyReportNumber();
 
       let reportDocRef;
@@ -260,7 +277,6 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
       });
 
       await batch.commit();
-
       await globalUtils.incrementReceiptCounter(
         constants.newReceiptCounters.SUPPLYREPORTS,
         currentCompanyId,
@@ -294,12 +310,13 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
     setSelectedSupplyman(null);
   };
 
-  return loading ? (
-    <Loader translucent />
-  ) : (
+  return (
     <>
       <Toaster toasterId={toasterId} />
-      <div className="create-supply-report-screen-container">
+      {loading ? (
+        <Loader translucent />
+      ) : (
+        <div className="create-supply-report-screen-container">
         <div className="supply-report-header">
           <div className="header-content">
             <h2 className="title">
@@ -479,6 +496,7 @@ export default function CreateSupplyReportScreen({ prefillSupplyReportP }) {
           )}
         </div>
       </div>
+      )}
     </>
   );
 }

@@ -20,6 +20,7 @@ import {
   Delete16Regular,
   Dismiss16Regular,
 } from '@fluentui/react-icons';
+import { DatePicker } from '@fluentui/react-datepicker-compat';
 import {
   query,
   where,
@@ -57,6 +58,18 @@ const formatTime = (ms) => {
   });
 };
 
+const toDateString = (date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const parseDateString = (dateStr) => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+
 const haversineKm = (lat1, lng1, lat2, lng2) => {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -87,6 +100,14 @@ function getSelectedMrLabel(mrUsers, uid) {
   const mr = mrUsers.find((u) => u.uid === uid);
   if (!mr) return uid;
   return mr.username || mr.email || mr.uid;
+}
+
+function getWithLabel(users, withValue) {
+  if (!withValue) return '';
+  if (withValue === 'Accounts') return 'Accounts';
+  const user = users.find((u) => u.uid === withValue);
+  if (!user) return withValue;
+  return user.username || user.email || user.uid;
 }
 
 function getSelectedRouteLabel(routes, routeId) {
@@ -212,6 +233,7 @@ function EditOrderDialog({
   order,
   partyNames: pNames,
   mrUsers: mrList,
+  companyUsers: companyUserList,
   userMap: uMap,
   companyId,
   onSaved,
@@ -221,10 +243,12 @@ function EditOrderDialog({
   const [partyResults, setPartyResults] = useState([]);
   const debouncedPartySearch = useDebounce(partySearch, 500);
   const [orderAmount, setOrderAmount] = useState(0);
+  const [billNumberSuffix, setBillNumberSuffix] = useState('');
   const [polybags, setPolybags] = useState(0);
   const [cases, setCases] = useState(0);
   const [packets, setPackets] = useState(0);
   const [mrId, setMrId] = useState('');
+  const [withValue, setWithValue] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -233,10 +257,12 @@ function EditOrderDialog({
       setPartySearch('');
       setPartyResults([]);
       setOrderAmount(order.orderAmount || 0);
+      setBillNumberSuffix((order.billNumber || '').replace(/^T-/i, ''));
       setPolybags(getBagQty(order.bags, 'polybags'));
       setCases(getBagQty(order.bags, 'cases'));
       setPackets(getBagQty(order.bags, 'packets'));
       setMrId(order.mrId || '');
+      setWithValue(order.with || '');
     }
   }, [order]);
 
@@ -277,11 +303,14 @@ function EditOrderDialog({
       if (polybags > 0) bags.push({ bagType: 'polybags', quantity: polybags });
       if (cases > 0) bags.push({ bagType: 'cases', quantity: cases });
       if (packets > 0) bags.push({ bagType: 'packets', quantity: packets });
+      const billNumber = billNumberSuffix ? `T-${billNumberSuffix}` : '';
       await updateDoc(orderRef, {
         partyId,
         orderAmount: Number(orderAmount) || 0,
+        billNumber,
         bags,
         mrId,
+        with: withValue,
       });
       onClose();
     } catch (err) {
@@ -354,6 +383,17 @@ function EditOrderDialog({
                 )}
               </div>
               <div className="edit-order-field">
+                <Label>Bill Number</Label>
+                <Input
+                  contentBefore="T-"
+                  type="number"
+                  value={billNumberSuffix}
+                  onChange={(e, d) => setBillNumberSuffix(d.value)}
+                  placeholder="Bill #"
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div className="edit-order-field">
                 <Label>Order Amount</Label>
                 <Input
                   type="number"
@@ -361,6 +401,23 @@ function EditOrderDialog({
                   onChange={(e, d) => setOrderAmount(d.value)}
                   style={{ width: '100%' }}
                 />
+              </div>
+              <div className="edit-order-field">
+                <Label>With</Label>
+                <Dropdown
+                  placeholder="Select user"
+                  value={getWithLabel(companyUserList, withValue)}
+                  selectedOptions={withValue ? [withValue] : []}
+                  onOptionSelect={(e, d) => setWithValue(d.optionValue || '')}
+                  style={{ width: '100%' }}
+                >
+                  <Option value="Accounts">Accounts</Option>
+                  {companyUserList.map((user) => (
+                    <Option key={user.uid} value={user.uid}>
+                      {user.username || user.email || user.uid}
+                    </Option>
+                  ))}
+                </Dropdown>
               </div>
               <div className="edit-order-field">
                 <Label>Goods</Label>
@@ -450,8 +507,12 @@ function ManagerDashboard() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0],
+  const [selectedDate, setSelectedDate] = useState(() =>
+    toDateString(new Date()),
+  );
+  const selectedDateValue = useMemo(
+    () => parseDateString(selectedDate),
+    [selectedDate],
   );
 
   const [mrRows, setMrRows] = useState([]);
@@ -801,6 +862,8 @@ function ManagerDashboard() {
       return {
         id: d.id,
         partyId: data.partyId || '',
+        billNumber: data.billNumber || '',
+        with: data.with || '',
         orderAmount: data.orderAmount || 0,
         mrId: data.mrId || '',
         orderStatus: data.orderStatus || '',
@@ -1035,11 +1098,14 @@ function ManagerDashboard() {
           <span className="live-badge">● Live</span>
         </div>
         <div className="dashboard-header-actions">
-          <input
-            type="date"
+          <DatePicker
             className="dashboard-date-picker"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            value={selectedDateValue}
+            onSelectDate={(date) => {
+              if (!date) return;
+              setSelectedDate(toDateString(date));
+            }}
+            placeholder="Select date"
           />
         </div>
       </div>
@@ -1326,6 +1392,7 @@ function ManagerDashboard() {
         order={editOrder}
         partyNames={partyNames}
         mrUsers={mrUsers}
+        companyUsers={companyUsers}
         userMap={userMap}
         companyId={currentCompanyId}
       />

@@ -35,7 +35,6 @@ import SettingsScreen from './screens/settings/settings';
 import SettingsContext from './contexts/settingsContext';
 import AllBundlesScreen from './screens/bundles/bundlesScreen';
 import ViewBundleScreen from './screens/bundles/viewBundle/viewBundle';
-import ReceiveBundle from './screens/bundles/receiveBundle/receiveBundle';
 import CreditNoteScreen from './screens/creditNote/creditNoteScreen';
 import CreateCreditNoteScreen from './screens/creditNote/createCreditNotes/createCNScreen';
 import PartyListScreen from './screens/settings/partyList/partyList';
@@ -137,7 +136,6 @@ function AppContent() {
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/bundles" element={<AllBundlesScreen />} />
           <Route path="/viewBundle" element={<ViewBundleScreen />} />
-          <Route path="/receiveBundle" element={<ReceiveBundle />} />
           <Route path="/creditNotes" element={<CreditNoteScreen />} />
           <Route path="/partyListSettings" element={<PartyListScreen />} />
           <Route

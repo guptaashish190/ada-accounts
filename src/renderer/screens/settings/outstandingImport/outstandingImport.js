@@ -16,11 +16,16 @@ import { firebaseDB } from '../../../firebaseInit';
 import { useCompany } from '../../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../../services/firestoreHelpers';
 import {
+  applySectionPartyAssignments,
+  buildEffectiveSectionPartyIdMap,
   buildNewOrderPayload,
   buildMajorityPartyCorrections,
   buildOrderUpdatePayload,
-  buildSectionPartyIdMap,
+  getInferredPartyIdForRow,
   getMatchedPartyIds,
+  getOutstandingNotSyncedRows,
+  getSectionsNeedingPartyAssignment,
+  markCreateRowsWithoutParty,
   isBill,
   matchOutstandingRow,
   normalizeBillNumber,
@@ -28,6 +33,7 @@ import {
   selectZeroBalanceOrderIds,
   ZERO_MODE,
 } from '../../../services/outstandingImportUtils';
+import PartySelector from '../../../common/partySelector';
 import './style.css';
 
 const IN_QUERY_LIMIT = 30;
@@ -62,7 +68,27 @@ export default function OutstandingImportScreen() {
     partyBalanceUpdates: [],
     sectionSummaries: [],
   });
+  const [sectionsNeedingParty, setSectionsNeedingParty] = useState([]);
+  const [sectionPartyAssignments, setSectionPartyAssignments] = useState({});
   const [error, setError] = useState('');
+
+  const notSyncedRows = useMemo(
+    () => getOutstandingNotSyncedRows(rows, {
+      updateAmount,
+      updateBalance,
+      enablePartyMajorityFix,
+      transferCandidates: correctionPreview.transferCandidates,
+      sectionPartyAssignments,
+    }),
+    [
+      rows,
+      updateAmount,
+      updateBalance,
+      enablePartyMajorityFix,
+      correctionPreview.transferCandidates,
+      sectionPartyAssignments,
+    ],
+  );
 
   const summary = useMemo(() => {
     const initial = {
@@ -72,6 +98,7 @@ export default function OutstandingImportScreen() {
       ambiguous: 0,
       invalid: 0,
       skipped: 0,
+      notSynced: notSyncedRows.length,
       toBeZeroed: zeroCandidateIds.length,
       toTransfer: correctionPreview.transferCandidates.length,
       toSyncParties: correctionPreview.partyBalanceUpdates.length,
@@ -86,6 +113,7 @@ export default function OutstandingImportScreen() {
     }, initial);
   }, [
     rows,
+    notSyncedRows.length,
     zeroCandidateIds.length,
     correctionPreview.transferCandidates.length,
     correctionPreview.partyBalanceUpdates.length,
@@ -272,6 +300,8 @@ export default function OutstandingImportScreen() {
       partyBalanceUpdates: [],
       sectionSummaries: [],
     });
+    setSectionsNeedingParty([]);
+    setSectionPartyAssignments({});
 
     try {
       const buffer = await file.arrayBuffer();
@@ -290,8 +320,11 @@ export default function OutstandingImportScreen() {
       setCurrentStep('Fetching matching bills from Firestore...');
       const allOrders = await fetchOrdersForRows(parsedRows, setCurrentStep);
       setCurrentStep('Resolving matched and unmatched rows...');
-      const resolvedRows = resolvePreviewRows(parsedRows, allOrders);
+      const resolvedRows = markCreateRowsWithoutParty(
+        resolvePreviewRows(parsedRows, allOrders),
+      );
       setRows(resolvedRows);
+      setSectionsNeedingParty(getSectionsNeedingPartyAssignment(resolvedRows));
       setCurrentStep('Preview ready.');
     } catch (e) {
       console.error('Failed to read outstanding file:', e);
@@ -343,7 +376,10 @@ export default function OutstandingImportScreen() {
     const transferByOrderId = new Map(
       correctionPreview.transferCandidates.map((item) => [item.orderId, item]),
     );
-    const sectionPartyIdMap = buildSectionPartyIdMap(rows);
+    const sectionPartyIdMap = buildEffectiveSectionPartyIdMap(
+      rows,
+      sectionPartyAssignments,
+    );
 
     const commitBatchIfNeeded = async (force = false) => {
       if (pendingOps === 0) return;
@@ -409,12 +445,18 @@ export default function OutstandingImportScreen() {
           }
           touchedOrderIds.add(row.matchedOrder.id);
         } else if (row.status === 'create') {
-          const newDocRef = doc(ordersCollection);
-          const createPayload = buildNewOrderPayload(row, newDocRef.id);
-          const inferredPartyId = row.sectionId ? sectionPartyIdMap.get(row.sectionId) : null;
-          if (inferredPartyId) {
-            createPayload.partyId = inferredPartyId;
+          const inferredPartyId = getInferredPartyIdForRow(row, sectionPartyIdMap);
+          if (!inferredPartyId) {
+            stats.skipped += 1;
+            // eslint-disable-next-line no-continue
+            continue;
           }
+
+          const newDocRef = doc(ordersCollection);
+          const createPayload = {
+            ...buildNewOrderPayload(row, newDocRef.id),
+            partyId: inferredPartyId,
+          };
           batch.set(newDocRef, createPayload);
           pendingOps += 1;
           stats.created += 1;
@@ -482,6 +524,17 @@ export default function OutstandingImportScreen() {
     setApplying(false);
   };
 
+  const handleSectionPartySelected = (sectionId, party) => {
+    if (!party?.id) return;
+
+    const newAssignments = {
+      ...sectionPartyAssignments,
+      [sectionId]: party,
+    };
+    setSectionPartyAssignments(newAssignments);
+    setRows((prev) => applySectionPartyAssignments(prev, newAssignments));
+  };
+
   const reset = () => {
     setRows([]);
     setResult(null);
@@ -497,6 +550,8 @@ export default function OutstandingImportScreen() {
       partyBalanceUpdates: [],
       sectionSummaries: [],
     });
+    setSectionsNeedingParty([]);
+    setSectionPartyAssignments({});
   };
 
   return (
@@ -618,12 +673,92 @@ export default function OutstandingImportScreen() {
               <span>Total: {summary.total}</span>
               <span>Matched: {summary.matched}</span>
               <span>Create: {summary.created}</span>
+              <span>Not Synced: {summary.notSynced}</span>
               <span>Ambiguous: {summary.ambiguous}</span>
               <span>Invalid: {summary.invalid}</span>
               <span>To Zero: {summary.toBeZeroed}</span>
               <span>To Transfer: {summary.toTransfer}</span>
               <span>To Sync Parties: {summary.toSyncParties}</span>
             </div>
+
+            {sectionsNeedingParty.length > 0 && (
+              <div className="outstanding-party-assignments">
+                <Text weight="semibold" size={200}>
+                  Assign party for unmatched sections
+                </Text>
+                <Text size={200} className="outstanding-party-assignments-note">
+                  These sections have new bills that could not be linked to a party
+                  automatically. Select a party to create them on import.
+                </Text>
+                {sectionsNeedingParty.map((section) => {
+                  const assignedParty = sectionPartyAssignments[section.sectionId];
+                  return (
+                    <div
+                      key={section.sectionId}
+                      className="outstanding-party-assignment-row"
+                    >
+                      <div className="outstanding-party-assignment-info">
+                        <Text weight="semibold">
+                          {section.sectionLabel || section.sectionId}
+                        </Text>
+                        <Text size={200}>
+                          {section.billCount} bill{section.billCount === 1 ? '' : 's'}
+                        </Text>
+                      </div>
+                      <div className="outstanding-party-assignment-selector">
+                        <PartySelector
+                          descriptive
+                          onPartySelected={(party) => {
+                            handleSectionPartySelected(section.sectionId, party);
+                          }}
+                        />
+                        {assignedParty && (
+                          <Text size={200} className="outstanding-party-assigned">
+                            Selected: {assignedParty.name}
+                          </Text>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {notSyncedRows.length > 0 && (
+              <div className="outstanding-not-synced-list">
+                <Text weight="semibold" size={200}>
+                  Bills that will not be synced ({notSyncedRows.length})
+                </Text>
+                <div className="outstanding-table-wrap outstanding-not-synced-table">
+                  <table className="app-table compact">
+                    <thead>
+                      <tr>
+                        <th>Row</th>
+                        <th>Bill Number</th>
+                        <th>Bill Date</th>
+                        <th>Amount</th>
+                        <th>Balance</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {notSyncedRows.map((row) => (
+                        <tr key={`not-synced-${row.rowIndex}-${row.billNumber}`}>
+                          <td>{row.rowIndex}</td>
+                          <td>{row.billNumber}</td>
+                          <td>{row.billDateDisplay}</td>
+                          <td>{row.orderAmount}</td>
+                          <td>{row.balance}</td>
+                          <td className={`status-${row.status}`}>{row.status}</td>
+                          <td className="outstanding-skip-reason">{row.skipReasonLabel}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             <div className="outstanding-table-wrap">
               <table className="app-table compact">

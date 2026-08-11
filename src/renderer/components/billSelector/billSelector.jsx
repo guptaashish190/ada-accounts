@@ -39,7 +39,7 @@ export default function BillSelector({
   defaultOpen = false,
 }) {
   const [ordersList, setOrdersList] = useState([]);
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(false);
   const [showOrderList, setShowOrderList] = useState([]);
   const [searchPartyName, setSearchPartyName] = useState('');
 
@@ -66,6 +66,11 @@ export default function BillSelector({
           'orderStatus',
           '==',
           constants.firebase.billFlowTypes.GOODS_RETURNED,
+        ),
+        where(
+          'orderStatus',
+          '==',
+          constants.firebase.billFlowTypes.GOODS_RETURN_RECD,
         ),
         where(
           'orderStatus',

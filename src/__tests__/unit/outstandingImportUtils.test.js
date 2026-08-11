@@ -6,6 +6,11 @@ const {
   buildOrderUpdatePayload,
   buildMajorityPartyCorrections,
   buildNewOrderPayload,
+  markCreateRowsWithoutParty,
+  getOutstandingNotSyncedRows,
+  getSectionsNeedingPartyAssignment,
+  applySectionPartyAssignments,
+  buildEffectiveSectionPartyIdMap,
   MAJORITY_RULES,
   parseOutstandingRows,
   selectZeroBalanceOrderIds,
@@ -246,6 +251,190 @@ describe('zeroing helpers', () => {
   });
 });
 
+describe('getOutstandingNotSyncedRows', () => {
+  test('lists blocked statuses and matched rows with no changes', () => {
+    const rows = [
+      {
+        rowIndex: 2,
+        billNumber: 'T-1',
+        billDateDisplay: '01-Jan-2026',
+        orderAmount: 100,
+        balance: 50,
+        status: 'ambiguous',
+      },
+      {
+        rowIndex: 3,
+        billNumber: 'T-2',
+        billDateDisplay: '02-Jan-2026',
+        orderAmount: 200,
+        balance: 75,
+        status: 'matched',
+        matchedOrder: { id: 'o1', orderAmount: 200, balance: 75, partyId: 'p1' },
+      },
+      {
+        rowIndex: 4,
+        billNumber: '*T-3',
+        billDateDisplay: '03-Jan-2026',
+        orderAmount: 300,
+        balance: 80,
+        status: 'skipped_no_party',
+        sectionId: 'section-1',
+      },
+    ];
+
+    const notSynced = getOutstandingNotSyncedRows(rows, {
+      updateAmount: true,
+      updateBalance: true,
+    });
+
+    expect(notSynced).toHaveLength(3);
+    expect(notSynced[0]).toMatchObject({
+      billNumber: 'T-1',
+      skipReason: 'ambiguous',
+      skipReasonLabel: 'Multiple DB matches',
+    });
+    expect(notSynced[1]).toMatchObject({
+      billNumber: 'T-2',
+      skipReason: 'no_changes',
+      skipReasonLabel: 'Already up to date',
+    });
+    expect(notSynced[2]).toMatchObject({
+      billNumber: '*T-3',
+      skipReason: 'skipped_no_party',
+    });
+  });
+
+  test('excludes matched rows that will receive party transfer', () => {
+    const rows = [
+      {
+        rowIndex: 5,
+        billNumber: 'T-9',
+        billDateDisplay: '09-Jan-2026',
+        orderAmount: 500,
+        balance: 100,
+        status: 'matched',
+        matchedOrder: { id: 'o9', orderAmount: 500, balance: 100, partyId: 'p2' },
+      },
+    ];
+
+    const notSynced = getOutstandingNotSyncedRows(rows, {
+      updateAmount: false,
+      updateBalance: false,
+      enablePartyMajorityFix: true,
+      transferCandidates: [
+        { orderId: 'o9', fromPartyId: 'p2', toPartyId: 'p1' },
+      ],
+    });
+
+    expect(notSynced).toHaveLength(0);
+  });
+});
+
+describe('markCreateRowsWithoutParty', () => {
+  test('keeps create status when section has an inferred party', () => {
+    const rows = [
+      {
+        sectionId: 'section-1',
+        status: 'matched',
+        matchedOrder: { id: 'o1', partyId: 'p1' },
+      },
+      {
+        sectionId: 'section-1',
+        status: 'create',
+        matchedOrder: null,
+        billNumber: '*T-00001',
+      },
+    ];
+
+    const result = markCreateRowsWithoutParty(rows);
+    expect(result[1].status).toBe('create');
+  });
+
+  test('marks create rows as skipped when no party can be inferred', () => {
+    const rows = [
+      {
+        sectionId: 'section-1',
+        status: 'create',
+        matchedOrder: null,
+        billNumber: '*T-00001',
+      },
+    ];
+
+    const result = markCreateRowsWithoutParty(rows);
+    expect(result[0].status).toBe('skipped_no_party');
+  });
+});
+
+describe('section party assignment helpers', () => {
+  const rowsWithoutParty = [
+    {
+      sectionId: 'section-1',
+      sectionLabel: 'AMAN TRADERS',
+      status: 'skipped_no_party',
+      billNumber: '*T-00001',
+    },
+    {
+      sectionId: 'section-1',
+      sectionLabel: 'AMAN TRADERS',
+      status: 'skipped_no_party',
+      billNumber: '*T-00002',
+    },
+    {
+      sectionId: 'section-2',
+      sectionLabel: 'OTHER PARTY',
+      status: 'skipped_no_party',
+      billNumber: '*T-00003',
+    },
+  ];
+
+  test('getSectionsNeedingPartyAssignment groups skipped rows by section', () => {
+    const sections = getSectionsNeedingPartyAssignment(rowsWithoutParty);
+
+    expect(sections).toHaveLength(2);
+    expect(sections[0]).toMatchObject({
+      sectionId: 'section-1',
+      sectionLabel: 'AMAN TRADERS',
+      billCount: 2,
+    });
+    expect(sections[1]).toMatchObject({
+      sectionId: 'section-2',
+      billCount: 1,
+    });
+  });
+
+  test('applySectionPartyAssignments restores create status for assigned sections', () => {
+    const assignments = {
+      'section-1': { id: 'p1', name: 'AMAN TRADERS' },
+    };
+
+    const result = applySectionPartyAssignments(rowsWithoutParty, assignments);
+
+    expect(result[0].status).toBe('create');
+    expect(result[1].status).toBe('create');
+    expect(result[2].status).toBe('skipped_no_party');
+  });
+
+  test('buildEffectiveSectionPartyIdMap includes manual assignments', () => {
+    const map = buildEffectiveSectionPartyIdMap(rowsWithoutParty, {
+      'section-1': { id: 'p1', name: 'AMAN TRADERS' },
+    });
+
+    expect(map.get('section-1')).toBe('p1');
+    expect(map.has('section-2')).toBe(false);
+  });
+
+  test('getOutstandingNotSyncedRows excludes rows with manual party assignment', () => {
+    const notSynced = getOutstandingNotSyncedRows(rowsWithoutParty, {
+      sectionPartyAssignments: {
+        'section-1': { id: 'p1', name: 'AMAN TRADERS' },
+      },
+    });
+
+    expect(notSynced).toHaveLength(1);
+    expect(notSynced[0].sectionId).toBe('section-2');
+  });
+});
+
 describe('majority correction helpers', () => {
   test('builds transfer candidates from section-majority party', () => {
     const rows = [
@@ -300,6 +489,57 @@ describe('majority correction helpers', () => {
     expect(result.partyBalanceUpdates[0]).toMatchObject({
       partyId: 'p1',
       partyBalance: 5000,
+    });
+  });
+
+  test('assigns partyId to matched bills missing party when section qualifies', () => {
+    const rows = [
+      {
+        sectionId: 'section-1',
+        sectionLabel: 'AMAN',
+        sectionTotalBalance: 5000,
+        status: 'matched',
+        billNumber: 'T-1',
+        matchedOrder: { id: 'o1', partyId: 'p1' },
+      },
+      {
+        sectionId: 'section-1',
+        sectionLabel: 'AMAN',
+        sectionTotalBalance: 5000,
+        status: 'matched',
+        billNumber: 'T-2',
+        matchedOrder: { id: 'o2', partyId: 'p1' },
+      },
+      {
+        sectionId: 'section-1',
+        sectionLabel: 'AMAN',
+        sectionTotalBalance: 5000,
+        status: 'matched',
+        billNumber: 'T-3',
+        matchedOrder: { id: 'o3', partyId: 'p1' },
+      },
+      {
+        sectionId: 'section-1',
+        sectionLabel: 'AMAN',
+        sectionTotalBalance: 5000,
+        status: 'matched',
+        billNumber: 'T-4',
+        matchedOrder: { id: 'o4', partyId: '' },
+      },
+    ];
+
+    const result = buildMajorityPartyCorrections(rows, {
+      syncPartyBalance: false,
+      minMatchedBills: MAJORITY_RULES.MIN_MATCHED_BILLS,
+      minMajorityRatio: MAJORITY_RULES.MIN_MAJORITY_RATIO,
+      minMajorityMargin: MAJORITY_RULES.MIN_MAJORITY_MARGIN,
+    });
+
+    expect(result.transferCandidates).toHaveLength(1);
+    expect(result.transferCandidates[0]).toMatchObject({
+      orderId: 'o4',
+      fromPartyId: '',
+      toPartyId: 'p1',
     });
   });
 

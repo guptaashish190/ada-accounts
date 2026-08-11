@@ -260,6 +260,9 @@ export const buildOrderUpdatePayload = (
   ) {
     payload.balance = row.balance;
   }
+  console.log('payload', payload);
+  console.log(updateAmount, updateBalance);
+  console.log(row, matchedOrder);
   return payload;
 };
 
@@ -380,6 +383,159 @@ export const buildSectionPartyIdMap = (rows) => {
   return sectionPartyMap;
 };
 
+export const getInferredPartyIdForRow = (row, sectionPartyIdMap) => {
+  if (!row?.sectionId) return null;
+  return sectionPartyIdMap.get(row.sectionId) || null;
+};
+
+export const mergeSectionPartyIdMap = (inferredMap, sectionPartyAssignments = {}) => {
+  const merged = new Map(inferredMap);
+  Object.entries(sectionPartyAssignments).forEach(([sectionId, party]) => {
+    if (party?.id) merged.set(sectionId, party.id);
+  });
+  return merged;
+};
+
+export const buildEffectiveSectionPartyIdMap = (rows, sectionPartyAssignments = {}) => (
+  mergeSectionPartyIdMap(buildSectionPartyIdMap(rows), sectionPartyAssignments)
+);
+
+export const getSectionsNeedingPartyAssignment = (rows) => {
+  const sectionMap = new Map();
+
+  rows.forEach((row) => {
+    if (row.status !== 'skipped_no_party' || !row.sectionId) return;
+
+    if (!sectionMap.has(row.sectionId)) {
+      sectionMap.set(row.sectionId, {
+        sectionId: row.sectionId,
+        sectionLabel: row.sectionLabel || '',
+        bills: [],
+      });
+    }
+    sectionMap.get(row.sectionId).bills.push(row);
+  });
+
+  return [...sectionMap.values()].map((section) => ({
+    ...section,
+    billCount: section.bills.length,
+  }));
+};
+
+export const applySectionPartyAssignments = (rows, sectionPartyAssignments = {}) => {
+  const mergedMap = buildEffectiveSectionPartyIdMap(rows, sectionPartyAssignments);
+
+  return rows.map((row) => {
+    if (row.status !== 'skipped_no_party' && row.status !== 'create') return row;
+
+    const partyId = getInferredPartyIdForRow(row, mergedMap);
+    if (!partyId) {
+      if (row.status === 'create') return { ...row, status: 'skipped_no_party' };
+      return row;
+    }
+    if (row.status === 'skipped_no_party') return { ...row, status: 'create' };
+    return row;
+  });
+};
+
+export const OUTSTANDING_SKIP_REASONS = {
+  ambiguous: 'Multiple DB matches',
+  invalid: 'Invalid bill date',
+  skipped_no_party: 'No party found',
+  skipped_old_unmatched: 'T-bill not in DB',
+  no_changes: 'Already up to date',
+};
+
+const OUTSTANDING_BLOCKED_STATUSES = new Set([
+  'ambiguous',
+  'invalid',
+  'skipped_no_party',
+  'skipped_old_unmatched',
+]);
+
+export const getOutstandingNotSyncedRows = (
+  rows,
+  {
+    updateAmount = true,
+    updateBalance = true,
+    enablePartyMajorityFix = false,
+    transferCandidates = [],
+    sectionPartyIdMap = null,
+    sectionPartyAssignments = null,
+    assignedPartyId = null,
+  } = {},
+) => {
+  const partyIdMap = sectionPartyIdMap
+    || (sectionPartyAssignments
+      ? buildEffectiveSectionPartyIdMap(rows, sectionPartyAssignments)
+      : buildSectionPartyIdMap(rows));
+  const transferByOrderId = new Map(
+    transferCandidates.map((item) => [item.orderId, item]),
+  );
+  const notSynced = [];
+
+  rows.forEach((row) => {
+    let skipReason = null;
+
+    if (OUTSTANDING_BLOCKED_STATUSES.has(row.status)) {
+      if (
+        row.status === 'skipped_no_party'
+        && getInferredPartyIdForRow(row, partyIdMap)
+      ) {
+        skipReason = null;
+      } else {
+        skipReason = row.status;
+      }
+    }
+
+    if (!skipReason && row.status === 'create') {
+      const partyId = assignedPartyId || getInferredPartyIdForRow(row, partyIdMap);
+      if (!partyId) {
+        skipReason = 'skipped_no_party';
+      }
+    } else if (row.status === 'matched' && row.matchedOrder?.id) {
+      const updatePayload = buildOrderUpdatePayload(row, row.matchedOrder, {
+        updateAmount,
+        updateBalance,
+      });
+      const transferCandidate = enablePartyMajorityFix
+        ? transferByOrderId.get(row.matchedOrder.id)
+        : null;
+      const hasPartyChange = !!(
+        transferCandidate?.toPartyId
+        && transferCandidate.toPartyId !== row.matchedOrder.partyId
+      );
+
+      if (!Object.keys(updatePayload).length && !hasPartyChange) {
+        skipReason = 'no_changes';
+      }
+    }
+
+    if (skipReason) {
+      notSynced.push({
+        ...row,
+        skipReason,
+        skipReasonLabel: OUTSTANDING_SKIP_REASONS[skipReason] || skipReason,
+      });
+    }
+  });
+
+  return notSynced;
+};
+
+export const markCreateRowsWithoutParty = (rows) => {
+  const sectionPartyIdMap = buildSectionPartyIdMap(rows);
+
+  return rows.map((row) => {
+    if (row.status !== 'create') return row;
+
+    const inferredPartyId = getInferredPartyIdForRow(row, sectionPartyIdMap);
+    if (inferredPartyId) return row;
+
+    return { ...row, status: 'skipped_no_party' };
+  });
+};
+
 export const buildMajorityPartyCorrections = (
   rows,
   {
@@ -397,19 +553,22 @@ export const buildMajorityPartyCorrections = (
   const partyBalanceById = new Map();
 
   Object.values(sectionBillMap).forEach((section) => {
-    const matchedRows = section.bills.filter(
+    const matchedRowsWithParty = section.bills.filter(
       (row) => row.status === 'matched' && row.matchedOrder?.partyId && row.matchedOrder?.id,
     );
-    if (!matchedRows.length) return;
+    const matchedRowsMissingParty = section.bills.filter(
+      (row) => row.status === 'matched' && row.matchedOrder?.id && !row.matchedOrder?.partyId,
+    );
+    if (!matchedRowsWithParty.length) return;
 
     const partyCount = new Map();
-    matchedRows.forEach((row) => {
+    matchedRowsWithParty.forEach((row) => {
       const pid = row.matchedOrder.partyId;
       partyCount.set(pid, (partyCount.get(pid) || 0) + 1);
     });
 
     const { topPartyId, topCount, secondCount } = getTopTwoParties(partyCount);
-    const matchedCount = matchedRows.length;
+    const matchedCount = matchedRowsWithParty.length;
     const majorityRatio = matchedCount ? topCount / matchedCount : 0;
     const majorityMargin = topCount - secondCount;
     const qualifies =
@@ -419,16 +578,26 @@ export const buildMajorityPartyCorrections = (
       && majorityMargin >= minMajorityMargin;
 
     const sectionTransfers = qualifies
-      ? matchedRows
-          .filter((row) => row.matchedOrder.partyId !== topPartyId)
-          .map((row) => ({
+      ? [
+          ...matchedRowsWithParty
+            .filter((row) => row.matchedOrder.partyId !== topPartyId)
+            .map((row) => ({
+              orderId: row.matchedOrder.id,
+              fromPartyId: row.matchedOrder.partyId,
+              toPartyId: topPartyId,
+              billNumber: row.billNumber,
+              sectionId: section.sectionId,
+              sectionLabel: section.partyName,
+            })),
+          ...matchedRowsMissingParty.map((row) => ({
             orderId: row.matchedOrder.id,
-            fromPartyId: row.matchedOrder.partyId,
+            fromPartyId: '',
             toPartyId: topPartyId,
             billNumber: row.billNumber,
             sectionId: section.sectionId,
             sectionLabel: section.partyName,
-          }))
+          })),
+        ]
       : [];
 
     transferCandidates.push(...sectionTransfers);

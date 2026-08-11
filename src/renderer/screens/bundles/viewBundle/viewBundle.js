@@ -3,7 +3,7 @@
 /* eslint-disable no-restricted-syntax */
 
 import { getDoc, updateDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   Button,
@@ -28,11 +28,14 @@ import {
 import constants from '../../../constants';
 import { firebaseAuth } from '../../../firebaseInit';
 import { mergeHandoverOntoBills } from '../../../services/handoverBalanceUtils';
+import { canEditBundle } from '../../../services/bundleEditUtils';
 
 export default function ViewBundleScreen() {
   const [bundle, setBundle] = useState();
   const [user, setuser] = useState();
   const { allUsers } = useAuthUser();
+  const currentUser = allUsers?.find((u) => u.uid === firebaseAuth.currentUser?.uid);
+  const isManager = !!currentUser?.isManager;
   const { state } = useLocation();
   const { bundleId } = state;
   const [allBills, setAllBills] = useState([]);
@@ -148,17 +151,44 @@ export default function ViewBundleScreen() {
     }
   };
 
+  const onEditBundle = () => {
+    window.electron.ipcRenderer.sendMessage('new-window', {
+      type: constants.windowConstants.ASSIGN_BILLS,
+      data: {
+        editBundle: {
+          bundleId,
+          receiptNumber: bundle.receiptNumber,
+          assignedTo: bundle.assignedTo,
+          timestamp: bundle.timestamp,
+          bills: allBills,
+        },
+      },
+    });
+  };
+
   const getActionButton = () => {
+    const showEditButton = canEditBundle(bundle, isManager);
+
     if (bundle.status === constants.firebase.billBundleFlowStatus.CREATED) {
       return (
-        <Button
-          appearance="primary"
-          onClick={() => {
-            onHandOver();
-          }}
-        >
-          Handover
-        </Button>
+        <>
+          {showEditButton ? (
+            <>
+              <Button appearance="secondary" onClick={onEditBundle}>
+                Edit
+              </Button>
+              &nbsp;&nbsp;
+            </>
+          ) : null}
+          <Button
+            appearance="primary"
+            onClick={() => {
+              onHandOver();
+            }}
+          >
+            Handover
+          </Button>
+        </>
       );
     }
     if (bundle.status === constants.firebase.billBundleFlowStatus.HANDOVER) {
@@ -188,6 +218,17 @@ export default function ViewBundleScreen() {
     (sum, bill) => sum + Number(bill.handoverBalance ?? bill.balance ?? 0),
     0,
   );
+
+  const billsByParty = useMemo(() => {
+    const grouped = {};
+    allBills.forEach((bill) => {
+      if (!grouped[bill.partyId]) grouped[bill.partyId] = [];
+      grouped[bill.partyId].push(bill);
+    });
+    return Object.values(grouped).sort((a, b) =>
+      (a[0].party?.name || '').localeCompare(b[0].party?.name || ''),
+    );
+  }, [allBills]);
 
   if (loading) {
     return <Spinner />;
@@ -272,32 +313,72 @@ export default function ViewBundleScreen() {
               ) : null}
             </div>
             <h3 className="bundle-section-title">All Bills</h3>
-            <table className="app-table bundle-bills-table">
-              <thead>
-                <tr>
-                  <th className="col-sno">S.NO.</th>
-                  <th className="col-bill">BILL NO.</th>
-                  <th className="col-party">PARTY</th>
-                  <th className="col-amount num">AMOUNT</th>
-                  <th className="col-notes">ACC NOTES</th>
-                </tr>
-              </thead>
+            {billsByParty.map((partyBills) => {
+              const partyId = partyBills[0].partyId;
+              const partyName = partyBills[0].party?.name || '--';
+              const partyTotal = partyBills.reduce(
+                (sum, bill) =>
+                  sum + Number(bill.handoverBalance ?? bill.balance ?? 0),
+                0,
+              );
+
+              return (
+                <div key={partyId} className="bundle-party-section">
+                  <h4 className="bundle-party-heading">{partyName}</h4>
+                  <table className="app-table bundle-bills-table">
+                    <thead>
+                      <tr>
+                        <th className="col-sno">S.NO.</th>
+                        <th className="col-bill">BILL NO.</th>
+                        <th className="col-amount num">AMOUNT</th>
+                        <th className="col-payment num">CASH</th>
+                        <th className="col-payment num">CHEQUE</th>
+                        <th className="col-payment num">UPI</th>
+                        <th className="col-payment num">NEFT</th>
+                        <th className="col-notes">ACC NOTES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {partyBills.map((bill, i) => (
+                        <BillRow
+                          orderDetail={
+                            bundle.orderDetails &&
+                            bundle.orderDetails.find(
+                              (x) => x.billId === bill.id,
+                            )
+                          }
+                          partyPayments={bundle.partyPayments || []}
+                          key={`rsr-${bill.id}`}
+                          data={bill}
+                          index={i}
+                          showPartyPayments={i === 0}
+                        />
+                      ))}
+                      <tr className="bundle-party-totals-row">
+                        <td colSpan={2}>
+                          <b>
+                            Subtotal ({partyBills.length}{' '}
+                            {partyBills.length === 1 ? 'bill' : 'bills'})
+                          </b>
+                        </td>
+                        <td className="num">
+                          <b>{globalUtils.getCurrencyFormat(partyTotal)}</b>
+                        </td>
+                        <td />
+                        <td />
+                        <td />
+                        <td />
+                        <td />
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+            <table className="app-table bundle-bills-table bundle-grand-totals-table">
               <tbody>
-                {allBills.map((bill, i) => {
-                  return (
-                    <BillRow
-                      orderDetail={
-                        bundle.orderDetails &&
-                        bundle.orderDetails.find((x) => x.billId === bill.id)
-                      }
-                      key={`rsr-${bill.id}`}
-                      data={bill}
-                      index={i}
-                    />
-                  );
-                })}
                 <tr className="bundle-totals-row">
-                  <td colSpan={3}>
+                  <td colSpan={2}>
                     <b>Total ({allBills.length} bills)</b>
                   </td>
                   <td className="num">
@@ -305,6 +386,10 @@ export default function ViewBundleScreen() {
                       {globalUtils.getCurrencyFormat(totalHandoverAmount)}
                     </b>
                   </td>
+                  <td />
+                  <td />
+                  <td />
+                  <td />
                   <td />
                 </tr>
               </tbody>
@@ -333,14 +418,34 @@ export default function ViewBundleScreen() {
   );
 }
 
-function BillRow({ data, index, orderDetail }) {
+function BillRow({
+  data,
+  index,
+  orderDetail,
+  partyPayments = [],
+  showPartyPayments = true,
+}) {
+  const partyPayment = partyPayments.find((pp) => pp.partyId === data.partyId);
+  const payments =
+    partyPayment?.payments?.length > 0
+      ? partyPayment.payments
+      : orderDetail?.payments || [];
+  const neftAmount = payments
+    .filter((x) => x.type === 'neft' || x.type === 'other')
+    .reduce((acc, x) => acc + (Number(x.amount) || 0), 0);
+  const accountsNotes =
+    data.accountsNotes || orderDetail?.accountsNotes || partyPayment?.notes;
+  const formatPartyPayment = (amount) => {
+    if (!showPartyPayments) return '';
+    return globalUtils.getCurrencyFormat(amount) || '--';
+  };
+
   return (
     <tr>
       <td className="col-sno">{index + 1}</td>
       <td className="col-bill">
         <b>{data.billNumber?.toUpperCase()}</b>
       </td>
-      <td className="col-party">{data.party?.name || '--'}</td>
       <td className="col-amount num">
         <b>
           {globalUtils.getCurrencyFormat(
@@ -348,7 +453,21 @@ function BillRow({ data, index, orderDetail }) {
           )}
         </b>
       </td>
-      <td className="col-notes">{orderDetail?.accountsNotes || '--'}</td>
+      <td className="col-payment num">
+        {formatPartyPayment(payments.find((x) => x.type === 'cash')?.amount)}
+      </td>
+      <td className="col-payment num">
+        {formatPartyPayment(
+          payments.find((x) => x.type === 'cheque')?.amount,
+        )}
+      </td>
+      <td className="col-payment num">
+        {formatPartyPayment(payments.find((x) => x.type === 'upi')?.amount)}
+      </td>
+      <td className="col-payment num">
+        {formatPartyPayment(neftAmount > 0 ? neftAmount : undefined)}
+      </td>
+      <td className="col-notes">{accountsNotes || '--'}</td>
     </tr>
   );
 }

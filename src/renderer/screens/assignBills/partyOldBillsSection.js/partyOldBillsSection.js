@@ -31,6 +31,9 @@ export default function PartySection({
   withPartyBillIds = [],
   onMarkWithParty,
   onUndoWithParty,
+  isEditMode = false,
+  originalBundleBillIds = [],
+  bundleAssignedTo,
 }) {
   const [oldBills, setOldBills] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +90,9 @@ export default function PartySection({
   const withPartyCount = oldBills.filter((b) =>
     withPartyBillIds.includes(b.id),
   ).length;
+  const partyHandoverTotal = attachedBills
+    .filter((b) => b.partyId === party.id)
+    .reduce((sum, b) => sum + getHandoverBalance(b), 0);
 
   return (
     <div className={`assign-party-card${expanded ? ' expanded' : ''}`}>
@@ -115,7 +121,7 @@ export default function PartySection({
         </div>
         <div className="assign-party-actions">
           <span className="assign-party-total">
-            {globalUtils.getCurrencyFormat(party.partyBalance || 0)}
+            {globalUtils.getCurrencyFormat(partyHandoverTotal)}
           </span>
           {(attachedCount > 0 || withPartyCount > 0) && (
             <span className="assign-party-selection-hint">
@@ -149,7 +155,7 @@ export default function PartySection({
                     <th>Days</th>
                     <th>With</th>
                     <th>Amount</th>
-                    <th>ERP Bal</th>
+                    <th>Balance</th>
                     <th>Handover</th>
                     <th>Scheduled</th>
                     <th>Acc. Note</th>
@@ -172,6 +178,13 @@ export default function PartySection({
                           ),
                         );
                       }}
+                      onNotesChange={(billId, accountsNotes) => {
+                        setAttachedBills((ab) =>
+                          ab.map((b) =>
+                            b.id === billId ? { ...b, accountsNotes } : b,
+                          ),
+                        );
+                      }}
                       removeAttachedBill={() => {
                         setAttachedBills((ab) =>
                           ab.filter((x) => x.id !== ob.id),
@@ -183,6 +196,9 @@ export default function PartySection({
                       isWithParty={withPartyBillIds.includes(ob.id)}
                       onWithParty={() => onMarkWithParty?.(ob)}
                       onUndoWithParty={() => onUndoWithParty?.(ob.id)}
+                      isEditMode={isEditMode}
+                      originalBundleBillIds={originalBundleBillIds}
+                      bundleAssignedTo={bundleAssignedTo}
                     />
                   ))}
                 </tbody>
@@ -200,11 +216,15 @@ function OldBillRow({
   attachedBill,
   attachBill,
   onHandoverChange,
+  onNotesChange,
   isAttached,
   removeAttachedBill,
   isWithParty,
   onWithParty,
   onUndoWithParty,
+  isEditMode = false,
+  originalBundleBillIds = [],
+  bundleAssignedTo,
 }) {
   const [newNotes, setNewNotes] = useState('');
   const [withUser, setWithUser] = useState('…');
@@ -215,12 +235,15 @@ function OldBillRow({
   useEffect(() => {
     if (isAttached && attachedBill) {
       setHandoverInput(String(getHandoverBalance(attachedBill)));
+      setNewNotes(attachedBill.accountsNotes || '');
     } else if (!isAttached) {
       setHandoverInput(String(getDefaultHandoverBalance(oldbill)));
+      setNewNotes('');
     }
   }, [
     isAttached,
     attachedBill?.handoverBalance,
+    attachedBill?.accountsNotes,
     oldbill.lastHandoverBalance,
     erpBalance,
   ]);
@@ -250,8 +273,19 @@ function OldBillRow({
     loadWithUser();
   }, [oldbill.with]);
 
-  const disabled =
-    isWithParty || ((isAttached || oldbill.with !== 'Accounts') && oldbill.with);
+
+  const isEditableBundleBill =
+    isEditMode &&
+    (originalBundleBillIds.includes(oldbill.id) ||
+      (bundleAssignedTo && oldbill.with === bundleAssignedTo));
+  const attachDisabled =
+    isWithParty ||
+    (!isAttached &&
+      oldbill.with &&
+      oldbill.with !== 'Accounts' &&
+      !isEditableBundleBill);
+  const fieldDisabled = isWithParty || (!isAttached && attachDisabled);
+  const handoverDisabled = isWithParty || attachDisabled || isAttached;
 
   const rowClass = [
     isAttached ? 'assign-bill-row-attached' : '',
@@ -283,7 +317,7 @@ function OldBillRow({
           type="number"
           appearance="underline"
           value={handoverInput}
-          disabled={disabled || isWithParty}
+          disabled={handoverDisabled}
           onChange={(_, t) => {
             setHandoverInput(t.value);
             if (isAttached) {
@@ -303,13 +337,18 @@ function OldBillRow({
       <td className="assign-bill-notes-cell">
         <Tooltip content={oldbill.accountsNotes || 'No note'}>
           <Input
-            disabled={disabled}
+            disabled={fieldDisabled}
             className="assign-bill-notes-input"
             size="small"
             value={newNotes}
             appearance="underline"
             placeholder={oldbill.accountsNotes || '—'}
-            onChange={(_, t) => setNewNotes(t.value)}
+            onChange={(_, t) => {
+              setNewNotes(t.value);
+              if (isAttached) {
+                onNotesChange?.(oldbill.id, t.value);
+              }
+            }}
           />
         </Tooltip>
       </td>
@@ -334,7 +373,7 @@ function OldBillRow({
             }
           >
             <Button
-              disabled={disabled}
+              disabled={attachDisabled}
               appearance="primary"
               size="small"
               onClick={() => onAttachBill()}

@@ -1,7 +1,14 @@
 /* eslint-disable radix */
 /* eslint-disable no-restricted-syntax */
 
-import { getDoc, updateDoc } from 'firebase/firestore';
+import {
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+  writeBatch,
+} from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { DatePicker, setMonth } from '@fluentui/react-datepicker-compat';
@@ -44,12 +51,18 @@ import { showToast } from '../../common/toaster';
 import './style.css';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import { useCompany } from '../../contexts/companyContext';
-import { getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
+import { getCompanyCollection, getCompanyDoc, DB_NAMES } from '../../services/firestoreHelpers';
 import constants from '../../constants';
 import { getHandoverBalance } from '../../services/handoverBalanceUtils';
 import supplyReportRecievingFormatGenerator from '../../common/printerDataGenerator/supplyReportRecievingFormatGenerator';
 import supplyReportFormatGenerator from '../../common/printerDataGenerator/supplyReportFormatGenerator';
 import SelectUserDropdown from '../../common/selectUser';
+import { firebaseDB } from '../../firebaseInit';
+import {
+  canEditSupplyman,
+  collectSupplyReportBillIds,
+  shouldCascadeBillWithOnSupplymanChange,
+} from '../../services/supplyReportEditUtils';
 
 export default function ViewSupplyReportScreen({
   prefillSupplyReport: prefillSupplyReportProp,
@@ -301,13 +314,14 @@ export default function ViewSupplyReportScreen({
                 allUsers.find((x) => x.uid === supplyReport.supplymanId)
                   ?.username
               }
-              {editEnabled ? (
+              {editEnabled && canEditSupplyman(supplyReport) ? (
                 <EditSupplymanDialog
                   currentUser={allUsers.find(
                     (x) => x.uid === supplyReport.supplymanId,
                   )}
-                  supplyReportId={supplyReport.id}
+                  supplyReport={supplyReport}
                   refresh={fetchSupplyReport}
+                  dispatchToast={dispatchToast}
                 />
               ) : null}
             </div>
@@ -384,24 +398,26 @@ export default function ViewSupplyReportScreen({
           </Button>
         ) : null}
         &nbsp;
-        {editEnabled ? (
-          <Button
-            appearance="primary"
-            onClick={() => {
-              setEditEnabled(false);
-            }}
-          >
-            Done
-          </Button>
-        ) : (
-          <Button
-            onClick={() => {
-              setEditEnabled(true);
-            }}
-          >
-            Edit
-          </Button>
-        )}
+        {canEditSupplyman(supplyReport) ? (
+          editEnabled ? (
+            <Button
+              appearance="primary"
+              onClick={() => {
+                setEditEnabled(false);
+              }}
+            >
+              Done
+            </Button>
+          ) : (
+            <Button
+              onClick={() => {
+                setEditEnabled(true);
+              }}
+            >
+              Edit
+            </Button>
+          )
+        ) : null}
         <VerticalSpace1 />
         <h3 style={{ color: 'grey' }}>New Bills</h3>
         <div className="app-table-wrapper">
@@ -689,26 +705,85 @@ function ReturnedBillRow({ data, index }) {
   );
 }
 
-function EditSupplymanDialog({ currentUser, supplyReportId, refresh }) {
+function EditSupplymanDialog({
+  currentUser,
+  supplyReport,
+  refresh,
+  dispatchToast,
+}) {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState(currentUser);
   const [loading, setLoading] = useState(false);
   const { currentCompanyId } = useCompany();
 
   const setSupplymanFunc = async () => {
+    const oldSupplymanId = currentUser?.uid;
+    const newSupplymanId = user?.uid;
+
+    if (!newSupplymanId || newSupplymanId === oldSupplymanId) {
+      setOpen(false);
+      return;
+    }
+
+    setLoading(true);
     try {
       const supplyReportRef = getCompanyDoc(
         currentCompanyId,
         DB_NAMES.SUPPLY_REPORTS,
-        supplyReportId,
+        supplyReport.id,
       );
+      const batch = writeBatch(firebaseDB);
 
-      // Update the supplymanId field
-      updateDoc(supplyReportRef, { supplymanId: user.uid });
+      batch.update(supplyReportRef, { supplymanId: newSupplymanId });
+
+      if (shouldCascadeBillWithOnSupplymanChange(supplyReport)) {
+        const billIds = new Set(collectSupplyReportBillIds(supplyReport));
+
+        const ordersBySrQuery = query(
+          getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS),
+          where('supplyReportId', '==', supplyReport.id),
+        );
+        const ordersBySrSnap = await getDocs(ordersBySrQuery);
+        ordersBySrSnap.forEach((orderDoc) => billIds.add(orderDoc.id));
+
+        const bundlesQuery = query(
+          getCompanyCollection(currentCompanyId, DB_NAMES.BILL_BUNDLES),
+          where('sourceSupplyReport', '==', supplyReport.id),
+        );
+        const bundlesSnap = await getDocs(bundlesQuery);
+        bundlesSnap.forEach((bundleDoc) => {
+          const bundleData = bundleDoc.data();
+          (bundleData.bills || []).forEach((billId) => billIds.add(billId));
+          if (bundleData.assignedTo === oldSupplymanId) {
+            batch.update(bundleDoc.ref, { assignedTo: newSupplymanId });
+          }
+        });
+
+        for (const billId of billIds) {
+          const orderRef = getCompanyDoc(
+            currentCompanyId,
+            DB_NAMES.ORDERS,
+            billId,
+          );
+          const orderSnap = await getDoc(orderRef);
+          if (
+            orderSnap.exists() &&
+            orderSnap.data().with === oldSupplymanId
+          ) {
+            batch.update(orderRef, { with: newSupplymanId });
+          }
+        }
+      }
+
+      await batch.commit();
+      showToast(dispatchToast, 'Supplyman updated', 'success');
       refresh();
       setOpen(false);
     } catch (error) {
-      alert('error occured');
+      console.error('Error updating supplyman:', error);
+      showToast(dispatchToast, 'An error occurred updating supplyman', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -731,6 +806,7 @@ function EditSupplymanDialog({ currentUser, supplyReportId, refresh }) {
                 setSupplymanFunc();
               }}
               appearance="secondary"
+              disabled={loading}
             >
               {loading ? <Spinner size="tiny" /> : 'Done'}
             </Button>

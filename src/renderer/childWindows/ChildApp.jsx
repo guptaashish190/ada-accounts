@@ -167,12 +167,21 @@ export default function App({ args }) {
   }
 
   if (args.type === constants.windowConstants.ASSIGN_BILLS) {
+    const assignKey = args.data?.editBundle?.bundleId ?? 'assign-bills-new';
     return (
       <FluentProvider theme={webLightTheme}>
         <CompanyProvider>
           <AllUsersContext>
             <SettingsContext>
-              <MemoryRouter initialEntries={['/assignBills']}>
+              <MemoryRouter
+                key={assignKey}
+                initialEntries={[
+                  {
+                    pathname: '/assignBills',
+                    state: { editBundle: args.data?.editBundle },
+                  },
+                ]}
+              >
                 <Routes>
                   <Route path="/assignBills" element={<AssignBillScreen />} />
                 </Routes>

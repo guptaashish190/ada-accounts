@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/no-static-element-interactions */
 
 import React from 'react';
-import { Button } from '@fluentui/react-components';
+import { Button, DATA_OVERFLOWING } from '@fluentui/react-components';
 
 import globalUtils from '../../../services/globalUtils';
 import './style.css';
@@ -82,6 +82,10 @@ export default function BillRow({
             {globalUtils.getCurrencyFormat(data.erpBalance)}
           </span>
         )}
+        <span className="br-chip br-chip-erp">
+            <span className="br-chip-label">Acc   Notes</span>
+            {data.accountsNotes || "--"}
+          </span>
       </span>
 
       {/* ── Action buttons ── */}

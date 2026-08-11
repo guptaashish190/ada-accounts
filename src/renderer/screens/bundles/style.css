@@ -1,35 +1,258 @@
-.all-bundles-container .supply-report-row {
-  cursor: pointer;
-  padding: 10px 0;
-  width: 60vw;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.086);
-  display: grid;
-  grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
+/* All Bundles Container */
+.all-bundles-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
-.all-bundles-container .supply-report-row .sr-id {
-  font-weight: bold;
-}
-
-.all-bundles-container .supply-report-row .sr-parties-length {
-  color: rgba(128, 128, 128, 0.816);
-}
-
-.all-bundles-container .supply-report-row .sr-supplyman {
-  color: var(--green);
-  margin-left: 10px;
-}
-
-.all-bundles-container .supply-report-row .sr-status {
-  font-size: 0.7em;
-  padding: 2px;
-  border-radius: 4px;
-  color: white;
+/* Page Header */
+.page-header {
+  margin-bottom: 24px;
   text-align: center;
+}
+
+/* Filters Section */
+.filters-section {
+  background: #f8f9fa;
+  border: 1px solid #e1dfdd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.filters-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.filter-item label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #605e5c;
+  white-space: nowrap;
+}
+
+.date-range {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Results Section */
+.results-section {
+  min-height: 200px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.bundles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+/* Bundle Card */
+.supply-report-card {
+  background: #ffffff;
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.supply-report-card:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+  border-color: #0078d4;
+  transform: translateY(-1px);
+}
+
+.supply-report-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f3f2f1;
+}
+
+.sr-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sr-title {
+  color: #1f2937;
+}
+
+.sr-title-separator {
+  color: #6b7280;
+}
+
+.sr-title-supplyman {
+  color: #334155;
+  font-weight: 600;
+}
+
+.sr-subtitle {
+  color: #6b7280;
+}
+
+.status-badge {
+  padding: 5px 9px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.supply-report-bills {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bills-loading-text,
+.bills-empty-text {
+  color: #6b7280;
+  padding: 6px 2px;
+}
+
+.sr-bills-table-wrapper {
+  max-height: none;
+  overflow: visible;
+}
+
+.sr-bills-table-wrapper .app-table {
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.sr-bills-table-wrapper .col-index {
+  width: 5%;
+}
+
+.sr-bills-table-wrapper .col-party {
+  width: 27%;
+}
+
+.sr-bills-table-wrapper .col-bill-number {
+  width: 18%;
+}
+
+.sr-bills-table-wrapper .col-money {
+  width: 10%;
+}
+
+.party-col {
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.amount-col {
+  font-weight: 600;
 }
 
 .menu-button {
   position: absolute;
   left: 5px;
   top: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .all-bundles-container {
+    padding: 16px;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .filter-item {
+    width: 100%;
+  }
+
+  .filter-actions {
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .date-range {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sr-bills-table-wrapper {
+    max-height: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .all-bundles-container {
+    padding: 12px;
+  }
+
+  .filters-section {
+    padding: 12px;
+  }
+
+  .supply-report-card {
+    padding: 12px;
+  }
+
+  .supply-report-row-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .status-badge {
+    align-self: flex-start;
+  }
+
+  .sr-bills-table-wrapper .app-table {
+    min-width: 100%;
+  }
 }
