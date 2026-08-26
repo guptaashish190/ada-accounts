@@ -197,38 +197,42 @@ export default function DaySupplyReportPrint() {
             {unSuppliedOrders.length !== 0 ? (
               <table className="app-table">
                 <thead className="supply-report-row">
-                  <th>
-                    <Text>Party Name</Text>
-                  </th>
-                  <th>
-                    <Text>Bill Number</Text>
-                  </th>
-                  <th>
-                    <Text>Amount</Text>
-                  </th>
-                  <th>
-                    <Text>Credit Days</Text>
-                  </th>
-                  <th>
-                    <Text>Payment</Text>
-                  </th>
-                  <th>
-                    <Text>Outstanding</Text>
-                  </th>
-                  <th>
-                    <Text>Remarks</Text>
-                  </th>
+                  <tr>
+                    <th>
+                      <Text>Party Name</Text>
+                    </th>
+                    <th>
+                      <Text>Bill Number</Text>
+                    </th>
+                    <th>
+                      <Text>Amount</Text>
+                    </th>
+                    <th>
+                      <Text>Credit Days</Text>
+                    </th>
+                    <th>
+                      <Text>Payment</Text>
+                    </th>
+                    <th>
+                      <Text>Outstanding</Text>
+                    </th>
+                    <th>
+                      <Text>Remarks</Text>
+                    </th>
+                  </tr>
                 </thead>
-                {unSuppliedOrders?.map((unso) => {
-                  return (
-                    <SupplyReportOrderRow
-                      key={`unsupplied-${unso.id}`}
-                      editRemarks={allowEditRemark}
-                      billId={unso.id}
-                      setRemarks={setNewRemarks}
-                    />
-                  );
-                })}
+                <tbody>
+                  {unSuppliedOrders?.map((unso) => {
+                    return (
+                      <SupplyReportOrderRow
+                        key={`unsupplied-${unso.id}`}
+                        editRemarks={allowEditRemark}
+                        billId={unso.id}
+                        setRemarks={setNewRemarks}
+                      />
+                    );
+                  })}
+                </tbody>
               </table>
             ) : null}
           </div>
@@ -254,46 +258,50 @@ function SupplyReportRow({
   return (
     <table className="app-table">
       <thead className="supply-report-row">
-        <th style={{ width: '25%' }}>
-          <Text className="sr-id">
-            {data.receiptNumber} (
-            {data.status === 'Completed' ? 'Received' : 'Unreceived'})
-          </Text>
-        </th>
-        <th style={{ width: '10%' }}>
-          <Text className="sr-timestamp">
-            {allUsers.find((x) => x.uid === data.supplymanId)?.username}
-          </Text>
-        </th>
+        <tr>
+          <th style={{ width: '25%' }}>
+            <Text className="sr-id">
+              {data.receiptNumber} (
+              {data.status === 'Completed' ? 'Received' : 'Unreceived'})
+            </Text>
+          </th>
+          <th style={{ width: '10%' }}>
+            <Text className="sr-timestamp">
+              {allUsers.find((x) => x.uid === data.supplymanId)?.username}
+            </Text>
+          </th>
 
-        <th style={{ width: '10%' }}>
-          <Text className="sr-supplyman">
-            {globalUtils.getDayTime(data.dispatchTimestamp)}
-          </Text>
-        </th>
-        <th style={{ width: '10%' }}>
-          <Text className="sr-supplyman">Credit Days</Text>
-        </th>
-        <th style={{ width: '20%' }}>
-          <Text>Payment</Text>
-        </th>
-        <th>
-          <Text>Outstanding</Text>
-        </th>
-        <th style={{ width: '13%' }}>
-          <Text>Remarks</Text>
-        </th>
+          <th style={{ width: '10%' }}>
+            <Text className="sr-supplyman">
+              {globalUtils.getDayTime(data.dispatchTimestamp)}
+            </Text>
+          </th>
+          <th style={{ width: '10%' }}>
+            <Text className="sr-supplyman">Credit Days</Text>
+          </th>
+          <th style={{ width: '18%' }}>
+            <Text>Payment</Text>
+          </th>
+          <th style={{ width: '14%' }}>
+            <Text>Outstanding</Text>
+          </th>
+          <th style={{ width: '13%' }}>
+            <Text>Remarks</Text>
+          </th>
+        </tr>
       </thead>
 
-      {data.orders.map((x) => (
-        <SupplyReportOrderRow
-          key={`order-${x}`}
-          showDefaultersOnly={showDefaultersOnly}
-          setRemarks={setRemarks}
-          editRemarks={editRemarks}
-          billId={x}
-        />
-      ))}
+      <tbody>
+        {data.orders.map((x) => (
+          <SupplyReportOrderRow
+            key={`order-${x}`}
+            showDefaultersOnly={showDefaultersOnly}
+            setRemarks={setRemarks}
+            editRemarks={editRemarks}
+            billId={x}
+          />
+        ))}
+      </tbody>
     </table>
   );
 }
@@ -413,11 +421,25 @@ function SupplyReportOrderRow({
     }
   }, [loading, showDefaultersOnly]);
 
-  if (loading) return <Spinner />;
-  if (!order) return <div>Error loading order</div>;
+  if (loading) {
+    return (
+      <tr>
+        <td colSpan={7}>
+          <Spinner />
+        </td>
+      </tr>
+    );
+  }
+  if (!order) {
+    return (
+      <tr>
+        <td colSpan={7}>Error loading order</td>
+      </tr>
+    );
+  }
 
   return (
-    <tbody
+    <tr
       style={{ backgroundColor: isDefaulter ? '#ff000077' : 'white' }}
       className="supply-report-print-bill-detail"
     >
@@ -476,6 +498,6 @@ function SupplyReportOrderRow({
           order.accountsNotes
         )}
       </td>
-    </tbody>
+    </tr>
   );
 }

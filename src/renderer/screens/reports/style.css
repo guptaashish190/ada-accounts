@@ -26,6 +26,15 @@
 .print-supply-reports-container table {
   width: 100%;
   margin-bottom: 20px;
+  border-collapse: collapse;
+  border: 1px solid #333;
+}
+
+.print-supply-reports-container table th,
+.print-supply-reports-container table td {
+  border: 1px solid #333;
+  padding: 5px;
+  vertical-align: top;
 }
 
 .print-supply-reports-container * {
@@ -68,11 +77,41 @@
   .print-supply-reports-container table {
     width: 100% !important;
     table-layout: fixed;
+    border-collapse: collapse !important;
+    border: 1px solid #000 !important;
+  }
+
+  .print-supply-reports-container table th,
+  .print-supply-reports-container table td {
+    border: 1px solid #000 !important;
+    padding: 3px 4px !important;
+    vertical-align: top !important;
+    word-break: break-word;
+    line-height: 1.2 !important;
   }
 
   .print-supply-reports-container .supply-report-row {
     width: 100% !important;
-    background-color: white;
+    background-color: #e2e8f0 !important;
+  }
+
+  .print-supply-reports-container .supply-report-row th {
+    background-color: #e2e8f0 !important;
+    font-weight: 700 !important;
+    position: static !important;
+  }
+
+  .print-supply-reports-container table th:nth-child(6),
+  .print-supply-reports-container table td:nth-child(6) {
+    width: 14% !important;
+    min-width: 72px !important;
+    white-space: nowrap !important;
+  }
+
+  .print-supply-reports-container table th:nth-child(5),
+  .print-supply-reports-container table td:nth-child(5) {
+    width: 18% !important;
+    white-space: normal !important;
   }
 
   .tab-navigator .left {
@@ -101,19 +140,6 @@
     font-size: 12px !important;
   }
 
-  /* table {
-    border: 1px solid black;
-    margin-bottom: 20px;
-  }
-
-  table th {
-    border: 1px solid black;
-  }
-
-  table td {
-    border: none;
-    border-right: 1px solid black;
-  } */
   .no-print{
     display: none;
   }
