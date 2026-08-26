@@ -1,7 +1,7 @@
-import { Dropdown, Option, Spinner } from '@fluentui/react-components';
+import { Spinner } from '@fluentui/react-components';
 import React, { useEffect, useState } from 'react';
 import { getDocs, query, where } from 'firebase/firestore';
-import { useAuthUser } from '../../contexts/allUsersContext';
+import SelectUserDropdown from '../../common/selectUser';
 import constants from '../../constants';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
@@ -14,7 +14,6 @@ import { VerticalSpace2 } from '../../common/verticalSpace';
 
 export default function ReceivePendingUser() {
   const [selectedUser, setSelectedUser] = useState();
-  const { allUsers } = useAuthUser();
   const [loading, setLoading] = useState(false);
   const [pendingSupplyReport, setPendingSupplyReport] = useState([]);
   const [pendingBundles, setPendingBundles] = useState([]);
@@ -91,20 +90,15 @@ export default function ReceivePendingUser() {
 
   return (
     <center>
-      <Dropdown
+      <SelectUserDropdown
         size="large"
-        onOptionSelect={(_, e) => setSelectedUser(e.optionValue)}
+        user={selectedUser}
+        setUser={setSelectedUser}
+        valueKey="uid"
         className="dropdown filter-input"
         placeholder="Select User"
-      >
-        {allUsers
-          .filter((x) => !x.isDeactivated)
-          .map((user) => (
-            <Option text={user.username} value={user.uid} key={user.uid}>
-              {user.username}
-            </Option>
-          ))}
-      </Dropdown>
+        showProfilePicture={false}
+      />
       {loading ? <Spinner /> : null}
       <VerticalSpace2 />
       <h3>Supply Reports</h3>

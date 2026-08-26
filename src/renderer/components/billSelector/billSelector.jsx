@@ -62,6 +62,7 @@ export default function BillSelector({
           '==',
           constants.firebase.billFlowTypes.ORDER_PACKED,
         ),
+        
         where(
           'orderStatus',
           '==',

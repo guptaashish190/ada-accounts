@@ -46,6 +46,7 @@ import {
   DB_NAMES,
 } from '../../../services/firestoreHelpers';
 import PartySelector from '../../../common/partySelector';
+import SelectUserDropdown from '../../../common/selectUser';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import './style.css';
 import { showToast } from '../../../common/toaster';
@@ -174,24 +175,15 @@ export default function CreateVoucherDialog({ inputsEnabled }) {
         <DialogContent>
           <br />
           <div className="create-payment-receipt-container">
-            <Dropdown
+            <SelectUserDropdown
               style={{ width: '60%' }}
-              onOptionSelect={(_, e) => setUser(e.optionValue)}
+              user={user}
+              setUser={setUser}
+              valueKey="uid"
               className="dropdown filter-input"
               placeholder="User"
-            >
-              {allUsers
-                .filter((x) => !x.isDeactivated)
-                .map((user1) => (
-                  <Option
-                    text={user1.username}
-                    value={user1.uid}
-                    key={`allbills-filter-user-${user1.uid}`}
-                  >
-                    {user1.username}
-                  </Option>
-                ))}
-            </Dropdown>
+              showProfilePicture={false}
+            />
             <br />
             <br />
             <Dropdown

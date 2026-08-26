@@ -372,6 +372,11 @@ export default function VerifySupplyReport() {
   });
 
   const printDispatchReceipt = (dispatchTimestamp, extraBills, bundleNumber) => {
+    const billsForPrint = bills.map((b) => ({
+      ...b,
+      balance: b.balance != null ? b.balance : parseInt(b.orderAmount, 10),
+    }));
+
     window.electron.ipcRenderer.sendMessage(
       'print',
       supplyReportFormatGenerator({
@@ -379,7 +384,7 @@ export default function VerifySupplyReport() {
           ?.username,
         dispatchTime: globalUtils.getTimeFormat(dispatchTimestamp),
         receiptNumber: supplyReport.receiptNumber,
-        bills,
+        bills: billsForPrint,
         oldBills: [...attachedBills, ...supplementaryBills].filter(
           (b) => b.balance === 0,
         ),

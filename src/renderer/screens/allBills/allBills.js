@@ -26,8 +26,8 @@ import Loader from '../../common/loader';
 import globalUtils, { useDebounce } from '../../services/globalUtils';
 import { VerticalSpace1 } from '../../common/verticalSpace';
 import BillDetailDialog from './billDetail/billDetail';
-import { useAuthUser } from '../../contexts/allUsersContext';
 import PartySelector from '../../common/partySelector';
+import SelectUserDropdown from '../../common/selectUser';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 
@@ -140,7 +140,6 @@ export default function AllBillsScreen() {
     fetchData();
   };
 
-  const { allUsers } = useAuthUser();
   const options = [
     'Created',
     'Packed',
@@ -157,33 +156,22 @@ export default function AllBillsScreen() {
         <div className="all-bills-search-input-container">
           <PartySelector onPartySelected={(p) => setQueryPartyId(p?.id)} />
 
-          <Dropdown
-            onOptionSelect={(_, e) => setQueryWith(e.optionValue)}
+          <SelectUserDropdown
+            user={queryWith}
+            setUser={setQueryWith}
+            valueKey="uid"
             className="dropdown filter-input"
             placeholder="With"
-          >
-            <Option
-              text="Accounts"
-              value="Accounts"
-              key="accounts-with-dropdown"
-            >
-              Accounts
-            </Option>
-            <Option text="None" value="" key="accounts-none-dropdown">
-              None
-            </Option>
-            {allUsers
-              .filter((x) => !x.isDeactivated)
-              .map((user) => (
-                <Option
-                  text={user.username}
-                  value={user.uid}
-                  key={`allbills-filter-user-${user.uid}`}
-                >
-                  {user.username}
-                </Option>
-              ))}
-          </Dropdown>
+            showProfilePicture={false}
+            extraOptions={[
+              {
+                text: 'Accounts',
+                value: 'Accounts',
+                key: 'accounts-with-dropdown',
+              },
+              { text: 'None', value: '', key: 'accounts-none-dropdown' },
+            ]}
+          />
 
           <Input
             onChange={(_, e) => setQueryBillNumber(e.value)}
@@ -192,23 +180,14 @@ export default function AllBillsScreen() {
             className="filter-input"
             placeholder="Bill No."
           />
-          <Dropdown
-            onOptionSelect={(_, e) => setQueryMR(e.optionValue)}
+          <SelectUserDropdown
+            user={queryMR}
+            setUser={setQueryMR}
+            valueKey="uid"
             className="dropdown filter-input"
             placeholder="MR"
-          >
-            {allUsers
-              .filter((x) => !x.isDeactivated)
-              .map((user) => (
-                <Option
-                  text={user.username}
-                  value={user.uid}
-                  key={`allbills-filter-mr-${user.uid}`}
-                >
-                  {user.username}
-                </Option>
-              ))}
-          </Dropdown>
+            showProfilePicture={false}
+          />
         </div>
         <VerticalSpace1 />
         <Button

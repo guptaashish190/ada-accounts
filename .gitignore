@@ -34,3 +34,5 @@ release-builds
 $RECYCLE.BIN
 
 fbexport
+
+scripts/serviceAccount.json

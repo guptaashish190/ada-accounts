@@ -31,6 +31,7 @@ const PRODUCT_FIELDS = [
   { key: 'type', label: 'Type' },
   { key: 'company', label: 'Company / Brand' },
   { key: 'packSize', label: 'Pack Size' },
+  { key: 'boxConversion', label: 'Box Conversion' },
   { key: 'mrp', label: 'MRP' },
   { key: 'ptd', label: 'PTD' },
   { key: 'ptr', label: 'PTR' },
@@ -130,6 +131,15 @@ export default function ImportProducts({ open, onClose, onImported }) {
         );
         if (idx !== -1) newMap[f.key] = cols[idx];
       }
+      if (f.key === 'boxConversion') {
+        const idx = lowerCols.findIndex(
+          (c) =>
+            c.includes('boxconversion')
+            || c.includes('box conversion')
+            || c.includes('box_conv'),
+        );
+        if (idx !== -1) newMap[f.key] = cols[idx];
+      }
       if (f.key === 'ptd') {
         const idx = lowerCols.findIndex(
           (c) => c === 'ptd' || c.includes('price to distributor'),
@@ -188,6 +198,7 @@ export default function ImportProducts({ open, onClose, onImported }) {
           type: String(row[mapping.type] || '').trim(),
           company: String(row[mapping.company] || '').trim(),
           packSize: String(row[mapping.packSize] || '').trim(),
+          boxConversion: parseFloat(row[mapping.boxConversion]) || 0,
           mrp: parseFloat(row[mapping.mrp]) || 0,
           ptd: parseFloat(row[mapping.ptd]) || 0,
           ptr: parseFloat(row[mapping.ptr]) || 0,
@@ -345,6 +356,7 @@ export default function ImportProducts({ open, onClose, onImported }) {
                             <th>Type</th>
                             <th>Company</th>
                             <th>Pack</th>
+                            <th>Box Conv.</th>
                             <th>MRP</th>
                             <th>PTD</th>
                             <th>PTR</th>
@@ -359,6 +371,7 @@ export default function ImportProducts({ open, onClose, onImported }) {
                               <td>{p.type || '—'}</td>
                               <td>{p.company}</td>
                               <td>{p.packSize}</td>
+                              <td>{p.boxConversion}</td>
                               <td>{p.mrp}</td>
                               <td>{p.ptd}</td>
                               <td>{p.ptr}</td>

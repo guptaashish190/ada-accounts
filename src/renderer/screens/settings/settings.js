@@ -9,8 +9,6 @@ import {
   Button,
   CardHeader,
   Card,
-  Dropdown,
-  Option,
   Toaster,
   useToastController,
   Text,
@@ -18,6 +16,7 @@ import {
 import { firebaseDB } from '../../firebaseInit';
 import { getUsersCollection } from '../../services/firestoreHelpers';
 import { showToast } from '../../common/toaster';
+import SelectUserDropdown from '../../common/selectUser';
 import PrinterSettings from './printers';
 
 export default function SettingsScreen() {
@@ -91,22 +90,16 @@ export default function SettingsScreen() {
           when accounts marks a bill as &quot;Bill With Party&quot;.
         </Text>
         <br />
-        <Dropdown
+        <SelectUserDropdown
           placeholder="Select user"
-          selectedOptions={billWithPartyUserId ? [billWithPartyUserId] : []}
-          value={
-            allUsers.find((u) => u.id === billWithPartyUserId)?.username || ''
-          }
-          onOptionSelect={(_, data) => {
-            setBillWithPartyUserId(data.optionValue || '');
-          }}
-        >
-          {allUsers.map((user) => (
-            <Option key={user.id} value={user.id}>
-              {user.username || user.id}
-            </Option>
-          ))}
-        </Dropdown>
+          user={billWithPartyUserId}
+          setUser={setBillWithPartyUserId}
+          valueKey="id"
+          users={allUsers}
+          filterDeactivated={false}
+          style={{ width: '100%' }}
+          showProfilePicture={false}
+        />
         <br />
         <Button
           appearance="primary"

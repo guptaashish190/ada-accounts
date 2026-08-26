@@ -44,6 +44,7 @@ import {
 import { firebaseDB } from '../../firebaseInit';
 import globalUtils, { useDebounce } from '../../services/globalUtils';
 import constants from '../../constants';
+import SelectUserDropdown from '../../common/selectUser';
 import './style.css';
 
 const MR_JOB_ID = constants.firebaseIds.JOBS.MR;
@@ -95,21 +96,6 @@ const computeTotalKm = (points) => {
   return total;
 };
 
-function getSelectedMrLabel(mrUsers, uid) {
-  if (!uid) return '';
-  const mr = mrUsers.find((u) => u.uid === uid);
-  if (!mr) return uid;
-  return mr.username || mr.email || mr.uid;
-}
-
-function getWithLabel(users, withValue) {
-  if (!withValue) return '';
-  if (withValue === 'Accounts') return 'Accounts';
-  const user = users.find((u) => u.uid === withValue);
-  if (!user) return withValue;
-  return user.username || user.email || user.uid;
-}
-
 function getSelectedRouteLabel(routes, routeId) {
   if (!routeId) return '';
   const route = routes.find((r) => r.routeId === routeId);
@@ -135,28 +121,25 @@ function AssignMrDialog({
           <DialogTitle>Assign MR — {routeName}</DialogTitle>
           <DialogContent>
             <div style={{ marginTop: 12 }}>
-              <Dropdown
+              <SelectUserDropdown
                 placeholder="Select MR"
-                value={getSelectedMrLabel(mrList, selectedMrUid)}
-                selectedOptions={selectedMrUid ? [selectedMrUid] : []}
-                onOptionSelect={(e, d) => onSelectMr(d.optionValue || '')}
+                user={selectedMrUid}
+                setUser={(value) => onSelectMr(value || '')}
+                valueKey="uid"
+                users={mrList}
                 style={{ width: '100%' }}
-              >
-                {mrList.map((mr) => {
+                showProfilePicture={false}
+                getDisplayName={(mr) => mr.username || mr.email || mr.uid}
+                getOptionLabel={(mr) => {
                   const name = mr.username || mr.email || mr.uid;
                   const route = mr.assignedRoute || '';
                   const suffix =
                     route && route !== assignRouteId
                       ? ' (on another route)'
                       : '';
-                  return (
-                    <Option key={mr.uid} value={mr.uid}>
-                      {name}
-                      {suffix}
-                    </Option>
-                  );
-                })}
-              </Dropdown>
+                  return `${name}${suffix}`;
+                }}
+              />
             </div>
           </DialogContent>
           <DialogActions>
@@ -404,20 +387,19 @@ function EditOrderDialog({
               </div>
               <div className="edit-order-field">
                 <Label>With</Label>
-                <Dropdown
+                <SelectUserDropdown
                   placeholder="Select user"
-                  value={getWithLabel(companyUserList, withValue)}
-                  selectedOptions={withValue ? [withValue] : []}
-                  onOptionSelect={(e, d) => setWithValue(d.optionValue || '')}
+                  user={withValue}
+                  setUser={(value) => setWithValue(value || '')}
+                  valueKey="uid"
+                  users={companyUserList}
                   style={{ width: '100%' }}
-                >
-                  <Option value="Accounts">Accounts</Option>
-                  {companyUserList.map((user) => (
-                    <Option key={user.uid} value={user.uid}>
-                      {user.username || user.email || user.uid}
-                    </Option>
-                  ))}
-                </Dropdown>
+                  showProfilePicture={false}
+                  getDisplayName={(u) => u.username || u.email || u.uid}
+                  extraOptions={[
+                    { text: 'Accounts', value: 'Accounts', key: 'accounts' },
+                  ]}
+                />
               </div>
               <div className="edit-order-field">
                 <Label>Goods</Label>
@@ -453,19 +435,16 @@ function EditOrderDialog({
               </div>
               <div className="edit-order-field">
                 <Label>MR</Label>
-                <Dropdown
+                <SelectUserDropdown
                   placeholder="Select MR"
-                  value={getSelectedMrLabel(mrList, mrId)}
-                  selectedOptions={mrId ? [mrId] : []}
-                  onOptionSelect={(e, d) => setMrId(d.optionValue || '')}
+                  user={mrId}
+                  setUser={(value) => setMrId(value || '')}
+                  valueKey="uid"
+                  users={mrList}
                   style={{ width: '100%' }}
-                >
-                  {mrList.map((mr) => (
-                    <Option key={mr.uid} value={mr.uid}>
-                      {mr.username || mr.email || mr.uid}
-                    </Option>
-                  ))}
-                </Dropdown>
+                  showProfilePicture={false}
+                  getDisplayName={(mr) => mr.username || mr.email || mr.uid}
+                />
               </div>
             </div>
           </DialogContent>
@@ -748,12 +727,12 @@ function ManagerDashboard() {
       registerByUser[uid].push(data);
     });
 
-    // Build orders by userId (createdById)
+    // Build orders by userId (mrId is canonical; fall back to createdById)
     const ordersByUser = {};
     let pipelineCount = 0;
     ordersDocs.forEach((d) => {
       const data = d.data();
-      const uid = data.createdById || '';
+      const uid = data.mrId || data.createdById || '';
       if (!ordersByUser[uid]) ordersByUser[uid] = [];
       ordersByUser[uid].push(data);
       if (data.flowCompleted === false) pipelineCount++;

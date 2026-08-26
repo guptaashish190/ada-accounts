@@ -133,6 +133,81 @@
   color: #5c2d91;
 }
 
+/* Today's Orders */
+.orders-section {
+  margin-bottom: 28px;
+}
+
+.orders-section h2,
+.visited-section h2,
+.pending-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #323130;
+}
+
+.orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.order-row {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background-color: #fff;
+  border: 1px solid #e1dfdd;
+  border-left: 4px solid #107c10;
+}
+
+.order-row__main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.order-row__party {
+  font-size: 14px;
+  font-weight: 600;
+  color: #323130;
+}
+
+.order-row__amount {
+  font-size: 14px;
+  font-weight: 700;
+  color: #107c10;
+  white-space: nowrap;
+}
+
+.order-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #605e5c;
+}
+
+.order-row__status {
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background-color: #f0f6ff;
+  color: #0078d4;
+}
+
+.order-row__type {
+  color: #605e5c;
+}
+
+.order-row__time {
+  color: #a19f9d;
+  margin-left: auto;
+}
+
 /* Visited Parties */
 .visited-section {
   margin-bottom: 28px;
@@ -200,14 +275,6 @@
   border-radius: 8px;
   object-fit: contain;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
-}
-
-.visited-section h2,
-.pending-section h2 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 12px 0;
-  color: #323130;
 }
 
 .visited-cards {

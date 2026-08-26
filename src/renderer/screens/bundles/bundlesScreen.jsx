@@ -14,10 +14,10 @@ import {
 import './style.css';
 import globalUtils from '../../services/globalUtils';
 import constants from '../../constants';
-import { useAuthUser } from '../../contexts/allUsersContext';
 import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 import PartySelector from '../../common/partySelector';
+import SelectUserDropdown from '../../common/selectUser';
 import { mergeHandoverOntoBills } from '../../services/handoverBalanceUtils';
 
 const statusColors = {
@@ -55,7 +55,6 @@ export default function AllBundlesScreen() {
   const [toDate, setToDate] = useState();
   const [loading, setLoading] = useState(false);
 
-  const { allUsers } = useAuthUser();
   const { currentCompanyId } = useCompany();
 
   const toDateMin = fromDate ? new Date(fromDate) : undefined;
@@ -233,23 +232,16 @@ export default function AllBundlesScreen() {
             <Text size={200} weight="semibold" style={{ marginBottom: '4px' }}>
               Assigned User
             </Text>
-            <Dropdown
-              onOptionSelect={(_, e) => setAssignedUser(e.optionValue)}
+            <SelectUserDropdown
+              user={assignedUser}
+              setUser={setAssignedUser}
+              valueKey="uid"
+              includeAllOption
               placeholder="All"
               size="small"
               style={{ width: '140px' }}
-            >
-              <Option text="All" value={null} key="assigned-user-all">
-                All
-              </Option>
-              {allUsers
-                .filter((x) => !x.isDeactivated)
-                .map((user) => (
-                  <Option text={user.username} value={user.uid} key={user.uid}>
-                    {user.username}
-                  </Option>
-                ))}
-            </Dropdown>
+              showProfilePicture={false}
+            />
           </div>
 
           <div className="filter-item">

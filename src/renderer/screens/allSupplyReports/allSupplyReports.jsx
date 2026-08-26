@@ -13,8 +13,8 @@ import { DatePicker } from '@fluentui/react-datepicker-compat';
 import './style.css';
 import Loader from '../../common/loader';
 import globalUtils from '../../services/globalUtils';
-import { useAuthUser } from '../../contexts/allUsersContext';
 import { useCompany } from '../../contexts/companyContext';
+import SelectUserDropdown from '../../common/selectUser';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 import constants from '../../constants';
 
@@ -37,7 +37,6 @@ export default function AllSupplyReportsScreen() {
   const [toDate, setToDate] = useState();
 
   const [loading, setLoading] = useState(false);
-  const { allUsers } = useAuthUser();
 
   // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
@@ -208,23 +207,16 @@ export default function AllSupplyReportsScreen() {
             <Text size={200} weight="semibold" style={{ marginBottom: '4px' }}>
               Supplyman
             </Text>
-            <Dropdown
-              onOptionSelect={(_, e) => setSupplyman(e.optionValue)}
+            <SelectUserDropdown
+              user={supplyman}
+              setUser={setSupplyman}
+              valueKey="uid"
+              includeAllOption
               placeholder="All"
               size="small"
               style={{ width: '140px' }}
-            >
-              <Option text="All" value={null} key="supplyman-all">
-                All
-              </Option>
-              {allUsers
-                .filter((x) => !x.isDeactivated)
-                .map((user) => (
-                  <Option text={user.username} value={user.uid} key={user.uid}>
-                    {user.username}
-                  </Option>
-                ))}
-            </Dropdown>
+              showProfilePicture={false}
+            />
           </div>
 
           <div className="filter-item">

@@ -348,16 +348,19 @@ function MrDetailPanel({ data }) {
       if (pIds.length > 0) fetchPartyNames(pIds);
     });
 
-    // 3. Real-time listener: orders for this MR today
+    // 3. Real-time listener: orders for this MR today (mrId is canonical)
     const ordersQuery = query(
       getCompanyCollection(companyId, DB_NAMES.ORDERS),
-      where('createdById', '==', mrUid),
+      where('mrId', '==', mrUid),
       where('creationTime', '>=', startMs),
       where('creationTime', '<', endMs),
     );
 
     unsubOrdersRef.current = onSnapshot(ordersQuery, (snap) => {
-      setOrders(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+      const orderList = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+      setOrders(orderList);
+      const pIds = orderList.map((o) => o.partyId).filter(Boolean);
+      if (pIds.length > 0) fetchPartyNames(pIds);
     });
 
     // 4. Real-time listener: location tracking doc for this MR today
@@ -468,6 +471,20 @@ function MrDetailPanel({ data }) {
     (sum, o) => sum + (o.orderAmount || 0),
     0,
   );
+
+  const sortedOrders = [...orders].sort(
+    (a, b) => (b.creationTime || 0) - (a.creationTime || 0),
+  );
+
+  const getOrderTypeLabel = (o) => {
+    const isDirectBilling =
+      Array.isArray(o.flow) &&
+      o.flow.length > 0 &&
+      o.flow[0]?.type === BILL_CREATED_FLOW;
+    if (isDirectBilling) return 'Direct Billing';
+    if (o.isCallOrder) return '\u260E Call order';
+    return '\u{1F6B6} Physical visit';
+  };
 
   const sortedLocationPoints = filterAndSmoothPathPoints(locationPoints);
   const locationSegments = buildContinuousSegments(sortedLocationPoints);
@@ -630,6 +647,38 @@ function MrDetailPanel({ data }) {
               <div className="stat-label">Distance</div>
               <div className="stat-value">{totalDistanceKm.toFixed(1)} km</div>
             </div>
+          </div>
+
+          {/* Today's Orders — same source as Sales total */}
+          <div className="orders-section">
+            <h2>Today&apos;s Orders ({orderCount})</h2>
+            {sortedOrders.length === 0 ? (
+              <div className="no-data-message">No orders today</div>
+            ) : (
+              <div className="orders-list">
+                {sortedOrders.map((o) => (
+                  <div key={o.id} className="order-row">
+                    <div className="order-row__main">
+                      <div className="order-row__party">
+                        {partyNames[o.partyId] || o.partyId || '—'}
+                      </div>
+                      <div className="order-row__amount">
+                        {globalUtils.getCurrencyFormat(o.orderAmount || 0)}
+                      </div>
+                    </div>
+                    <div className="order-row__meta">
+                      {o.orderStatus && (
+                        <span className="order-row__status">{o.orderStatus}</span>
+                      )}
+                      <span className="order-row__type">{getOrderTypeLabel(o)}</span>
+                      <span className="order-row__time">
+                        {formatTime(o.creationTime)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Visited Parties */}
