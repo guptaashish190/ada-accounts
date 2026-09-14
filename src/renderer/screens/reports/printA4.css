@@ -1,0 +1,133 @@
+/**
+ * Shared A4 print rules.
+ *
+ * Screens that print a full page import this and wrap their printable markup
+ * in `.print-a4-container` (or the legacy `.print-supply-reports-container`).
+ * Anything marked `.no-print` is hidden on paper; anything marked
+ * `.print-only` is hidden on screen and shown on paper.
+ */
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 5mm;
+  }
+
+  .version-name {
+    display: none;
+  }
+
+  body,
+  html {
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    height: auto !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .tab-navigator,
+  .tab-content,
+  .print-supply-reports-page,
+  .print-supply-reports-container,
+  .print-a4-container {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .print-supply-reports-container table,
+  .print-a4-container table {
+    width: 100% !important;
+    table-layout: fixed;
+    border-collapse: collapse !important;
+    border: 1px solid #000 !important;
+  }
+
+  .print-supply-reports-container table th,
+  .print-supply-reports-container table td,
+  .print-a4-container table th,
+  .print-a4-container table td {
+    border: 1px solid #000 !important;
+    padding: 3px 4px !important;
+    vertical-align: top !important;
+    word-break: break-word;
+    line-height: 1.2 !important;
+  }
+
+  .print-supply-reports-container .supply-report-row {
+    width: 100% !important;
+    background-color: #e2e8f0 !important;
+  }
+
+  .print-supply-reports-container .supply-report-row th {
+    background-color: #e2e8f0 !important;
+    font-weight: 700 !important;
+    position: static !important;
+  }
+
+  .print-a4-container table th {
+    background-color: #e2e8f0 !important;
+    font-weight: 700 !important;
+    position: static !important;
+  }
+
+  .print-supply-reports-container table th:nth-child(6),
+  .print-supply-reports-container table td:nth-child(6) {
+    width: 14% !important;
+    min-width: 72px !important;
+    white-space: nowrap !important;
+  }
+
+  .print-supply-reports-container table th:nth-child(5),
+  .print-supply-reports-container table td:nth-child(5) {
+    width: 18% !important;
+    white-space: normal !important;
+  }
+
+  .tab-navigator .left {
+    display: none;
+  }
+
+  .tab-navigator .right {
+    margin-top: 0px;
+  }
+
+  h3 {
+    font-size: 18px !important;
+  }
+
+  .print-supply-reports-container .all-bills-search-input-container {
+    display: none;
+  }
+
+  .tab-navigator {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .print-supply-reports-container .supply-report-row span {
+    font-weight: bold !important;
+    font-size: 12px !important;
+  }
+
+  * {
+    font-size: 11px !important;
+  }
+}

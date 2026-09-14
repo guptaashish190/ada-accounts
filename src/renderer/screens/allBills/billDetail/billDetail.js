@@ -11,7 +11,7 @@ import {
   Text,
 } from '@fluentui/react-components';
 
-import { ArrowExportLtr16Filled } from '@fluentui/react-icons';
+import { ArrowExportLtr16Filled, Edit16Regular } from '@fluentui/react-icons';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import globalUtils from '../../../services/globalUtils';
@@ -27,7 +27,7 @@ function openViewBundleWindow(bundleId) {
   });
 }
 
-function BillDetailDialog({ order, party, withUser, mrUser }) {
+function BillDetailDialog({ order, party, withUser, mrUser, onEdit, onClose }) {
   const { allUsers } = useAuthUser();
   const navigate = useNavigate();
 
@@ -79,6 +79,14 @@ function BillDetailDialog({ order, party, withUser, mrUser }) {
         <div className="bill-detail-content-container">
           <Text className="label">With: </Text>
           <Text className="value">{withUser}</Text>
+        </div>
+        <div className="bill-detail-content-container">
+          <Text className="label">Goods: </Text>
+          <Text className="value">
+            Polybags: {globalUtils.getBagQuantity(order.bags, 'polybag')},{' '}
+            Cases: {globalUtils.getBagQuantity(order.bags, 'case')}, Packets:{' '}
+            {globalUtils.getBagQuantity(order.bags, 'packet')}
+          </Text>
         </div>
         {order.supplyReportId ? (
           <Button
@@ -142,10 +150,20 @@ function BillDetailDialog({ order, party, withUser, mrUser }) {
         </div>
       </DialogContent>
       <DialogActions>
-        <DialogTrigger disableButtonEnhancement>
-          <Button appearance="secondary">Close</Button>
-        </DialogTrigger>
-        <Button appearance="primary">Do Something</Button>
+        {onClose ? (
+          <Button appearance="secondary" onClick={onClose}>
+            Close
+          </Button>
+        ) : (
+          <DialogTrigger disableButtonEnhancement>
+            <Button appearance="secondary">Close</Button>
+          </DialogTrigger>
+        )}
+        {onEdit && (
+          <Button appearance="primary" icon={<Edit16Regular />} onClick={onEdit}>
+            Edit
+          </Button>
+        )}
       </DialogActions>
     </DialogBody>
   );

@@ -353,9 +353,6 @@ export default function AllBundlesScreen() {
             <Text size={400} style={{ color: '#605e5c' }}>
               No bundles found
             </Text>
-            <Text size={200} style={{ color: '#8a8886', marginTop: '4px' }}>
-              Try adjusting your search filters
-            </Text>
           </div>
         )}
       </div>

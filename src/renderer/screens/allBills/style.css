@@ -1,10 +1,117 @@
 .all-bills-screen {
-  width: 90%;
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.all-bills-screen .all-bills-search-input-container {
+.all-bills-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.all-bills-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.all-bills-date-picker {
+  min-width: 180px;
+}
+
+.all-bills-screen h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.orders-section {
+  margin-bottom: 32px;
+}
+
+.orders-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.orders-section-toggle h2 {
+  margin: 0;
+}
+
+.orders-section-chevron {
+  color: #605e5c;
+  transition: transform 0.15s ease;
+}
+
+.orders-section-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.orders-filter-panel {
+  margin-bottom: 24px;
+  padding: 16px 16px 12px;
+  border: 1px solid #e1dfdd;
+  border-radius: 8px;
+  background: #faf9f8;
+}
+
+.orders-filter-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 10px;
-  row-gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: 12px 14px;
+  align-items: end;
+}
+
+.orders-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.orders-filter-field .fui-Combobox,
+.orders-filter-field .fui-Input,
+.orders-filter-field .fui-Dropdown {
+  width: 100%;
+}
+
+.orders-filter-actions {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.orders-filter-hint {
+  margin: 10px 0 0;
+  color: #8a8886;
+  font-size: 12px;
+}
+
+.all-bills-empty {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: #605e5c;
+}
+
+.all-bills-empty.compact {
+  min-height: 80px;
+}
+
+.order-status-pill {
+  background: #f3f2f1;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 13px;
 }

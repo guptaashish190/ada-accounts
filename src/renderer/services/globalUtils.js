@@ -18,6 +18,14 @@ import {
   DB_NAMES,
 } from './firestoreHelpers';
 
+function normalizeBagKind(bagType) {
+  const normalized = String(bagType || '').toLowerCase().replace(/\s+/g, '');
+  if (normalized.includes('poly')) return 'polybag';
+  if (normalized.includes('case')) return 'case';
+  if (normalized.includes('packet')) return 'packet';
+  return normalized;
+}
+
 export default {
   /**
    * Fetch user by ID (from root /users collection)
@@ -255,6 +263,16 @@ export default {
         counter: cashReceiptsDoc.data().counter + 1,
       });
     }
+  },
+
+  normalizeBagKind,
+
+  getBagQuantity(bags, kind) {
+    const target = normalizeBagKind(kind);
+    const bag = (bags || []).find(
+      (b) => normalizeBagKind(b.bagType) === target,
+    );
+    return bag ? bag.quantity || 0 : 0;
   },
 
   getTotalCases: (bills) =>

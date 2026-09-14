@@ -66,47 +66,38 @@ export default function PartyDetailsScreen() {
 
   const fetchReceivedPayments = async () => {
     try {
-      const upiRef = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
-      const chequesRef = getCompanyCollection(currentCompanyId, DB_NAMES.CHEQUES);
+      const paymentsRef = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.ONLINE_PAYMENTS,
+      );
       const cashReceiptsRef = getCompanyCollection(
         currentCompanyId,
         DB_NAMES.CASH_RECEIPTS,
       );
 
-      const [upiSnapshot, chequeSnapshot, cashReceiptSnapshot] = await Promise.all([
+      const [paymentsSnapshot, cashReceiptSnapshot] = await Promise.all([
         getDocs(
           query(
-            upiRef,
+            paymentsRef,
             where('partyId', '==', partyId),
             where('isReceived', '==', true),
           ),
         ),
-        getDocs(query(chequesRef, where('partyId', '==', partyId))),
         getDocs(query(cashReceiptsRef, where('parties', 'array-contains', partyId))),
       ]);
 
-      const upiPayments = upiSnapshot.docs
-        .map((doc1) => ({ id: doc1.id, ...doc1.data() }))
-        .filter((payment) => {
-          const normalizedType = (payment?.type || 'upi').toString().toLowerCase();
-          return normalizedType === 'upi' || normalizedType === 'neft';
-        })
-        .map((payment) => ({
-          id: payment.id,
-          timestamp: payment.timestamp || 0,
-          mode: (payment.type || 'upi').toString().toUpperCase(),
-          amount: parseFloat(payment.amount || 0),
-          reference: payment.billNumber || payment.comment || '--',
-        }));
-
-      const chequePayments = chequeSnapshot.docs.map((doc1) => {
-        const data = doc1.data();
+      const onlinePayments = paymentsSnapshot.docs.map((doc1) => {
+        const payment = { id: doc1.id, ...doc1.data() };
+        const normalizedType = (payment?.type || 'upi').toString().toLowerCase();
         return {
-          id: doc1.id,
-          timestamp: data.timestamp || data.chequeDate || 0,
-          mode: 'CHEQUE',
-          amount: parseFloat(data.amount || 0),
-          reference: data.chequeNumber || '--',
+          id: payment.id,
+          timestamp: payment.timestamp || payment.chequeDate || 0,
+          mode: normalizedType.toUpperCase(),
+          amount: parseFloat(payment.amount || 0),
+          reference:
+            normalizedType === 'cheque'
+              ? payment.chequeNumber || '--'
+              : payment.billNumber || payment.comment || '--',
         };
       });
 
@@ -128,7 +119,7 @@ export default function PartyDetailsScreen() {
         })
         .filter((payment) => payment.amount > 0);
 
-      const allPayments = [...upiPayments, ...chequePayments, ...cashPayments].sort(
+      const allPayments = [...onlinePayments, ...cashPayments].sort(
         (p1, p2) => (p2.timestamp || 0) - (p1.timestamp || 0),
       );
 

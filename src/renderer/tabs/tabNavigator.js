@@ -31,6 +31,8 @@ export default function TabNavigator({ children }) {
   const { user } = useCurrentUser();
   const { pathname } = location;
 
+  const canSeeAllTabs = config.enableAllTabs || user.isManager;
+
   const filterJobs = (toFilter) => {
     if (toFilter) {
       return toFilter.filter((t) =>
@@ -40,8 +42,13 @@ export default function TabNavigator({ children }) {
     return [];
   };
 
-  const filteredTabs =
-    config.enableAllTabs || user.isManager ? tabs : filterJobs(tabs);
+  const getTabStartRoute = (tab) => {
+    if (tab.route) return tab.route;
+    const submenu = canSeeAllTabs ? tab.submenu : filterJobs(tab.submenu);
+    return submenu?.[0]?.route || tab.submenu?.[0]?.route;
+  };
+
+  const filteredTabs = canSeeAllTabs ? tabs : filterJobs(tabs);
 
   const [currentMenu, setCurrentMenu] = useState(0);
 
@@ -79,10 +86,9 @@ export default function TabNavigator({ children }) {
     }
   }, [pathname, filteredTabs, currentMenu]);
 
-  const filteredSubmenu =
-    config.enableAllTabs || user.isManager
-      ? filteredTabs[currentMenu]?.submenu
-      : filterJobs(filteredTabs[currentMenu]?.submenu);
+  const filteredSubmenu = canSeeAllTabs
+    ? filteredTabs[currentMenu]?.submenu
+    : filterJobs(filteredTabs[currentMenu]?.submenu);
 
   return (
     <div className="tab-navigator">
@@ -113,7 +119,7 @@ export default function TabNavigator({ children }) {
                   value={tab.name}
                   className={`main-tab ${currentMenu === i ? 'active' : ''}`}
                   onClick={() => {
-                    navigate(tab.route || tab.submenu[0].route);
+                    navigate(getTabStartRoute(tab));
                   }}
                 >
                   {tab.name}

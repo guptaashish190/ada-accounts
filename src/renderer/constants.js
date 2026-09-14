@@ -11,6 +11,7 @@ export default {
     VIEW_VOUCHER: 'VIEW_VOUCHER',
     ASSIGN_BILLS: 'ASSIGN_BILLS',
     VIEW_BUNDLE: 'VIEW_BUNDLE',
+    BILL_DETAIL: 'BILL_DETAIL',
   },
   paymentOkBuffer: 2,
   paymentTermsListItems: ['Monthly', 'Weekly', 'Cash', 'Bill to Bill'],
@@ -57,10 +58,6 @@ export default {
       name: 'BUNDLES',
       prefix: 'BD',
     },
-    CHEQUES: {
-      name: 'CHEQUES',
-      prefix: 'CH',
-    },
     CREDITNOTE: {
       name: 'CREDITNOTE',
       prefix: 'CN',
@@ -80,6 +77,7 @@ export default {
     JOBS: {
       DISPATCH: 'BiT2WpxL7rBnjovrxP54',
       CASHIER: '3PyLZYPjuyfGwY3LJTY9',
+      BILL_CREATION: '57Znif4vPssXEAVFJXxx',
       MR: 'cAf2yrduIKDf7jLQ8KWu',
       SUPPLY: 'vh8bGmg9haGmpNs4a9vw',
     },

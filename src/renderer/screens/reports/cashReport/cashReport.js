@@ -48,18 +48,42 @@ export default function CashReport() {
         setCashVouchers,
         currentCompanyId,
       );
-      await getFirebaseMappedData(
-        DB_NAMES.UPI,
+      const onlineByTimestamp = await getFirebaseMappedData(
+        DB_NAMES.ONLINE_PAYMENTS,
         selectedDate,
-        setUpis,
+        null,
         currentCompanyId,
       );
-      await getFirebaseMappedData(
-        DB_NAMES.CHEQUES,
+      const onlineByReceivedAt = await getFirebaseMappedData(
+        DB_NAMES.ONLINE_PAYMENTS,
         selectedDate,
-        setCheques,
+        null,
         currentCompanyId,
+        'receivedAt',
       );
+
+      const normalizeType = (item) =>
+        (item?.type || 'upi').toString().toLowerCase();
+      setUpis(
+        onlineByTimestamp.filter((item) => normalizeType(item) !== 'cheque'),
+      );
+
+      const chequeMap = new Map();
+      onlineByReceivedAt.forEach((item) => {
+        if (normalizeType(item) === 'cheque') {
+          chequeMap.set(item.id, item);
+        }
+      });
+      onlineByTimestamp.forEach((item) => {
+        if (
+          normalizeType(item) === 'cheque' &&
+          !item.receivedAt &&
+          !chequeMap.has(item.id)
+        ) {
+          chequeMap.set(item.id, item);
+        }
+      });
+      setCheques(Array.from(chequeMap.values()));
 
       let total1 = 0;
       cashData.forEach((x) => {
@@ -346,6 +370,7 @@ const getFirebaseMappedData = async (
   selectedDate,
   setList,
   currentCompanyId,
+  dateField = 'timestamp',
 ) => {
   let refMain = getCompanyCollection(currentCompanyId, refName);
 
@@ -360,8 +385,8 @@ const getFirebaseMappedData = async (
 
   refMain = query(
     refMain,
-    where('timestamp', '>=', dateFrom.getTime()),
-    where('timestamp', '<=', dateTo.getTime()),
+    where(dateField, '>=', dateFrom.getTime()),
+    where(dateField, '<=', dateTo.getTime()),
   );
 
   const querySnapshot = await getDocs(refMain);
@@ -373,6 +398,6 @@ const getFirebaseMappedData = async (
   mainData = mainData.filter((x) => x.status !== 'CANCELLED');
   mainData = mainData.sort((rd1, rd2) => rd1.timestamp - rd2.timestamp);
 
-  setList(mainData);
+  if (setList) setList(mainData);
   return mainData;
 };

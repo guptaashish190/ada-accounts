@@ -2,19 +2,18 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 import {
   Timestamp,
-  getDoc,
   getDocs,
-  limit,
   onSnapshot,
   query,
   updateDoc,
   where,
 } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Button,
-  Card,
-  Checkbox,
+  Dropdown,
+  Input,
+  Option,
   Dialog,
   DialogActions,
   DialogBody,
@@ -29,11 +28,10 @@ import {
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import { firebaseAuth } from '../../firebaseInit';
 import globalUtils from '../../services/globalUtils';
-import { VerticalSpace1, VerticalSpace2 } from '../../common/verticalSpace';
+import { VerticalSpace1 } from '../../common/verticalSpace';
 import { useAuthUser } from '../../contexts/allUsersContext';
-import AdjustAmountDialog from '../receiveSupplyReport/adjustAmountOnBills/adjustAmountDialog';
 import constants from '../../constants';
-import { ChequeEntryDialog } from '../cheques/cheques';
+import { ChequeEntryDialog } from './chequeEntryDialog';
 import { useCompany } from '../../contexts/companyContext';
 import {
   getCompanyCollection,
@@ -41,25 +39,85 @@ import {
   DB_NAMES,
 } from '../../services/firestoreHelpers';
 import { enrichPaymentItems } from '../../services/paymentSourceUtils';
-import {
-  PaymentSourceInfo,
-} from '../../common/paymentSourceInfo';
+import { PaymentSourceInfo } from '../../common/paymentSourceInfo';
+import PartySelector from '../../common/partySelector';
+import './style.css';
+
+const MODE_OPTIONS = [
+  { id: 'all', label: 'All' },
+  { id: 'upi', label: 'UPI' },
+  { id: 'neft', label: 'NEFT' },
+  { id: 'cheque', label: 'Cheque' },
+];
+
+const normalizeType = (item) =>
+  (item?.type || 'upi').toString().toLowerCase();
+
+const endOfDay = (date) => {
+  const next = new Date(date);
+  next.setHours(23, 59, 59, 999);
+  return next;
+};
+
+const startOfDay = (date) => {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const matchesFilters = (item, { mode, party, chequeNumber, chequeDateFrom, chequeDateTo }) => {
+  if (mode !== 'all' && normalizeType(item) !== mode) return false;
+  if (party?.id && item.partyId !== party.id) return false;
+  if (mode === 'cheque') {
+    if (chequeNumber) {
+      const number = (item.chequeNumber || '').toString();
+      if (!number.toLowerCase().includes(chequeNumber.toLowerCase())) return false;
+    }
+    if (chequeDateFrom && (!item.chequeDate || item.chequeDate < startOfDay(chequeDateFrom).getTime())) {
+      return false;
+    }
+    if (chequeDateTo && (!item.chequeDate || item.chequeDate > endOfDay(chequeDateTo).getTime())) {
+      return false;
+    }
+  }
+  return true;
+};
+
+function FilterField({ label, wide, children }) {
+  return (
+    <div className={`online-payments-field${wide ? ' online-payments-field-wide' : ''}`}>
+      <span className="online-payments-field-label">{label}</span>
+      {children}
+    </div>
+  );
+}
 
 export default function UpiScreen() {
   const [receivedUpiItems, setReceivedUpiItems] = useState([]);
-  const [unReceivedUpiItems, setUnReceivedUpiItems] = useState([]);
-  const [unReceivedChequeItems, setUnReceivedChequeItems] = useState([]);
+  const [unReceivedItems, setUnReceivedItems] = useState([]);
+  const [mode, setMode] = useState('all');
+  const [filterParty, setFilterParty] = useState();
+  const [chequeNumber, setChequeNumber] = useState('');
+  const [chequeDateFrom, setChequeDateFrom] = useState();
+  const [chequeDateTo, setChequeDateTo] = useState();
 
   const [loading, setLoading] = useState(false);
-  const { allUsers } = useAuthUser();
+  const [partySelectorKey, setPartySelectorKey] = useState(0);
 
   const [fromDate, setFromDate] = useState(new Date());
   const [toDate, setToDate] = useState(new Date());
 
-  // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
 
-  const fetchUpi = async () => {
+  const filterState = {
+    mode,
+    party: filterParty,
+    chequeNumber,
+    chequeDateFrom,
+    chequeDateTo,
+  };
+
+  const fetchReceived = async (overrideFrom, overrideTo) => {
     if (!currentCompanyId) {
       setReceivedUpiItems([]);
       return;
@@ -67,20 +125,19 @@ export default function UpiScreen() {
 
     setLoading(true);
     try {
-      const upiCollection = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
-      const dateFrom = new Date(fromDate);
-      dateFrom.setHours(0, 0, 0, 0);
-
-      const dateTo = new Date(toDate);
-      dateTo.setHours(23, 59, 59, 999);
+      const paymentsCollection = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.ONLINE_PAYMENTS,
+      );
+      const dateFrom = startOfDay(overrideFrom || fromDate);
+      const dateTo = endOfDay(overrideTo || toDate);
 
       const dynamicQuery = query(
-        upiCollection,
+        paymentsCollection,
         where('timestamp', '>=', dateFrom.getTime()),
         where('timestamp', '<=', dateTo.getTime()),
         where('isReceived', '==', true),
       );
-      
 
       const querySnapshot = await getDocs(dynamicQuery);
 
@@ -99,19 +156,19 @@ export default function UpiScreen() {
         dataWithParty2,
       );
       setReceivedUpiItems(enriched);
-      setLoading(false);
     } catch (error) {
-      console.error('Error fetching supply reports:', error);
-      setLoading(false);
+      console.error('Error fetching online payments:', error);
     }
+    setLoading(false);
   };
+
   useEffect(() => {
-    fetchUpi();
+    fetchReceived();
     if (!currentCompanyId) return undefined;
 
     setLoading(true);
     const unreceivedQuery = query(
-      getCompanyCollection(currentCompanyId, DB_NAMES.UPI),
+      getCompanyCollection(currentCompanyId, DB_NAMES.ONLINE_PAYMENTS),
       where('isReceived', '==', false),
     );
 
@@ -133,14 +190,7 @@ export default function UpiScreen() {
             currentCompanyId,
             dataWithParty,
           );
-          setUnReceivedUpiItems(
-            enriched.filter(
-              (x) => x.type === 'upi' || x.type === 'neft' || x.type === undefined,
-            ),
-          );
-          setUnReceivedChequeItems(
-            enriched.filter((x) => x.type === 'cheque'),
-          );
+          setUnReceivedItems(enriched);
         } catch (error) {
           console.error('Error fetching pending payments stream:', error);
         }
@@ -155,86 +205,178 @@ export default function UpiScreen() {
     return () => unsubscribe();
   }, [currentCompanyId]);
 
+  const filteredUnreceived = useMemo(
+    () => unReceivedItems.filter((item) => matchesFilters(item, filterState)),
+    [unReceivedItems, mode, filterParty, chequeNumber, chequeDateFrom, chequeDateTo],
+  );
+  const filteredReceived = useMemo(
+    () => receivedUpiItems.filter((item) => matchesFilters(item, filterState)),
+    [receivedUpiItems, mode, filterParty, chequeNumber, chequeDateFrom, chequeDateTo],
+  );
+
+  const showChequeFilters = mode === 'cheque';
+  const hasRows = filteredUnreceived.length + filteredReceived.length > 0;
+
+  const clearFilters = () => {
+    const today = new Date();
+    setFilterParty();
+    setChequeNumber('');
+    setChequeDateFrom();
+    setChequeDateTo();
+    setMode('all');
+    setFromDate(today);
+    setToDate(today);
+    setPartySelectorKey((key) => key + 1);
+    fetchReceived(today, today);
+  };
+
   return (
     <center>
-      <h3>Payments</h3>
-      {loading ? (
-        <Spinner />
-      ) : (
-        <div>
-          <div>
-            <DatePicker
-              size="large"
-              className=" filter-input"
-              onSelectDate={(d) => setFromDate(d)}
-              placeholder="From Date"
-              value={fromDate}
-            />
-            &nbsp;
-            <DatePicker
-              size="large"
-              className=" filter-input"
-              onSelectDate={(d) => {
-                setToDate(d);
-              }}
-              placeholder="To date"
-              value={toDate}
-            />
-            &nbsp;
-            <Button size="large" onClick={() => fetchUpi()}>
-              Get
-            </Button>
+      <div className="online-payments-screen">
+        <h3>Online Payments</h3>
+        <div className="online-payments-filters">
+          <div className="online-payments-filters-row">
+            <FilterField label="Type">
+              <Dropdown
+                value={MODE_OPTIONS.find((option) => option.id === mode)?.label}
+                selectedOptions={[mode]}
+                onOptionSelect={(_, data) => {
+                  setMode(data.optionValue || 'all');
+                }}
+                style={{ minWidth: '140px' }}
+              >
+                {MODE_OPTIONS.map((option) => (
+                  <Option key={option.id} value={option.id}>
+                    {option.label}
+                  </Option>
+                ))}
+              </Dropdown>
+            </FilterField>
+            <FilterField label="Party" wide>
+              <PartySelector
+                key={partySelectorKey}
+                onPartySelected={setFilterParty}
+              />
+            </FilterField>
+            <FilterField label="Entry date">
+              <div className="online-payments-date-range">
+                <DatePicker
+                  className="filter-input"
+                  onSelectDate={(d) => setFromDate(d)}
+                  placeholder="From"
+                  value={fromDate}
+                />
+                <span className="online-payments-date-sep">to</span>
+                <DatePicker
+                  className="filter-input"
+                  onSelectDate={(d) => setToDate(d)}
+                  placeholder="To"
+                  value={toDate}
+                />
+              </div>
+            </FilterField>
+            <div className="online-payments-actions">
+              <Button appearance="primary" onClick={() => fetchReceived()}>
+                Get
+              </Button>
+              <Button appearance="secondary" onClick={clearFilters}>
+                Clear
+              </Button>
+            </div>
           </div>
-          <VerticalSpace1 />
-          <table className="app-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Party</th>
-                <th>Amount</th>
-                <th>Source</th>
-                <th>Status</th>
-                <th>Created By</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {unReceivedUpiItems?.map((uri) => {
-                return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
-              })}
-              {unReceivedChequeItems?.map((uri) => {
-                return (
-                  <UpiItemRow
-                    refreshData={() => {
-                      fetchUpi();
-                    }}
-                    key={`cheque-list-${uri.id}`}
-                    data={uri}
+          {showChequeFilters ? (
+            <div className="online-payments-filters-row">
+              <FilterField label="Cheque no.">
+                <Input
+                  className="filter-input"
+                  value={chequeNumber}
+                  onChange={(e) => setChequeNumber(e.target.value)}
+                  placeholder="Number"
+                />
+              </FilterField>
+              <FilterField label="Cheque date">
+                <div className="online-payments-date-range">
+                  <DatePicker
+                    className="filter-input"
+                    placeholder="From"
+                    value={chequeDateFrom}
+                    onSelectDate={setChequeDateFrom}
                   />
-                );
-              })}
-              {receivedUpiItems?.map((uri) => {
-                return <UpiItemRow key={`upi-list-${uri.id}`} data={uri} />;
-              })}
-            </tbody>
-          </table>
+                  <span className="online-payments-date-sep">to</span>
+                  <DatePicker
+                    className="filter-input"
+                    placeholder="To"
+                    value={chequeDateTo}
+                    onSelectDate={setChequeDateTo}
+                  />
+                </div>
+              </FilterField>
+            </div>
+          ) : null}
         </div>
-      )}
+        <div className="app-table-wrapper">
+          {loading ? (
+            <div className="online-payments-loading">
+              <Spinner />
+            </div>
+          ) : (
+            <table className="app-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Party</th>
+                  <th>Amount</th>
+                  <th>Cheque No.</th>
+                  <th>Cheque Date</th>
+                  <th>Source</th>
+                  <th>Status</th>
+                  <th>Created By</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUnreceived.map((uri) => {
+                  return (
+                    <UpiItemRow
+                      refreshData={() => {
+                        fetchReceived();
+                      }}
+                      key={`pending-${uri.id}`}
+                      data={uri}
+                    />
+                  );
+                })}
+                {filteredReceived.map((uri) => {
+                  return <UpiItemRow key={`received-${uri.id}`} data={uri} />;
+                })}
+              </tbody>
+            </table>
+          )}
+          {!loading && !hasRows ? (
+            <div className="online-payments-empty">No payments found</div>
+          ) : null}
+        </div>
+      </div>
     </center>
   );
 }
 
 function UpiItemRow({ data, refreshData }) {
   const { allUsers } = useAuthUser();
-  const [loading, setLoading] = useState(false);
-  const { currentCompanyId } = useCompany();
+  const isCheque = normalizeType(data) === 'cheque';
   return (
     <tr>
       <td>{globalUtils.getTimeFormat(data.timestamp, true)}</td>
-      <td>{data.type?.toUpperCase()}</td>
+      <td>{normalizeType(data).toUpperCase()}</td>
       <td>{data.party?.name}</td>
       <td>{globalUtils.getCurrencyFormat(data.amount)}</td>
+      <td>{isCheque ? data.chequeNumber || '--' : '--'}</td>
+      <td>
+        {isCheque && data.chequeDate
+          ? globalUtils.getTimeFormat(data.chequeDate, true)
+          : '--'}
+      </td>
       <td>{data.sourceLabels || '--'}</td>
       <td
         style={{
@@ -247,28 +389,11 @@ function UpiItemRow({ data, refreshData }) {
       </td>
       <td>{allUsers.find((x) => x.uid === data?.createdBy)?.username}</td>
       <td>
-        {data?.type === 'cheque' ? (
-          data.isReceived ? (
-            <Text size={200}>--</Text>
-          ) : (
+        {isCheque ? (
           <ChequeEntryDialog
+            paymentId={data.id}
+            isReceived={!!data.isReceived}
             onClose={() => {
-              if (loading) return;
-              setLoading(true);
-              try {
-                const upiRef = getCompanyDoc(
-                  currentCompanyId,
-                  DB_NAMES.UPI,
-                  data.id,
-                );
-                updateDoc(upiRef, {
-                  receivedBy: firebaseAuth.currentUser.uid,
-                  isReceived: true,
-                });
-              } catch (e) {
-                console.log(e);
-              }
-              setLoading(false);
               if (refreshData) refreshData();
             }}
             chequeData={{
@@ -277,12 +402,13 @@ function UpiItemRow({ data, refreshData }) {
                 : data.imageUrl,
               party: data.party,
               amount: data.amount,
+              chequeNumber: data.chequeNumber,
+              chequeDate: data.chequeDate,
               sourceRefs: data.sourceRefs,
               partyId: data.partyId,
               accountsNotes: data.accountsNotes,
             }}
           />
-          )
         ) : (
           <UPIDialog
             createdBy={
@@ -297,7 +423,6 @@ function UpiItemRow({ data, refreshData }) {
 }
 
 function UPIDialog({ data, createdBy }) {
-  const [adjustedBills, setAdjustedBills] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
@@ -330,32 +455,15 @@ function UPIDialog({ data, createdBy }) {
     if (loading) return;
     setLoading(true);
     try {
-      const partyRef = getCompanyDoc(
+      const paymentRef = getCompanyDoc(
         currentCompanyId,
-        DB_NAMES.PARTIES,
-        data.partyId,
+        DB_NAMES.ONLINE_PAYMENTS,
+        data.id,
       );
-      const partySnapshot = await getDoc(partyRef);
-      let newPayments = partySnapshot.data().payments || [];
-
-      newPayments = [
-        ...newPayments,
-        {
-          amount: data.amount,
-          adjustedBills: adjustedBills.map((x) => x.id),
-          timestamp: Timestamp.now().toMillis(),
-          mode: (data.type || 'upi').toUpperCase(),
-        },
-      ];
-      updateDoc(partyRef, {
-        payments: newPayments,
-      });
-
-      const upiRef = getCompanyDoc(currentCompanyId, DB_NAMES.UPI, data.id);
-      updateDoc(upiRef, {
+      await updateDoc(paymentRef, {
         receivedBy: firebaseAuth.currentUser.uid,
         isReceived: true,
-        bills: adjustedBills.map((x) => x.billNumber),
+        receivedAt: Timestamp.now().toMillis(),
       });
       setOpenDialog(false);
     } catch (e) {
@@ -367,88 +475,89 @@ function UPIDialog({ data, createdBy }) {
   return (
     <>
       <Dialog open={openDialog}>
-      <DialogTrigger disableButtonEnhancement>
-        <Button onClick={() => setOpenDialog(true)}>
-          {data.isReceived ? 'View' : 'Receive'}
-        </Button>
-      </DialogTrigger>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>Receive Payment</DialogTitle>
-          <DialogContent>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Image
-                width={300}
+        <DialogTrigger disableButtonEnhancement>
+          <Button onClick={() => setOpenDialog(true)}>
+            {data.isReceived ? 'View' : 'Receive'}
+          </Button>
+        </DialogTrigger>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Receive Payment</DialogTitle>
+            <DialogContent>
+              <div
                 style={{
-                  objectFit: 'contain',
-                  cursor: 'zoom-in',
+                  display: 'flex',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
                 }}
-                src={imageSrc}
-                onClick={() => openImageViewer()}
-              />
-              <div style={{ marginLeft: '20px' }}>
-                <Text size={400}>
-                  Party: <b>{data.party?.name}</b>
-                </Text>
-                <VerticalSpace1 />
-                <Text size={400}>
-                  Amount: <b>{globalUtils.getCurrencyFormat(data.amount)}</b>
-                </Text>
-                <VerticalSpace1 />
-                <Text size={400}>
-                  Status: <b>{data.isReceived ? 'Received' : 'Pending'}</b>
-                </Text>
-                <VerticalSpace1 />
-                <Text size={400}>
-                  Created By: <b>{createdBy}</b>
-                </Text>
-                <VerticalSpace1 />
-                <Text size={400}>Source:</Text>
-                <PaymentSourceInfo
-                  sourceRefs={data.sourceRefs}
-                  partyId={data.partyId}
-                  showNotes={false}
+              >
+                <Image
+                  width={300}
+                  style={{
+                    objectFit: 'contain',
+                    cursor: 'zoom-in',
+                  }}
+                  src={imageSrc}
+                  onClick={() => openImageViewer()}
                 />
-                <VerticalSpace1 />
-                <Text size={400}>
-                  Account Notes:{' '}
-                  <b>{data.accountsNotes && data.accountsNotes !== '--'
-                    ? data.accountsNotes
-                    : '--'}
-                  </b>
-                </Text>
-                <VerticalSpace1 />
+                <div style={{ marginLeft: '20px' }}>
+                  <Text size={400}>
+                    Party: <b>{data.party?.name}</b>
+                  </Text>
+                  <VerticalSpace1 />
+                  <Text size={400}>
+                    Amount: <b>{globalUtils.getCurrencyFormat(data.amount)}</b>
+                  </Text>
+                  <VerticalSpace1 />
+                  <Text size={400}>
+                    Status: <b>{data.isReceived ? 'Received' : 'Pending'}</b>
+                  </Text>
+                  <VerticalSpace1 />
+                  <Text size={400}>
+                    Created By: <b>{createdBy}</b>
+                  </Text>
+                  <VerticalSpace1 />
+                  <Text size={400}>Source:</Text>
+                  <PaymentSourceInfo
+                    sourceRefs={data.sourceRefs}
+                    partyId={data.partyId}
+                    showNotes={false}
+                  />
+                  <VerticalSpace1 />
+                  <Text size={400}>
+                    Account Notes:{' '}
+                    <b>
+                      {data.accountsNotes && data.accountsNotes !== '--'
+                        ? data.accountsNotes
+                        : '--'}
+                    </b>
+                  </Text>
+                  <VerticalSpace1 />
+                </div>
               </div>
-            </div>
-          </DialogContent>
-          <DialogActions>
-            <DialogTrigger disableButtonEnhancement>
-              <Button
-                onClick={() => setOpenDialog(false)}
-                appearance="secondary"
-              >
-                Close
-              </Button>
-            </DialogTrigger>
-            {!data.isReceived ? (
-              <Button
-                onClick={() => {
-                  onDone();
-                }}
-                appearance="primary"
-              >
-                {loading ? <Spinner /> : 'Receive'}
-              </Button>
-            ) : null}
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
+            </DialogContent>
+            <DialogActions>
+              <DialogTrigger disableButtonEnhancement>
+                <Button
+                  onClick={() => setOpenDialog(false)}
+                  appearance="secondary"
+                >
+                  Close
+                </Button>
+              </DialogTrigger>
+              {!data.isReceived ? (
+                <Button
+                  onClick={() => {
+                    onDone();
+                  }}
+                  appearance="primary"
+                >
+                  {loading ? <Spinner /> : 'Receive'}
+                </Button>
+              ) : null}
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
       </Dialog>
       <Dialog
         open={showImageViewer}
@@ -523,7 +632,7 @@ function UPIDialog({ data, createdBy }) {
               >
                 <img
                   src={imageSrc}
-                  alt="UPI"
+                  alt="Online payment"
                   onDragStart={(e) => e.preventDefault()}
                   onMouseDown={(e) => {
                     if (zoomScale <= 1) return;
@@ -539,7 +648,12 @@ function UPIDialog({ data, createdBy }) {
                     objectFit: 'contain',
                     transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
                     transformOrigin: 'center center',
-                    cursor: zoomScale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                    cursor:
+                      zoomScale > 1
+                        ? isDragging
+                          ? 'grabbing'
+                          : 'grab'
+                        : 'zoom-in',
                   }}
                 />
               </div>

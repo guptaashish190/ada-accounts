@@ -12,37 +12,25 @@ import {
   DialogActions,
   Dropdown,
   Option,
-  Input,
-  Label,
 } from '@fluentui/react-components';
-import {
-  Edit16Regular,
-  Delete16Regular,
-  Dismiss16Regular,
-} from '@fluentui/react-icons';
+import { Edit16Regular } from '@fluentui/react-icons';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
 import {
   query,
   where,
-  getDocs,
-  documentId,
   onSnapshot,
   doc,
-  limit,
   writeBatch,
-  updateDoc,
-  deleteDoc,
 } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { useCompany } from '../../contexts/companyContext';
 import { useAuthUser } from '../../contexts/allUsersContext';
 import {
   getCompanyCollection,
-  getCompanyDoc,
   DB_NAMES,
 } from '../../services/firestoreHelpers';
 import { firebaseDB } from '../../firebaseInit';
-import globalUtils, { useDebounce } from '../../services/globalUtils';
+import globalUtils from '../../services/globalUtils';
 import constants from '../../constants';
 import SelectUserDropdown from '../../common/selectUser';
 import './style.css';
@@ -203,283 +191,6 @@ function AssignRouteDialog({
   );
 }
 
-function getBagQty(bags, type) {
-  const bag = (bags || []).find(
-    (b) => (b.bagType || '').toLowerCase() === type.toLowerCase(),
-  );
-  return bag ? bag.quantity || 0 : 0;
-}
-
-function EditOrderDialog({
-  open,
-  onClose,
-  order,
-  partyNames: pNames,
-  mrUsers: mrList,
-  companyUsers: companyUserList,
-  userMap: uMap,
-  companyId,
-  onSaved,
-}) {
-  const [partyId, setPartyId] = useState('');
-  const [partySearch, setPartySearch] = useState('');
-  const [partyResults, setPartyResults] = useState([]);
-  const debouncedPartySearch = useDebounce(partySearch, 500);
-  const [orderAmount, setOrderAmount] = useState(0);
-  const [billNumberSuffix, setBillNumberSuffix] = useState('');
-  const [polybags, setPolybags] = useState(0);
-  const [cases, setCases] = useState(0);
-  const [packets, setPackets] = useState(0);
-  const [mrId, setMrId] = useState('');
-  const [withValue, setWithValue] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (order) {
-      setPartyId(order.partyId || '');
-      setPartySearch('');
-      setPartyResults([]);
-      setOrderAmount(order.orderAmount || 0);
-      setBillNumberSuffix((order.billNumber || '').replace(/^T-/i, ''));
-      setPolybags(getBagQty(order.bags, 'polybags'));
-      setCases(getBagQty(order.bags, 'cases'));
-      setPackets(getBagQty(order.bags, 'packets'));
-      setMrId(order.mrId || '');
-      setWithValue(order.with || '');
-    }
-  }, [order]);
-
-  useEffect(() => {
-    if (!debouncedPartySearch || debouncedPartySearch.length < 3) {
-      setPartyResults([]);
-      return;
-    }
-    const fetchParties = async () => {
-      const partiesRef = getCompanyCollection(companyId, DB_NAMES.PARTIES);
-      const q = query(
-        partiesRef,
-        where('name', '>=', debouncedPartySearch.toUpperCase()),
-        limit(5),
-      );
-      try {
-        const snap = await getDocs(q);
-        const results = snap.docs.map((d) => ({
-          id: d.id,
-          name: d.data().name || d.id,
-        }));
-        setPartyResults(results);
-      } catch (err) {
-        console.error('Party search error:', err);
-      }
-    };
-    fetchParties();
-  }, [debouncedPartySearch, companyId]);
-
-  if (!order) return null;
-
-  const orderRef = getCompanyDoc(companyId, DB_NAMES.ORDERS, order.id);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const bags = [];
-      if (polybags > 0) bags.push({ bagType: 'polybags', quantity: polybags });
-      if (cases > 0) bags.push({ bagType: 'cases', quantity: cases });
-      if (packets > 0) bags.push({ bagType: 'packets', quantity: packets });
-      const billNumber = billNumberSuffix ? `T-${billNumberSuffix}` : '';
-      await updateDoc(orderRef, {
-        partyId,
-        orderAmount: Number(orderAmount) || 0,
-        billNumber,
-        bags,
-        mrId,
-        with: withValue,
-      });
-      onClose();
-    } catch (err) {
-      console.error('Error saving order:', err);
-    }
-    setSaving(false);
-  };
-
-  const handleCancel = async () => {
-    setSaving(true);
-    try {
-      await updateDoc(orderRef, { orderStatus: 'Cancelled' });
-      onClose();
-    } catch (err) {
-      console.error('Error cancelling order:', err);
-    }
-    setSaving(false);
-  };
-
-  const handleDelete = async () => {
-    setSaving(true);
-    try {
-      await deleteDoc(orderRef);
-      onClose();
-    } catch (err) {
-      console.error('Error deleting order:', err);
-    }
-    setSaving(false);
-  };
-
-  const selectedPartyName = pNames[partyId] || partyId || '';
-
-  return (
-    <Dialog open={open} onOpenChange={(e, d) => !d.open && onClose()}>
-      <DialogSurface style={{ maxWidth: 500 }}>
-        <DialogBody>
-          <DialogTitle>Edit Order</DialogTitle>
-          <DialogContent>
-            <div className="edit-order-form">
-              <div className="edit-order-field">
-                <Label>Party</Label>
-                <div className="party-selected-label">
-                  Current: <strong>{selectedPartyName}</strong>
-                </div>
-                <Input
-                  placeholder="Search party by name..."
-                  value={partySearch}
-                  onChange={(e, d) => setPartySearch(d.value)}
-                  style={{ width: '100%' }}
-                />
-                {partyResults.length > 0 && (
-                  <div className="party-search-results">
-                    {partyResults.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        className={`party-search-item${
-                          p.id === partyId ? ' selected' : ''
-                        }`}
-                        onClick={() => {
-                          setPartyId(p.id);
-                          setPartySearch('');
-                          setPartyResults([]);
-                        }}
-                      >
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="edit-order-field">
-                <Label>Bill Number</Label>
-                <Input
-                  contentBefore="T-"
-                  type="number"
-                  value={billNumberSuffix}
-                  onChange={(e, d) => setBillNumberSuffix(d.value)}
-                  placeholder="Bill #"
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div className="edit-order-field">
-                <Label>Order Amount</Label>
-                <Input
-                  type="number"
-                  value={String(orderAmount)}
-                  onChange={(e, d) => setOrderAmount(d.value)}
-                  style={{ width: '100%' }}
-                />
-              </div>
-              <div className="edit-order-field">
-                <Label>With</Label>
-                <SelectUserDropdown
-                  placeholder="Select user"
-                  user={withValue}
-                  setUser={(value) => setWithValue(value || '')}
-                  valueKey="uid"
-                  users={companyUserList}
-                  style={{ width: '100%' }}
-                  showProfilePicture={false}
-                  getDisplayName={(u) => u.username || u.email || u.uid}
-                  extraOptions={[
-                    { text: 'Accounts', value: 'Accounts', key: 'accounts' },
-                  ]}
-                />
-              </div>
-              <div className="edit-order-field">
-                <Label>Goods</Label>
-                <div className="edit-order-bags-row">
-                  <div>
-                    <Label size="small">Polybags</Label>
-                    <Input
-                      type="number"
-                      size="small"
-                      value={String(polybags)}
-                      onChange={(e, d) => setPolybags(Number(d.value) || 0)}
-                    />
-                  </div>
-                  <div>
-                    <Label size="small">Cases</Label>
-                    <Input
-                      type="number"
-                      size="small"
-                      value={String(cases)}
-                      onChange={(e, d) => setCases(Number(d.value) || 0)}
-                    />
-                  </div>
-                  <div>
-                    <Label size="small">Packets</Label>
-                    <Input
-                      type="number"
-                      size="small"
-                      value={String(packets)}
-                      onChange={(e, d) => setPackets(Number(d.value) || 0)}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="edit-order-field">
-                <Label>MR</Label>
-                <SelectUserDropdown
-                  placeholder="Select MR"
-                  user={mrId}
-                  setUser={(value) => setMrId(value || '')}
-                  valueKey="uid"
-                  users={mrList}
-                  style={{ width: '100%' }}
-                  showProfilePicture={false}
-                  getDisplayName={(mr) => mr.username || mr.email || mr.uid}
-                />
-              </div>
-            </div>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              appearance="subtle"
-              icon={<Delete16Regular />}
-              disabled={saving}
-              onClick={handleDelete}
-              style={{ color: '#c50f1f', marginRight: 'auto' }}
-            >
-              Delete
-            </Button>
-            <Button
-              appearance="subtle"
-              icon={<Dismiss16Regular />}
-              disabled={saving}
-              onClick={handleCancel}
-              style={{ color: '#c50f1f' }}
-            >
-              Cancel Order
-            </Button>
-            <Button appearance="secondary" onClick={onClose} disabled={saving}>
-              Close
-            </Button>
-            <Button appearance="primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog>
-  );
-}
-
 function ManagerDashboard() {
   const { currentCompanyId } = useCompany();
   const { allUsers } = useAuthUser();
@@ -513,13 +224,6 @@ function ManagerDashboard() {
   const [assignSelectedRouteId, setAssignSelectedRouteId] = useState('');
   const [assignRouteSaving, setAssignRouteSaving] = useState(false);
 
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editOrder, setEditOrder] = useState(null);
-
-  const [orderRows, setOrderRows] = useState([]);
-  const [partyNames, setPartyNames] = useState({});
-  const partyNamesCacheRef = React.useRef({});
-
   const [routesDocs, setRoutesDocs] = useState(null);
   const [registerDocs, setRegisterDocs] = useState(null);
   const [ordersDocs, setOrdersDocs] = useState(null);
@@ -548,14 +252,6 @@ function ManagerDashboard() {
     [companyUsers],
   );
 
-  const userMap = useMemo(() => {
-    const map = {};
-    companyUsers.forEach((u) => {
-      map[u.uid] = u.username || u.email || u.uid;
-    });
-    return map;
-  }, [companyUsers]);
-
   const routeOptions = useMemo(() => {
     if (!routesDocs) return [];
     const dayIndex = getWeekdayIndex(selectedDate);
@@ -576,32 +272,6 @@ function ManagerDashboard() {
       .sort((a, b) => a.routeName.localeCompare(b.routeName));
     return options;
   }, [routesDocs, selectedDate]);
-
-  const fetchPartyNames = async (partyIds) => {
-    const missing = partyIds.filter(
-      (id) => id && !partyNamesCacheRef.current[id],
-    );
-    if (missing.length === 0) return;
-    const chunks = [];
-    for (let i = 0; i < missing.length; i += 10) {
-      chunks.push(missing.slice(i, i + 10));
-    }
-    await Promise.all(
-      chunks.map(async (chunk) => {
-        const snap = await getDocs(
-          query(
-            getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES),
-            where(documentId(), 'in', chunk),
-          ),
-        );
-        snap.docs.forEach((d) => {
-          const pData = d.data();
-          partyNamesCacheRef.current[d.id] = pData.name || pData.Name || d.id;
-        });
-      }),
-    );
-    setPartyNames({ ...partyNamesCacheRef.current });
-  };
 
   const getDateRange = (dateStr) => {
     const d = new Date(dateStr);
@@ -835,28 +505,6 @@ function ManagerDashboard() {
     setUnassignedRoutes(missingAssignmentRows);
     setSummaryStats({ totalOrders, totalSales, totalVisits, pipelineCount });
 
-    // Build order rows for the orders table
-    const oRows = ordersDocs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        partyId: data.partyId || '',
-        billNumber: data.billNumber || '',
-        with: data.with || '',
-        orderAmount: data.orderAmount || 0,
-        mrId: data.mrId || '',
-        orderStatus: data.orderStatus || '',
-        creationTime: data.creationTime || 0,
-        bags: data.bags || [],
-        flow: data.flow || [],
-      };
-    });
-    oRows.sort((a, b) => b.creationTime - a.creationTime);
-    setOrderRows(oRows);
-
-    const pIds = oRows.map((o) => o.partyId).filter(Boolean);
-    if (pIds.length > 0) fetchPartyNames(pIds);
-
     // Build supply rows
     const srBySupplyman = {};
     supplyReportsDocs.forEach((d) => {
@@ -1028,12 +676,6 @@ function ManagerDashboard() {
       console.error('Error assigning route to MR:', err);
     }
     setAssignRouteSaving(false);
-  };
-
-  const handleOpenEditOrder = (e, order) => {
-    e.stopPropagation();
-    setEditOrder(order);
-    setEditDialogOpen(true);
   };
 
   const handleActiveSRClick = (e, row) => {
@@ -1283,57 +925,6 @@ function ManagerDashboard() {
         )}
       </div>
 
-      {/* Today's Orders Table */}
-      <div className="mr-table-section">
-        <h2>Today&apos;s Orders ({orderRows.length})</h2>
-        {orderRows.length === 0 ? (
-          <div className="empty-state">
-            <Text>No orders today</Text>
-          </div>
-        ) : (
-          <table className="app-table">
-            <thead>
-              <tr>
-                <th>Party Name</th>
-                <th>Order Amount</th>
-                <th>MR</th>
-                <th>Status</th>
-                <th>Creation Time</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {orderRows.map((o) => (
-                <tr key={o.id} style={{ cursor: 'default' }}>
-                  <td>{partyNames[o.partyId] || o.partyId || '—'}</td>
-                  <td>{globalUtils.getCurrencyFormat(o.orderAmount)}</td>
-                  <td>{userMap[o.mrId] || '—'}</td>
-                  <td>
-                    <span className="order-status-pill">
-                      {o.orderStatus || '—'}
-                      {o.flow.length > 0 && (
-                        <span>
-                          : {formatTime(o.flow[o.flow.length - 1].timestamp)}
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td>{formatTime(o.creationTime)}</td>
-                  <td>
-                    <Button
-                      appearance="subtle"
-                      icon={<Edit16Regular />}
-                      size="small"
-                      onClick={(e) => handleOpenEditOrder(e, o)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
       {/* Assign MR Dialog */}
       <AssignMrDialog
         open={assignDialogOpen}
@@ -1361,20 +952,6 @@ function ManagerDashboard() {
         saving={assignRouteSaving}
       />
 
-      {/* Edit Order Dialog */}
-      <EditOrderDialog
-        open={editDialogOpen}
-        onClose={() => {
-          setEditDialogOpen(false);
-          setEditOrder(null);
-        }}
-        order={editOrder}
-        partyNames={partyNames}
-        mrUsers={mrUsers}
-        companyUsers={companyUsers}
-        userMap={userMap}
-        companyId={currentCompanyId}
-      />
     </div>
   );
 }

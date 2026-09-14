@@ -42,12 +42,18 @@ jest.mock('../../renderer/services/globalUtils', () => ({
     getTimeFormat: () => '01/01/2024',
     getDayTime: () => '10:00 AM',
     dateDifferenceInDays: () => 0,
+    fetchOrdersByIds: jest.fn((ids) =>
+      Promise.resolve(ids.map((id) => ({ id, mrId: 'u1' }))),
+    ),
+    fetchPartyInfoForOrders: jest.fn((orders) => Promise.resolve(orders)),
   },
 }));
 
 // ─── Context mocks ─────────────────────────────────────────────────────────────
 jest.mock('../../renderer/contexts/allUsersContext', () => ({
-  useAuthUser: () => ({ allUsers: [] }),
+  useAuthUser: () => ({
+    allUsers: [{ uid: 'u1', username: 'Puneet Singh' }],
+  }),
 }));
 
 jest.mock('../../renderer/contexts/companyContext', () => ({
@@ -140,7 +146,7 @@ describe('DaySupplyReportPrint', () => {
     expect(screen.getByText(/End of Report/i)).toBeInTheDocument();
   });
 
-  test('renders supply report rows when getDocs returns data', async () => {
+  test('renders MR-wise tables when getDocs returns data', async () => {
     // First call = supply reports, second call = orders
     mockGetDocs
       .mockResolvedValueOnce(
@@ -149,8 +155,8 @@ describe('DaySupplyReportPrint', () => {
             receiptNumber: 'SR-001',
             status: 'Dispatched',
             dispatchTimestamp: Date.now(),
-            supplymanId: 'u1',
-            orders: [],
+            supplymanId: 'u2',
+            orders: ['order1'],
             items: [],
           },
         ]),
@@ -161,6 +167,6 @@ describe('DaySupplyReportPrint', () => {
       render(<DaySupplyReportPrint />);
     });
 
-    expect(screen.getByText(/SR-001/)).toBeInTheDocument();
+    expect(screen.getByText('Puneet Singh')).toBeInTheDocument();
   });
 });

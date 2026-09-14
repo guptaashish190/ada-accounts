@@ -1,0 +1,84 @@
+.online-payments-screen {
+  width: 96%;
+  max-width: 1280px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.online-payments-screen h3 {
+  margin: 0 0 16px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.online-payments-filters {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 18px 14px;
+  margin-bottom: 16px;
+}
+
+.online-payments-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: flex-end;
+}
+
+.online-payments-filters-row + .online-payments-filters-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #eef2f7;
+}
+
+.online-payments-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 160px;
+}
+
+.online-payments-field-wide {
+  min-width: 220px;
+  flex: 1;
+}
+
+.online-payments-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.online-payments-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.online-payments-date-range .filter-input {
+  min-width: 140px;
+}
+
+.online-payments-date-sep {
+  color: #94a3b8;
+  font-size: 13px;
+  padding-bottom: 2px;
+}
+
+.online-payments-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.online-payments-empty,
+.online-payments-loading {
+  padding: 32px 16px;
+  text-align: center;
+  color: #64748b;
+}

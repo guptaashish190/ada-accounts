@@ -265,6 +265,39 @@
 }
 
 /* Edit Order Dialog */
+.edit-order-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 16px 24px 0;
+}
+
+.edit-order-header-leading,
+.edit-order-header-trailing {
+  display: flex;
+  align-items: center;
+}
+
+.edit-order-header-leading {
+  min-width: 32px;
+}
+
+.edit-order-header-trailing {
+  justify-content: flex-end;
+  min-width: 32px;
+}
+
+.edit-order-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .edit-order-form {
   display: flex;
   flex-direction: column;
@@ -329,4 +362,17 @@
   cursor: pointer;
   padding: 2px 6px;
   min-width: auto;
+}
+
+.orders-filter-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: end;
+}
+
+.orders-filter-actions {
+  display: flex;
+  gap: 8px;
 }

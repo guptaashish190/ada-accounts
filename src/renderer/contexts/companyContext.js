@@ -18,6 +18,7 @@ import {
 } from '../services/firestoreHelpers';
 import Loader from '../common/loader';
 
+
 const CompanyContext = createContext(null);
 
 /**

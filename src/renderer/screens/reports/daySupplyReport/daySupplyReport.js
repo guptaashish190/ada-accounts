@@ -5,7 +5,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import {
   Button,
@@ -28,8 +28,54 @@ import {
   DB_NAMES,
 } from '../../../services/firestoreHelpers';
 
+function getOrderMrId(order) {
+  return order?.mrId || order?.createdById || 'unassigned';
+}
+
+function getMrName(mrId, allUsers) {
+  return allUsers.find((x) => x.uid === mrId)?.username || 'Unknown MR';
+}
+
+function groupOrdersByMr(orderIds, orders, allUsers) {
+  const orderById = {};
+  orders.forEach((order) => {
+    if (order?.id && !order.error) {
+      orderById[order.id] = order;
+    }
+  });
+
+  const groups = {};
+
+  orderIds.forEach((orderId) => {
+    const order = orderById[orderId];
+    if (!order) return;
+
+    const mrId = getOrderMrId(order);
+    if (!groups[mrId]) {
+      groups[mrId] = {
+        mrId,
+        mrName: getMrName(mrId, allUsers),
+        orderIds: [],
+      };
+    }
+    groups[mrId].orderIds.push(orderId);
+  });
+
+  return Object.values(groups).sort((a, b) =>
+    a.mrName.localeCompare(b.mrName),
+  );
+}
+
+function groupOrderDocsByMr(orders, allUsers) {
+  return groupOrdersByMr(
+    orders.map((order) => order.id),
+    orders,
+    allUsers,
+  );
+}
+
 export default function DaySupplyReportPrint() {
-  const [supplyReports, setSupplyReports] = useState([]);
+  const [mrGroups, setMrGroups] = useState([]);
   const [unSuppliedOrders, setUnSuppliedOrders] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [allowEditRemark, setAllowEditRemarks] = useState(false);
@@ -38,6 +84,12 @@ export default function DaySupplyReportPrint() {
 
   const [loading, setLoading] = useState(false);
   const { currentCompanyId } = useCompany();
+  const { allUsers } = useAuthUser();
+
+  const unSuppliedMrGroups = useMemo(
+    () => groupOrderDocsByMr(unSuppliedOrders, allUsers),
+    [unSuppliedOrders, allUsers],
+  );
 
   const handlePrint = () => {
     window.print();
@@ -96,7 +148,22 @@ export default function DaySupplyReportPrint() {
           id: doc1.id,
         }));
 
-        setSupplyReports(supplyReportData);
+        const allOrderIds = [
+          ...new Set(
+            supplyReportData.flatMap((sr) => sr.orders || []),
+          ),
+        ];
+
+        let mrGroupsData = [];
+        if (allOrderIds.length > 0) {
+          const orders = await globalUtils.fetchOrdersByIds(
+            allOrderIds,
+            currentCompanyId,
+          );
+          mrGroupsData = groupOrdersByMr(allOrderIds, orders, allUsers);
+        }
+
+        setMrGroups(mrGroupsData);
         setUnSuppliedOrders(unSuppliedOrders1);
       } catch (error) {
         console.error('Error fetching supply reports:', error);
@@ -180,12 +247,13 @@ export default function DaySupplyReportPrint() {
           </div>
         ) : (
           <div>
-            {supplyReports.map((sr) => {
+            {mrGroups.map((group) => {
               return (
-                <SupplyReportRow
+                <MrSupplyReportTable
                   showDefaultersOnly={showDefaultersOnly}
-                  key={`supply-report-all-list-${sr.id}`}
-                  data={sr}
+                  key={`mr-supply-report-${group.mrId}`}
+                  mrName={group.mrName}
+                  orderIds={group.orderIds}
                   editRemarks={allowEditRemark}
                   setRemarks={setNewRemarks}
                 />
@@ -194,50 +262,21 @@ export default function DaySupplyReportPrint() {
             <h2>
               {unSuppliedOrders.length === 0 ? 'No ' : ''}Unsupplied Bills
             </h2>
-            {unSuppliedOrders.length !== 0 ? (
-              <table className="app-table">
-                <thead className="supply-report-row">
-                  <tr>
-                    <th>
-                      <Text>Party Name</Text>
-                    </th>
-                    <th>
-                      <Text>Bill Number</Text>
-                    </th>
-                    <th>
-                      <Text>Amount</Text>
-                    </th>
-                    <th>
-                      <Text>Credit Days</Text>
-                    </th>
-                    <th>
-                      <Text>Payment</Text>
-                    </th>
-                    <th>
-                      <Text>Outstanding</Text>
-                    </th>
-                    <th>
-                      <Text>Remarks</Text>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {unSuppliedOrders?.map((unso) => {
-                    return (
-                      <SupplyReportOrderRow
-                        key={`unsupplied-${unso.id}`}
-                        editRemarks={allowEditRemark}
-                        billId={unso.id}
-                        setRemarks={setNewRemarks}
-                      />
-                    );
-                  })}
-                </tbody>
-              </table>
-            ) : null}
+            {unSuppliedOrders.length !== 0
+              ? unSuppliedMrGroups.map((group) => (
+                  <MrSupplyReportTable
+                    showDefaultersOnly={showDefaultersOnly}
+                    key={`unsupplied-mr-${group.mrId}`}
+                    mrName={group.mrName}
+                    orderIds={group.orderIds}
+                    editRemarks={allowEditRemark}
+                    setRemarks={setNewRemarks}
+                  />
+                ))
+              : null}
           </div>
         )}
-        {!loading && supplyReports.length === 0 ? (
+        {!loading && mrGroups.length === 0 && unSuppliedOrders.length === 0 ? (
           <div>No Supply Reports found</div>
         ) : null}
       </div>
@@ -247,37 +286,33 @@ export default function DaySupplyReportPrint() {
   );
 }
 
-function SupplyReportRow({
-  data,
+function MrSupplyReportTable({
+  mrName,
+  orderIds,
   editRemarks,
   setRemarks,
   showDefaultersOnly,
 }) {
-  const { allUsers } = useAuthUser();
-
   return (
     <table className="app-table">
       <thead className="supply-report-row">
         <tr>
+          <th colSpan={7}>
+            <Text className="sr-id">{mrName}</Text>
+          </th>
+        </tr>
+        <tr>
           <th style={{ width: '25%' }}>
-            <Text className="sr-id">
-              {data.receiptNumber} (
-              {data.status === 'Completed' ? 'Received' : 'Unreceived'})
-            </Text>
+            <Text>Party Name</Text>
           </th>
           <th style={{ width: '10%' }}>
-            <Text className="sr-timestamp">
-              {allUsers.find((x) => x.uid === data.supplymanId)?.username}
-            </Text>
-          </th>
-
-          <th style={{ width: '10%' }}>
-            <Text className="sr-supplyman">
-              {globalUtils.getDayTime(data.dispatchTimestamp)}
-            </Text>
+            <Text>Bill Number</Text>
           </th>
           <th style={{ width: '10%' }}>
-            <Text className="sr-supplyman">Credit Days</Text>
+            <Text>Amount</Text>
+          </th>
+          <th style={{ width: '10%' }}>
+            <Text>Credit Days</Text>
           </th>
           <th style={{ width: '18%' }}>
             <Text>Payment</Text>
@@ -292,13 +327,13 @@ function SupplyReportRow({
       </thead>
 
       <tbody>
-        {data.orders.map((x) => (
+        {orderIds.map((orderId) => (
           <SupplyReportOrderRow
-            key={`order-${x}`}
+            key={`order-${orderId}`}
             showDefaultersOnly={showDefaultersOnly}
             setRemarks={setRemarks}
             editRemarks={editRemarks}
-            billId={x}
+            billId={orderId}
           />
         ))}
       </tbody>
@@ -344,10 +379,9 @@ function SupplyReportOrderRow({
         currentCompanyId,
         DB_NAMES.CASH_RECEIPTS,
       );
-      const upiRef = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
-      const chequeRef = getCompanyCollection(
+      const paymentsRef = getCompanyCollection(
         currentCompanyId,
-        DB_NAMES.CHEQUES,
+        DB_NAMES.ONLINE_PAYMENTS,
       );
 
       const dateFrom = new Date(orderObj.billCreationTime);
@@ -368,29 +402,26 @@ function SupplyReportOrderRow({
         where('timestamp', '>=', dateFrom.getTime()),
         where('timestamp', '<=', dateTo.getTime()),
       );
-      const chequeQuery = query(
-        chequeRef,
-        where('partyId', '==', orderObj.partyId),
-        where('timestamp', '>=', dateFrom.getTime()),
-        where('timestamp', '<=', dateTo.getTime()),
-      );
 
-      const upiQuery = query(
-        upiRef,
+      const paymentsQuery = query(
+        paymentsRef,
         where('partyId', '==', orderObj.partyId),
         where('timestamp', '>=', dateFrom.getTime()),
         where('timestamp', '<=', dateTo.getTime()),
       );
 
       let cashDocs = await getDocs(cashQuery);
-      let upiDocs = await getDocs(upiQuery);
-      let chequeDocs = await getDocs(chequeQuery);
+      let paymentDocs = await getDocs(paymentsQuery);
 
       cashDocs = cashDocs.docs.map((x) => ({ id: x.id, ...x.data() }));
-      chequeDocs = chequeDocs.docs.map((x) => ({ id: x.id, ...x.data() }));
-      upiDocs = upiDocs.docs
-        .filter((x) => x.data().type === 'upi')
-        .map((x) => ({ id: x.id, ...x.data() }));
+      paymentDocs = paymentDocs.docs.map((x) => ({ id: x.id, ...x.data() }));
+      const chequeDocs = paymentDocs.filter(
+        (x) => (x.type || '').toString().toLowerCase() === 'cheque',
+      );
+      const upiDocs = paymentDocs.filter((x) => {
+        const normalizedType = (x.type || 'upi').toString().toLowerCase();
+        return normalizedType !== 'cheque';
+      });
 
       setCashReceipts(cashDocs);
       setChequeReceipts(chequeDocs);
@@ -483,7 +514,7 @@ function SupplyReportOrderRow({
           </div>
         ))}
       </td>
-      <td>{globalUtils.getCurrencyFormat(order.party.partyBalance)}</td>
+      <td>{globalUtils.getCurrencyFormat(order.party?.partyBalance)}</td>
       <td>
         {editRemarks ? (
           <Input

@@ -4,7 +4,10 @@ export default [
   {
     name: 'Dashboard',
     key: 'tab-dashboard',
-    allowJob: [constants.firebaseIds.JOBS.CASHIER],
+    allowJob: [
+      constants.firebaseIds.JOBS.CASHIER,
+      constants.firebaseIds.JOBS.BILL_CREATION,
+    ],
     submenu: [
       {
         name: 'Cashier',
@@ -17,6 +20,12 @@ export default [
         route: '/managerDashboard',
         key: 'tab-dashboard-manager',
         allowJob: [],
+      },
+      {
+        name: 'All Orders',
+        route: '/allOrders',
+        key: 'tab-dashboard-all-orders',
+        allowJob: [constants.firebaseIds.JOBS.BILL_CREATION],
       },
     ],
   },
@@ -69,29 +78,11 @@ export default [
         key: 'tab-transactions-cash-receipts',
       },
       {
-        name: 'UPI',
+        name: 'Online Payments',
         route: '/upi',
-        key: 'tab-transactions-upi',
-      },
-      {
-        name: 'Cheques',
-        route: '/chequesList',
-        key: 'tab-transactions-cheques',
-        allowJob: [constants.firebaseIds.JOBS.CASHIER],
+        key: 'tab-transactions-online-payments',
       },
     ],
-  },
-  {
-    name: 'Bills',
-    key: 'tab-bills',
-    submenu: [
-      {
-        name: 'All Bills',
-        route: '/searchBills',
-        key: 'tab-bills-all',
-      },
-    ],
-
   },
   {
     name: 'Parties',

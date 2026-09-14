@@ -143,6 +143,7 @@ export default function ReceiveSRScreen() {
 
   const init = async () => {
     setLoading(true);
+    console.log(supplyReport);
     if (supplyReport?.supplymanId) {
       try {
         const supplymanUserData = await globalUtils.fetchUserById(

@@ -39,41 +39,77 @@ L.Icon.Default.mergeOptions({
     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-const createRouteEndpointIcon = (bgColor) => new L.DivIcon({
-  className: 'route-endpoint-marker',
-  html:
-    `<div style="background:${bgColor};width:12px;height:12px;border-radius:50%;` +
-    'border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.35)"></div>',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
-});
+const PIN_COLORS = {
+  order: '#107c10',
+  payment: '#0078d4',
+  noOrder: '#f7630c',
+  start: '#16a34a',
+  live: '#2563eb',
+  end: '#dc2626',
+};
 
-const startIcon = createRouteEndpointIcon('#16a34a');
-const currentIcon = createRouteEndpointIcon('#2563eb');
-const endIcon = createRouteEndpointIcon('#dc2626');
+const createRouteEndpointIcon = (bgColor) =>
+  new L.DivIcon({
+    className: 'route-endpoint-marker',
+    html:
+      `<div class="route-endpoint-marker__dot" style="background:${bgColor}"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+
+const startIcon = createRouteEndpointIcon(PIN_COLORS.start);
+const currentIcon = createRouteEndpointIcon(PIN_COLORS.live);
+const endIcon = createRouteEndpointIcon(PIN_COLORS.end);
 const BILL_CREATED_FLOW = constants.firebase.billFlowTypes.BILL_CREATED;
 
-const orderIcon = new L.DivIcon({
-  className: 'order-map-marker',
-  html:
-    '<button type="button" aria-label="Visited party" ' +
-    'style="background:#107c10;width:10px;height:10px;border-radius:50%;' +
-    'border:2px solid #fff;box-shadow:0 0 4px rgba(0,0,0,.35);cursor:pointer;' +
-    'padding:0;display:block"></button>',
-  iconSize: [10, 10],
-  iconAnchor: [5, 5],
-});
+const visitPinColor = (status) => {
+  if (status === 'Payment') return PIN_COLORS.payment;
+  if (status === 'Order') return PIN_COLORS.order;
+  return PIN_COLORS.noOrder;
+};
 
-function AutoFitBounds({ positions }) {
+const dropPinIconCache = {};
+
+const createDropPinIcon = (color, index) => {
+  const cacheKey = `${color}-${index}`;
+  if (dropPinIconCache[cacheKey]) return dropPinIconCache[cacheKey];
+  dropPinIconCache[cacheKey] = new L.DivIcon({
+    className: 'visit-drop-pin',
+    html:
+      '<div class="visit-drop-pin__wrap">' +
+      `<span class="visit-drop-pin__badge" style="border-color:${color};color:${color}">${index}</span>` +
+      `<svg viewBox="0 0 24 36" width="28" height="42" aria-hidden="true">` +
+      `<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="${color}"/>` +
+      '<circle cx="12" cy="12" r="4.5" fill="#fff"/></svg></div>',
+    iconSize: [28, 58],
+    iconAnchor: [14, 58],
+  });
+  return dropPinIconCache[cacheKey];
+};
+
+const extractLatLng = (location) => {
+  if (!location) return null;
+  const lat = location.latitude ?? location._lat ?? location.lat;
+  const lng = location.longitude ?? location._long ?? location.lng;
+  if (!lat || !lng) return null;
+  return { lat: Number(lat), lng: Number(lng) };
+};
+
+function AutoFitBounds({ positions, resizeToken }) {
   const map = useMap();
-  const hasFit = useRef(false);
+  const first = positions[0];
+  const last = positions[positions.length - 1];
+  const boundsKey = `${positions.length}:${first?.[0]}:${first?.[1]}:${last?.[0]}:${last?.[1]}`;
 
   useEffect(() => {
-    if (!hasFit.current && positions.length > 0) {
-      map.fitBounds(positions, { padding: [30, 30] });
-      hasFit.current = true;
+    map.invalidateSize();
+    if (positions.length === 0) return;
+    if (positions.length === 1) {
+      map.setView(positions[0], 15);
+      return;
     }
-  }, [positions.length]);
+    map.fitBounds(positions, { padding: [40, 40] });
+  }, [boundsKey, resizeToken]);
   return null;
 }
 
@@ -187,6 +223,7 @@ function MrDetailPanel({ data }) {
   const [locationPoints, setLocationPoints] = useState([]);
   const [trackingIsActive, setTrackingIsActive] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState(null);
+  const [mapExpanded, setMapExpanded] = useState(false);
 
   const partyNamesCacheRef = useRef({});
   const partyDataCacheRef = useRef({});
@@ -503,19 +540,18 @@ function MrDetailPanel({ data }) {
     return sum + segmentDistance;
   }, 0);
 
-  const orderMarkers = registerEntries
-    .filter(
-      (e) =>
-        (e.status === 'Order' || e.status === 'Payment') && e.location,
-    )
-    .map((e) => ({
-      lat: e.location.latitude ?? e.location._lat,
-      lng: e.location.longitude ?? e.location._long,
-      timestamp: e.timestamp,
-      partyId: e.partyId || '',
-      status: e.status,
-    }))
-    .filter((m) => m.lat && m.lng);
+  const visitMarkers = visitedParties
+    .map((vp) => {
+      const coords = extractLatLng(vp.location);
+      if (!coords) return null;
+      return { ...vp, ...coords };
+    })
+    .filter(Boolean);
+
+  const allMapPositions = [
+    ...allRoutePositions,
+    ...visitMarkers.map((m) => [m.lat, m.lng]),
+  ];
 
   const mapCenter = sortedLocationPoints.length > 0
     ? [sortedLocationPoints[0].lat, sortedLocationPoints[0].lng]
@@ -552,74 +588,148 @@ function MrDetailPanel({ data }) {
       </div>
 
       {/* Map */}
-      <div className="mr-detail-map-section">
+      <div
+        className={`mr-detail-map-section${
+          mapExpanded ? ' mr-detail-map-section--expanded' : ''
+        }`}
+      >
         {locationPoints.length === 0 ? (
           <div className="mr-detail-map-empty">
             No location data available for this date.
           </div>
         ) : (
-          <div className="mr-detail-map">
-            <MapContainer
-              center={mapCenter}
-              zoom={14}
-              style={{ width: '100%', height: '100%' }}
-              scrollWheelZoom
-            >
-              <AutoFitBounds positions={allRoutePositions} />
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {polylineSegments.map((segmentPositions, index) => (
-                <Polyline
-                  // eslint-disable-next-line react/no-array-index-key
-                  key={`route-segment-${index}`}
-                  positions={segmentPositions}
-                  color="#0078d4"
-                  weight={3}
-                  opacity={0.8}
-                />
-              ))}
-              {sortedLocationPoints.length > 0 && (
-                <Marker
-                  position={[sortedLocationPoints[0].lat, sortedLocationPoints[0].lng]}
-                  icon={startIcon}
+          <>
+            <div className="mr-detail-map-wrap">
+              <div className="mr-detail-map">
+                <MapContainer
+                  center={mapCenter}
+                  zoom={14}
+                  style={{ width: '100%', height: '100%' }}
+                  scrollWheelZoom
                 >
-                  <Popup>
-                    Start — {formatTime(sortedLocationPoints[0].timestamp)}
-                  </Popup>
-                </Marker>
-              )}
-              {sortedLocationPoints.length > 1 && (
-                <Marker
-                  position={[
-                    sortedLocationPoints[sortedLocationPoints.length - 1].lat,
-                    sortedLocationPoints[sortedLocationPoints.length - 1].lng,
-                  ]}
-                  icon={trackingIsActive ? currentIcon : endIcon}
-                >
-                  <Popup>
-                    {trackingIsActive ? 'Current' : 'End'} —{' '}
-                    {formatTime(
-                      sortedLocationPoints[sortedLocationPoints.length - 1].timestamp,
-                    )}
-                  </Popup>
-                </Marker>
-              )}
-              {orderMarkers.map((om, idx) => (
-                <Marker
-                  key={`order-${idx}`}
-                  position={[om.lat, om.lng]}
-                  icon={orderIcon}
-                >
-                  <Tooltip direction="top" offset={[0, -10]} opacity={1}>
-                    {partyNames[om.partyId] || om.partyId}{' '}
-                    ({formatTime(om.timestamp)})
-                  </Tooltip>
-                </Marker>
-              ))}
-            </MapContainer>
-          </div>
+                  <AutoFitBounds
+                    positions={allMapPositions}
+                    resizeToken={mapExpanded}
+                  />
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {polylineSegments.map((segmentPositions, index) => (
+                    <Polyline
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={`route-segment-${index}`}
+                      positions={segmentPositions}
+                      color="#0078d4"
+                      weight={3}
+                      opacity={0.8}
+                    />
+                  ))}
+                  {sortedLocationPoints.length > 0 && (
+                    <Marker
+                      position={[
+                        sortedLocationPoints[0].lat,
+                        sortedLocationPoints[0].lng,
+                      ]}
+                      icon={startIcon}
+                    >
+                      <Popup>
+                        Start — {formatTime(sortedLocationPoints[0].timestamp)}
+                      </Popup>
+                    </Marker>
+                  )}
+                  {sortedLocationPoints.length > 1 && (
+                    <Marker
+                      position={[
+                        sortedLocationPoints[sortedLocationPoints.length - 1]
+                          .lat,
+                        sortedLocationPoints[sortedLocationPoints.length - 1]
+                          .lng,
+                      ]}
+                      icon={trackingIsActive ? currentIcon : endIcon}
+                    >
+                      <Popup>
+                        {trackingIsActive ? 'Current' : 'End'} —{' '}
+                        {formatTime(
+                          sortedLocationPoints[
+                            sortedLocationPoints.length - 1
+                          ].timestamp,
+                        )}
+                      </Popup>
+                    </Marker>
+                  )}
+                  {visitMarkers.map((vm, idx) => {
+                    const pinColor = visitPinColor(vm.status);
+                    const isPayment = vm.status === 'Payment';
+                    const isOrder = vm.status === 'Order';
+                    const outcome = isPayment
+                      ? `Payment: ${globalUtils.getCurrencyFormat(
+                          vm.paymentTotal || 0,
+                        )}`
+                      : isOrder
+                        ? `Order: ${globalUtils.getCurrencyFormat(
+                            vm.orderAmount || 0,
+                          )}${vm.orderStatus ? ` • ${vm.orderStatus}` : ''}`
+                        : `No order${vm.reason ? ` (${vm.reason})` : ''}`;
+                    return (
+                      <Marker
+                        key={`visit-${vm.partyId}-${vm.timestamp}-${idx}`}
+                        position={[vm.lat, vm.lng]}
+                        icon={createDropPinIcon(pinColor, idx + 1)}
+                      >
+                        <Tooltip
+                          direction="top"
+                          offset={[0, -48]}
+                          opacity={1}
+                        >
+                          {idx + 1}. {vm.partyName}
+                        </Tooltip>
+                        <Popup>
+                          <div className="visit-pin-popup">
+                            <strong>{vm.partyName}</strong>
+                            <div>{outcome}</div>
+                            <div className="visit-pin-popup__time">
+                              {formatTime(vm.timestamp)}
+                            </div>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    );
+                  })}
+                </MapContainer>
+              </div>
+              <button
+                type="button"
+                className="mr-detail-map-expand"
+                title={mapExpanded ? 'Exit full map' : 'Expand map'}
+                onClick={() => setMapExpanded((open) => !open)}
+              >
+                {mapExpanded ? '✕' : '⛶'}
+              </button>
+            </div>
+            <div className="mr-detail-map-legend">
+              <span>
+                <i className="mr-detail-map-legend__dot" style={{ background: PIN_COLORS.start }} />
+                Start
+              </span>
+              <span>
+                <i className="mr-detail-map-legend__pin" style={{ background: PIN_COLORS.order }} />
+                Order
+              </span>
+              <span>
+                <i className="mr-detail-map-legend__pin" style={{ background: PIN_COLORS.payment }} />
+                Payment
+              </span>
+              <span>
+                <i className="mr-detail-map-legend__pin" style={{ background: PIN_COLORS.noOrder }} />
+                No order
+              </span>
+              <span>
+                <i className="mr-detail-map-legend__dot" style={{ background: PIN_COLORS.live }} />
+                Live / End
+              </span>
+            </div>
+          </>
         )}
       </div>
 

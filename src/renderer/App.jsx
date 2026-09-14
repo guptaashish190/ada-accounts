@@ -26,10 +26,8 @@ import PendingSupplyReports from './screens/pendingSupplyReports/pendingSupplyRe
 import VerifySupplyReport from './screens/verifySupplyReport/verifySupplyReport';
 import ReceiveSupplyReportScreen from './screens/receiveSupplyReport/receiveSupplyReportList';
 import ReceiveSRScreen from './screens/receiveSupplyReport/receiveSRScreen/receiveSRScreen';
-import AllBillsScreen from './screens/allBills/allBills';
 import PaymentReceipts from './screens/paymentReceipts/paymentReceipts';
 import CreatePaymentReceiptDialog from './screens/paymentReceipts/createPaymentReceiptDialog/createPaymentReceiptDialog';
-import ChequesScreen from './screens/cheques/cheques';
 import AssignBillScreen from './screens/assignBills/assignBillsScreen';
 import SettingsScreen from './screens/settings/settings';
 import SettingsContext from './contexts/settingsContext';
@@ -59,6 +57,7 @@ import UsersManagementScreen from './screens/settings/users/usersManagement';
 import CashierDashboard from './screens/cashierDashboard/cashierDashboard';
 import ProductsListScreen from './screens/products/productsList';
 import ManagerDashboard from './screens/managerDashboard/managerDashboard';
+import AllBillsScreen from './screens/allBills/allBills';
 
 const myNewTheme = {
   10: '#010304',
@@ -124,14 +123,12 @@ function AppContent() {
             path="/receiveSupplyReports"
             element={<ReceiveSupplyReportScreen />}
           />
-          <Route path="/searchBills" element={<AllBillsScreen />} />
           <Route path="/receiveSRScreen" element={<ReceiveSRScreen />} />
           <Route path="/paymentReceipts" element={<PaymentReceipts />} />
           <Route
             path="/createPaymentReceipts"
             element={<CreatePaymentReceiptDialog />}
           />
-          <Route path="/chequesList" element={<ChequesScreen />} />
           <Route path="/assignBills" element={<AssignBillScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/bundles" element={<AllBundlesScreen />} />
@@ -174,6 +171,7 @@ function AppContent() {
           <Route path="/cashierDashboard" element={<CashierDashboard />} />
           <Route path="/products" element={<ProductsListScreen />} />
           <Route path="/managerDashboard" element={<ManagerDashboard />} />
+          <Route path="/allOrders" element={<AllBillsScreen />} />
         </Routes>
       </TabNavigator>
     </Router>

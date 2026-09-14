@@ -47,16 +47,29 @@
   margin-bottom: 20px;
 }
 
+.mr-detail-map-wrap {
+  position: relative;
+}
+
 .mr-detail-map {
   width: 100%;
-  height: 360px;
+  height: 52vh;
+  min-height: 480px;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e1dfdd;
 }
 
+.mr-detail-map-section--expanded .mr-detail-map {
+  height: calc(100vh - 140px);
+  min-height: 560px;
+}
+
 .mr-detail-map-empty {
-  padding: 32px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   background-color: #f3f2f1;
   color: #605e5c;
@@ -64,9 +77,100 @@
   font-size: 14px;
 }
 
+.mr-detail-map-expand {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 500;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e1dfdd;
+  border-radius: 50%;
+  background: #fff;
+  color: #323130;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.mr-detail-map-expand:hover {
+  background: #f3f2f1;
+}
+
+.mr-detail-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #605e5c;
+}
+
+.mr-detail-map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mr-detail-map-legend__dot,
+.mr-detail-map-legend__pin {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #fff;
+}
+
+.mr-detail-map-legend__pin {
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+
+.route-endpoint-marker,
+.visit-drop-pin,
 .order-map-marker {
   background: none !important;
   border: none !important;
+}
+
+.route-endpoint-marker__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.35);
+}
+
+.visit-drop-pin__wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0;
+}
+
+.visit-drop-pin__badge {
+  background: #fff;
+  border: 1.5px solid;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  line-height: 1.2;
+  margin-bottom: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.visit-pin-popup strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.visit-pin-popup__time {
+  margin-top: 4px;
+  color: #605e5c;
+  font-size: 12px;
 }
 
 /* Summary Stats */

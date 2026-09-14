@@ -67,6 +67,11 @@ const getChildWindowKey = (args: any): string => {
     return bundleId ? `${type}:${bundleId}` : `${type}:${Date.now()}`;
   }
 
+  if (type === 'BILL_DETAIL') {
+    const orderId = data?.orderId;
+    return orderId ? `${type}:${orderId}` : `${type}:${Date.now()}`;
+  }
+
   if (type === 'MR_DETAIL') {
     const mrUid = data?.mrUid || 'unknown';
     const selectedDate = data?.selectedDate || 'today';
@@ -333,6 +338,7 @@ ipcMain.on('new-window', (event, args) => {
   const isViewVoucher = args && args.type === 'VIEW_VOUCHER';
   const isAssignBills = args && args.type === 'ASSIGN_BILLS';
   const isViewBundle = args && args.type === 'VIEW_BUNDLE';
+  const isBillDetail = args && args.type === 'BILL_DETAIL';
   const isPrintCashReceipt = args && args.type === 'PRINT_CASH_RECEIPT';
   const winWidth = isMrDetail
     ? 1100
@@ -344,7 +350,7 @@ ipcMain.on('new-window', (event, args) => {
         ? 1300
       : isViewVoucher
         ? 950
-      : isViewBundle
+      : isViewBundle || isBillDetail
         ? 1100
       : isCreateSupplyReport
         ? 1200
@@ -363,6 +369,8 @@ ipcMain.on('new-window', (event, args) => {
         ? 820
       : isViewBundle
         ? 800
+      : isBillDetail
+        ? 820
       : isCreateSupplyReport
         ? 850
       : isReceiveSupplyReport
@@ -378,6 +386,8 @@ ipcMain.on('new-window', (event, args) => {
       ? 'View Voucher'
     : isViewBundle
       ? 'View Bundle'
+    : isBillDetail
+      ? 'Bill Detail'
     : isCreateSupplyReport
       ? 'Create Supply Report'
     : isMrDetail
@@ -409,6 +419,7 @@ ipcMain.on('new-window', (event, args) => {
         isAssignBills ||
         isViewVoucher ||
         isViewBundle ||
+        isBillDetail ||
         isReceiveSupplyReport ||
         isCreateSupplyReport,
       nodeIntegration: true,

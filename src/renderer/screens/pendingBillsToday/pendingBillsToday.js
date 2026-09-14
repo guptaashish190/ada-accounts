@@ -220,50 +220,42 @@ function BillsList({ partyId }) {
   const fetchLastPayment = async () => {
     try {
       const cashRef = getCompanyCollection(currentCompanyId, DB_NAMES.CASH_RECEIPTS);
-      const upiRef = getCompanyCollection(currentCompanyId, DB_NAMES.UPI);
-      const chequeRef = getCompanyCollection(currentCompanyId, DB_NAMES.CHEQUES);
+      const paymentsRef = getCompanyCollection(
+        currentCompanyId,
+        DB_NAMES.ONLINE_PAYMENTS,
+      );
 
-      // Query for last payment before the oldest pending bill
       const cashQueryLast = query(
         cashRef,
         where('parties', 'array-contains', partyId),
         orderBy('timestamp', 'desc'),
         limit(1),
       );
-      const chequeQueryLast = query(
-        chequeRef,
-        where('partyId', '==', partyId),
-        orderBy('timestamp', 'desc'),
-        limit(1),
-      );
-      const upiQueryLast = query(
-        upiRef,
+      const paymentsQueryLast = query(
+        paymentsRef,
         where('partyId', '==', partyId),
         orderBy('timestamp', 'desc'),
         limit(1),
       );
 
       const cashQueryLastDocs = await getDocs(cashQueryLast);
-      const upiQueryLastDocs = await getDocs(upiQueryLast);
-      const chequeQueryLastDocs = await getDocs(chequeQueryLast);
+      const paymentsQueryLastDocs = await getDocs(paymentsQueryLast);
 
       const cashLastValue =
         cashQueryLastDocs.docs.length > 0
           ? cashQueryLastDocs.docs[0].data()
           : undefined;
-      const upiLastValue =
-        upiQueryLastDocs.docs.length > 0
-          ? upiQueryLastDocs.docs[0].data()
-          : undefined;
-      const chequeLastValue =
-        chequeQueryLastDocs.docs.length > 0
-          ? chequeQueryLastDocs.docs[0].data()
+      const paymentLastValue =
+        paymentsQueryLastDocs.docs.length > 0
+          ? paymentsQueryLastDocs.docs[0].data()
           : undefined;
 
       const lastPayment1 = [
         { ...cashLastValue, type: 'cash' },
-        { ...upiLastValue, type: 'upi' },
-        { ...chequeLastValue, type: 'cheque' },
+        {
+          ...paymentLastValue,
+          type: (paymentLastValue?.type || 'upi').toString().toLowerCase(),
+        },
       ].sort((x1, x2) => (x2?.timestamp || 0) - (x1?.timestamp || 0))[0];
 
       setLastPayment(lastPayment1.timestamp ? lastPayment1 : undefined);

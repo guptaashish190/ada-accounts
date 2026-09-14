@@ -20,6 +20,7 @@ import CreateSupplyReportScreen from '../screens/createSupplyReport/createSupply
 import ViewVoucherScreen from '../screens/vouchers/viewVoucherScreen';
 import AssignBillScreen from '../screens/assignBills/assignBillsScreen';
 import ViewBundleScreen from '../screens/bundles/viewBundle/viewBundle';
+import BillDetailWindow from './billDetailWindow/billDetailWindow';
 
 export default function App({ args }) {
   const isPrint = args.type === constants.printConstants.PRINT_CASHRECEIPT;
@@ -33,6 +34,7 @@ export default function App({ args }) {
       [constants.windowConstants.VIEW_VOUCHER]: 'View Voucher',
       [constants.windowConstants.ASSIGN_BILLS]: 'Assign Bills',
       [constants.windowConstants.VIEW_BUNDLE]: 'View Bundle',
+      [constants.windowConstants.BILL_DETAIL]: 'Bill Detail',
       [constants.printConstants.PRINT_CASHRECEIPT]: 'Print Cash Receipt',
     };
     document.title = titlesByType[args.type] || 'Child Window';
@@ -187,6 +189,19 @@ export default function App({ args }) {
                 </Routes>
               </MemoryRouter>
             </SettingsContext>
+          </AllUsersContext>
+        </CompanyProvider>
+      </FluentProvider>
+    );
+  }
+
+  if (args.type === constants.windowConstants.BILL_DETAIL) {
+    const billKey = args.data?.orderId ?? 'bill-detail';
+    return (
+      <FluentProvider theme={webLightTheme}>
+        <CompanyProvider>
+          <AllUsersContext>
+            <BillDetailWindow key={billKey} data={args.data} />
           </AllUsersContext>
         </CompanyProvider>
       </FluentProvider>

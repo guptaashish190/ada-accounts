@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import {
   Spinner,
   Button,
@@ -7,338 +8,676 @@ import {
   Card,
   CardHeader,
   Text,
-  Input,
-  Tab,
-  TabList,
+  Toaster,
+  useId,
+  useToastController,
 } from '@fluentui/react-components';
 import {
-  ChevronDown20Regular,
-  ChevronUp20Regular,
-  Call20Regular,
-  CalendarLtr20Regular,
-  Save20Regular,
+  LockClosed20Regular,
+  LockOpen20Regular,
+  Print20Regular,
 } from '@fluentui/react-icons';
 import { DatePicker } from '@fluentui/react-datepicker-compat';
-import {
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  arrayUnion,
-  Timestamp,
-  orderBy,
-  limit,
-} from 'firebase/firestore';
 import { useCompany } from '../../contexts/companyContext';
+import { useCurrentUser } from '../../contexts/userContext';
+import { useAuthUser } from '../../contexts/allUsersContext';
+import { showToast } from '../../common/toaster';
+import PartyCard, { isPartyActioned, wasPartyRescheduled } from './partyCard';
+import DayReportPrintView, { buildReportTotals } from './dayReportPrintView';
 import {
-  getCompanyCollection,
-  getCompanyDoc,
-  DB_NAMES,
-} from '../../services/firestoreHelpers';
-import { firebaseAuth } from '../../firebaseInit';
+  DEFAULT_PAYMENT_WINDOW_DAYS,
+  MIN_LIST_BALANCE,
+  PAYMENT_LOOKUP_DAYS,
+  PAYMENT_MODES,
+  buildAutoAttachJobs,
+  cancelEntry,
+  closeDay,
+  endOfDay,
+  entryHasLinkedPayments,
+  fetchAllScheduledOrders,
+  fetchClaimedPaymentIds,
+  fetchEntriesForDate,
+  fetchDayStatus,
+  fetchOrdersRescheduledOnDate,
+  fetchPartyDetails,
+  fetchPaymentsInWindow,
+  fetchRoutesForDay,
+  snapshotPartiesForClose,
+  updatePartyCreditAndRoute,
+  formatCurrency,
+  formatLongDate,
+  parseDateKey,
+  reopenDay,
+  reschedulePartyOrders,
+  saveEntry,
+  startOfDay,
+  toDateKey,
+  billRescheduleDate,
+} from './collectionService';
+import '../reports/printA4.css';
 import './style.css';
 
+const INITIAL_VISIBLE_PARTIES = 40;
+const VISIBLE_PARTIES_STEP = 40;
+
+const billTime = (order) =>
+  order.billCreationTime || order.creationTime || 0;
+
+const sortOrdersByBillDate = (orders) =>
+  [...(orders || [])].sort((a, b) => billTime(a) - billTime(b));
+
+const recountParty = (party, dateObj) => {
+  const dayStart = startOfDay(dateObj).getTime();
+  const dayEnd = endOfDay(dateObj).getTime();
+  let dueTodayAmount = 0;
+  let overdueAmount = 0;
+  let totalPending = 0;
+  const orders = sortOrdersByBillDate(party.orders);
+  orders.forEach((order) => {
+    totalPending += order.balance || 0;
+    const scheduled = order.schedulePaymentDate || 0;
+    if (scheduled < dayStart) overdueAmount += order.balance || 0;
+    else if (scheduled <= dayEnd) dueTodayAmount += order.balance || 0;
+  });
+  return { ...party, orders, dueTodayAmount, overdueAmount, totalPending };
+};
+
+const mergePartyOrders = (party, incoming, dateObj) => {
+  const byId = new Map((party.orders || []).map((order) => [order.id, order]));
+  incoming.forEach((order) => {
+    if (!byId.has(order.id)) byId.set(order.id, order);
+  });
+  return recountParty({ ...party, orders: [...byId.values()] }, dateObj);
+};
+
+const addOrMergeParties = (parties, incoming, dateObj) => {
+  const byParty = new Map(parties.map((party) => [party.partyId, party]));
+  incoming.forEach((next) => {
+    const existing = byParty.get(next.partyId);
+    if (!existing) {
+      byParty.set(next.partyId, recountParty(next, dateObj));
+      return;
+    }
+    byParty.set(
+      next.partyId,
+      mergePartyOrders(existing, next.orders || [], dateObj),
+    );
+  });
+  return [...byParty.values()];
+};
+
+const buildPartiesData = (
+  orders,
+  partyCache,
+  partyIdsOnRoute,
+  partyToRouteMap,
+  selectedDateObj,
+) => {
+  const dayStart = startOfDay(selectedDateObj).getTime();
+  const dayEnd = endOfDay(selectedDateObj).getTime();
+  const partyMap = {};
+
+  orders.forEach((order) => {
+    const { partyId } = order;
+    if (!partyId) return;
+    if ((order.balance || 0) <= MIN_LIST_BALANCE) return;
+
+    if (!partyMap[partyId]) {
+      const partyData = partyCache[partyId] || {};
+      const routeInfo = partyToRouteMap[partyId] || null;
+      partyMap[partyId] = {
+        partyId,
+        partyName: partyData.name || 'Unknown Party',
+        contact: partyData.contact || '',
+        creditDays: partyData.creditDays,
+        routeId: routeInfo?.routeId || 'miscellaneous',
+        routeName: routeInfo?.routeName || 'Miscellaneous',
+        routeWeekday: routeInfo?.routeWeekday ?? null,
+        isOnRoute: partyIdsOnRoute.has(partyId),
+        orders: [],
+        totalPending: 0,
+        dueTodayAmount: 0,
+        overdueAmount: 0,
+      };
+    }
+
+    partyMap[partyId].orders.push(order);
+    partyMap[partyId].totalPending += order.balance || 0;
+
+    const scheduled = order.schedulePaymentDate || 0;
+    if (scheduled < dayStart) {
+      partyMap[partyId].overdueAmount += order.balance || 0;
+    } else if (scheduled <= dayEnd) {
+      partyMap[partyId].dueTodayAmount += order.balance || 0;
+    }
+  });
+
+  Object.values(partyMap).forEach((party) => {
+    party.orders = sortOrdersByBillDate(party.orders);
+  });
+
+  return Object.values(partyMap);
+};
+
+/** Rebuild a party from a saved entry's frozen bill snapshot. */
+const partyFromEntry = (entry) => {
+  const bills = (entry.bills || []).filter(
+    (bill) => (bill.balance || 0) > MIN_LIST_BALANCE,
+  );
+  return {
+    partyId: entry.partyId,
+    partyName: entry.partyName || 'Unknown Party',
+    contact: '',
+    creditDays: undefined,
+    routeId: entry.routeId || 'miscellaneous',
+    routeName: entry.routeName || 'Miscellaneous',
+    routeWeekday: entry.routeWeekday ?? null,
+    isOnRoute: !!entry.routeId && entry.routeId !== 'miscellaneous',
+    orders: bills.map((bill) => {
+      const rescheduleDate = billRescheduleDate(bill);
+      return {
+        id: bill.billId,
+        billNumber: bill.billNumber,
+        billCreationTime: bill.billDate,
+        orderAmount: bill.amount,
+        balance: bill.balance,
+        schedulePaymentDate: rescheduleDate
+          ? parseDateKey(rescheduleDate).getTime()
+          : bill.schedulePaymentDate,
+        rescheduleDate,
+      };
+    }),
+    totalPending: bills.reduce((sum, b) => sum + (b.balance || 0), 0),
+    dueTodayAmount: 0,
+    overdueAmount: 0,
+  };
+};
+
 function CashierDashboard() {
-  const { currentCompanyId } = useCompany();
-  const [loading, setLoading] = useState(true);
+  const { currentCompanyId, getCurrentCompanyName } = useCompany();
+  const { user } = useCurrentUser();
+  const { allUsers } = useAuthUser();
+  const toasterId = useId('cashier-toaster');
+  const { dispatchToast } = useToastController(toasterId);
+  const [printKind, setPrintKind] = useState('collection');
+
+  const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [loadedBillCount, setLoadedBillCount] = useState(0);
   const [partiesData, setPartiesData] = useState([]);
-  const [filteredParties, setFilteredParties] = useState([]);
   const [expandedParty, setExpandedParty] = useState(null);
   const [routeList, setRouteList] = useState([]);
   const [selectedRoute, setSelectedRoute] = useState('all');
-  const [viewMode, setViewMode] = useState('daily');
+  const [visibleDue, setVisibleDue] = useState(INITIAL_VISIBLE_PARTIES);
+  const [visibleCarryOver, setVisibleCarryOver] = useState(
+    INITIAL_VISIBLE_PARTIES,
+  );
 
-  const getTodayDateString = () => new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState(getTodayDateString());
-  const [rangeFrom, setRangeFrom] = useState(new Date());
-  const [rangeTo, setRangeTo] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(toDateKey(new Date()));
 
-  const [stats, setStats] = useState({
-    dueToday: 0,
-    overdue: 0,
-    partyCount: 0,
-  });
+  const [entriesByParty, setEntriesByParty] = useState({});
+  const [paymentWindowDays, setPaymentWindowDays] = useState(
+    DEFAULT_PAYMENT_WINDOW_DAYS,
+  );
+  const [dayStatus, setDayStatus] = useState(null);
+  const [closing, setClosing] = useState(false);
+  const [paymentsCache, setPaymentsCache] = useState(null);
+  const attachRequestRef = useRef(0);
+  const entriesByPartyRef = useRef({});
 
-  useEffect(() => {
-    if (currentCompanyId) {
-      fetchScheduledPayments();
-    }
-  }, [currentCompanyId, selectedDate, viewMode]);
+  const dayClosed = dayStatus?.status === 'CLOSED';
 
-  useEffect(() => {
-    filterParties();
-  }, [selectedRoute, partiesData]);
-
-  const fetchPartyDetails = async (partyIds) => {
-    const cache = {};
-    const unique = [...new Set(partyIds.filter(Boolean))];
-    const chunks = [];
-    for (let i = 0; i < unique.length; i += 10) {
-      chunks.push(unique.slice(i, i + 10));
-    }
-    await Promise.all(
-      chunks.map(async (chunk) => {
-        const snap = await getDocs(
-          query(
-            getCompanyCollection(currentCompanyId, 'parties'),
-            where('__name__', 'in', chunk),
-          ),
-        );
-        snap.docs.forEach((d) => {
-          cache[d.id] = d.data();
-        });
-      }),
-    );
-    return cache;
+  const clearDashboard = () => {
+    attachRequestRef.current += 1;
+    setHasLoaded(false);
+    setLoading(false);
+    setLoadedBillCount(0);
+    setPartiesData([]);
+    setEntriesByParty({});
+    entriesByPartyRef.current = {};
+    setDayStatus(null);
+    setPaymentsCache(null);
+    setRouteList([]);
+    setExpandedParty(null);
+    setSelectedRoute('all');
   };
 
-  const fetchScheduledPayments = async () => {
+  useEffect(() => {
+    clearDashboard();
+  }, [currentCompanyId, selectedDate]);
+
+  useEffect(() => {
+    setVisibleDue(INITIAL_VISIBLE_PARTIES);
+    setVisibleCarryOver(INITIAL_VISIBLE_PARTIES);
+  }, [selectedRoute, partiesData]);
+
+  useEffect(() => {
+    entriesByPartyRef.current = entriesByParty;
+  }, [entriesByParty]);
+
+  const autoAttachUnlinkedPayments = async ({
+    requestId,
+    companyId,
+    dateKey,
+    parties,
+    entriesByParty: loadedEntries,
+  }) => {
     try {
-      setLoading(true);
+      const [paymentsByParty, claimed] = await Promise.all([
+        fetchPaymentsInWindow(companyId, dateKey, PAYMENT_LOOKUP_DAYS),
+        fetchClaimedPaymentIds(companyId, dateKey, PAYMENT_LOOKUP_DAYS),
+      ]);
+      if (requestId !== attachRequestRef.current) return;
 
-      const selectedDateObj = new Date(selectedDate);
-      const jsDay = selectedDateObj.getDay();
-      const routeIndex = (jsDay + 6) % 7;
+      setPaymentsCache({ byParty: paymentsByParty, claimed });
 
-      const routesRef = getCompanyCollection(currentCompanyId, 'mr_routes');
-      const routesSnapshot = await getDocs(routesRef);
+      const jobs = buildAutoAttachJobs(
+        parties,
+        loadedEntries,
+        paymentsByParty,
+        claimed,
+        dateKey,
+      );
+      if (!jobs.length) return;
 
-      const todayPartyIds = new Set();
-      const partyToRouteMap = {};
+      const saved = (
+        await Promise.allSettled(
+          jobs.map(async ({ party, payments, existing }) => {
+            const latest = entriesByPartyRef.current[party.partyId] || existing;
+            if (entryHasLinkedPayments(latest)) return null;
+            return saveEntry(companyId, dateKey, party, {
+              payments,
+              notes: latest?.notes || '',
+              rescheduleByBill: {},
+              existingBills: latest?.bills || [],
+            });
+          }),
+        )
+      )
+        .filter((result) => result.status === 'fulfilled' && result.value)
+        .map((result) => result.value);
+      if (requestId !== attachRequestRef.current || !saved.length) return;
 
-      routesSnapshot.docs.forEach((doc) => {
-        const route = doc.data();
-        const routeId = doc.id;
-        const routeName = route.name || routeId;
-        const routeArray = route.route || [];
-
-        if (routeArray[routeIndex] && routeArray[routeIndex].parties) {
-          routeArray[routeIndex].parties.forEach((partyId) => {
-            todayPartyIds.add(partyId);
-            partyToRouteMap[partyId] = { routeId, routeName };
-          });
-        }
+      setEntriesByParty((prev) => {
+        const next = { ...prev };
+        saved.forEach((entry) => {
+          if (entryHasLinkedPayments(prev[entry.partyId])) return;
+          next[entry.partyId] = entry;
+        });
+        entriesByPartyRef.current = next;
+        return next;
       });
 
-      const endOfDay =
-        viewMode === 'daily' ? new Date(selectedDate) : new Date(rangeTo);
-      endOfDay.setHours(23, 59, 59, 999);
+      showToast(
+        dispatchToast,
+        `Linked recent payments for ${saved.length} parties`,
+        'success',
+      );
+    } catch (error) {
+      console.error('Error auto-linking recent payments:', error);
+      if (requestId === attachRequestRef.current) {
+        setPaymentsCache({ byParty: new Map(), claimed: new Map() });
+        showToast(dispatchToast, 'Could not auto-link recent payments', 'error');
+      }
+    }
+  };
 
-      const ordersRef = getCompanyCollection(currentCompanyId, DB_NAMES.ORDERS);
-      const q = query(
-        ordersRef,
-        where('schedulePaymentDate', '<=', endOfDay.getTime()),
-        where('balance', '>', 0),
-        orderBy('schedulePaymentDate', 'asc'),
-        limit(2000),
+  const fetchDashboard = async () => {
+    const requestId = ++attachRequestRef.current;
+
+    try {
+      setLoading(true);
+      setLoadedBillCount(0);
+      setPaymentsCache(null);
+
+      const selectedDateObj = parseDateKey(selectedDate);
+      const windowEnd = endOfDay(selectedDate).getTime();
+
+      const [{ partyIdsOnRoute, partyToRouteMap, routes }, orders] =
+        await Promise.all([
+          fetchRoutesForDay(currentCompanyId, selectedDateObj),
+          fetchAllScheduledOrders(
+            currentCompanyId,
+            windowEnd,
+            setLoadedBillCount,
+          ),
+        ]);
+
+      const partyCache = await fetchPartyDetails(
+        currentCompanyId,
+        orders.map((o) => o.partyId),
       );
 
-      const ordersSnapshot = await getDocs(q);
-
-      let ordersList;
-      if (viewMode === 'range') {
-        const startOfFrom = new Date(rangeFrom);
-        startOfFrom.setHours(0, 0, 0, 0);
-        const rangeFromMs = startOfFrom.getTime();
-        ordersList = ordersSnapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((o) => o.schedulePaymentDate >= rangeFromMs);
-      } else {
-        ordersList = ordersSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-      }
-
-      await buildPartiesData(
-        ordersList,
-        todayPartyIds,
+      let parties = buildPartiesData(
+        orders,
+        partyCache,
+        partyIdsOnRoute,
         partyToRouteMap,
         selectedDateObj,
       );
 
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching scheduled payments:', error);
-      setLoading(false);
-    }
-  };
+      const [entries, status, moved] = await Promise.all([
+        fetchEntriesForDate(currentCompanyId, selectedDate),
+        fetchDayStatus(currentCompanyId, selectedDate),
+        fetchOrdersRescheduledOnDate(currentCompanyId, selectedDate).catch(
+          (error) => {
+            console.error('Error recovering rescheduled bills:', error);
+            return [];
+          },
+        ),
+      ]);
 
-  const buildPartiesData = async (
-    orders,
-    todayPartyIds,
-    partyToRouteMap,
-    selectedDateObj,
-  ) => {
-    const startOfDay = new Date(selectedDateObj);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(selectedDateObj);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    const allPartyIds = orders.map((o) => o.partyId).filter(Boolean);
-    const partyCache = await fetchPartyDetails(allPartyIds);
-
-    const partyMap = {};
-    orders.forEach((order) => {
-      const { partyId } = order;
-      if (!partyId) return;
-
-      if (!partyMap[partyId]) {
-        const partyData = partyCache[partyId] || {};
-        const routeInfo = partyToRouteMap[partyId] || null;
-        const isOnRoute = todayPartyIds.has(partyId);
-
-        partyMap[partyId] = {
-          partyId,
-          partyName: partyData.name || 'Unknown Party',
-          contact: partyData.contact || '',
-          creditDays: partyData.creditDays,
-          routeId: routeInfo?.routeId || 'miscellaneous',
-          routeName: routeInfo?.routeName || 'Miscellaneous',
-          isOnRoute,
-          orders: [],
-          totalPending: 0,
-          dueTodayAmount: 0,
-          overdueAmount: 0,
-          oldestBillTime: Infinity,
-        };
-      }
-
-      partyMap[partyId].orders.push(order);
-      partyMap[partyId].totalPending += order.balance || 0;
-
-      const billTime = order.billCreationTime || order.creationTime || 0;
-      if (billTime && billTime < partyMap[partyId].oldestBillTime) {
-        partyMap[partyId].oldestBillTime = billTime;
-      }
-
-      const schedDate = order.schedulePaymentDate || 0;
-      if (schedDate < startOfDay.getTime()) {
-        partyMap[partyId].overdueAmount += order.balance || 0;
-      } else if (schedDate <= endOfDay.getTime()) {
-        partyMap[partyId].dueTodayAmount += order.balance || 0;
-      }
-    });
-
-    const now = Date.now();
-    Object.values(partyMap).forEach((party) => {
-      party.oldestBillDays =
-        party.oldestBillTime < Infinity
-          ? Math.floor((now - party.oldestBillTime) / (1000 * 60 * 60 * 24))
-          : 0;
-      party.orders.sort((a, b) => {
-        const dateA = a.schedulePaymentDate || a.billCreationTime || 0;
-        const dateB = b.schedulePaymentDate || b.billCreationTime || 0;
-        return dateA - dateB;
+      const byParty = {};
+      entries.forEach((entry) => {
+        byParty[entry.partyId] = entry;
       });
-    });
 
-    const partiesArray = Object.values(partyMap).sort((a, b) => {
-      if (a.isOnRoute && !b.isOnRoute) return -1;
-      if (!a.isOnRoute && b.isOnRoute) return 1;
-      return (
-        b.overdueAmount - a.overdueAmount || b.totalPending - a.totalPending
+      const extraCache = await fetchPartyDetails(currentCompanyId, [
+        ...moved.map((order) => order.partyId),
+        ...entries.map((entry) => entry.partyId),
+      ]);
+      const cache = { ...partyCache, ...extraCache };
+
+      parties = addOrMergeParties(
+        parties,
+        buildPartiesData(
+          moved,
+          cache,
+          partyIdsOnRoute,
+          partyToRouteMap,
+          selectedDateObj,
+        ),
+        selectedDateObj,
       );
-    });
+      parties = addOrMergeParties(
+        parties,
+        entries
+          .filter((entry) => (entry.bills || []).length > 0)
+          .map(partyFromEntry),
+        selectedDateObj,
+      );
 
-    let totalDueToday = 0;
-    let totalOverdue = 0;
-    partiesArray.forEach((p) => {
-      totalDueToday += p.dueTodayAmount;
-      totalOverdue += p.overdueAmount;
-    });
+      parties.sort((a, b) => {
+        if (a.isOnRoute && !b.isOnRoute) return -1;
+        if (!a.isOnRoute && b.isOnRoute) return 1;
+        return (
+          b.overdueAmount - a.overdueAmount || b.totalPending - a.totalPending
+        );
+      });
 
-    setStats({
-      dueToday: totalDueToday,
-      overdue: totalOverdue,
-      partyCount: partiesArray.length,
-    });
+      if (requestId !== attachRequestRef.current) return;
+      setEntriesByParty(byParty);
+      entriesByPartyRef.current = byParty;
+      setDayStatus(status);
+      setPartiesData(parties);
+      setRouteList(routes || []);
+      setHasLoaded(true);
+      setLoading(false);
 
-    setPartiesData(partiesArray);
-
-    const routes = [
-      ...new Set(
-        partiesArray
-          .filter((p) => p.isOnRoute)
-          .map((p) => JSON.stringify({ id: p.routeId, name: p.routeName })),
-      ),
-    ]
-      .map((str) => JSON.parse(str))
-      .filter((route) => route.id !== 'miscellaneous');
-    setRouteList(routes);
+      if (status?.status === 'CLOSED') {
+        setPaymentsCache({ byParty: new Map(), claimed: new Map() });
+        return;
+      }
+      void autoAttachUnlinkedPayments({
+        requestId,
+        companyId: currentCompanyId,
+        dateKey: selectedDate,
+        parties,
+        entriesByParty: byParty,
+      });
+    } catch (error) {
+      console.error('Error loading cashier dashboard:', error);
+      if (requestId !== attachRequestRef.current) return;
+      showToast(dispatchToast, 'Could not load the dashboard', 'error');
+      setLoading(false);
+    }
   };
 
-  const filterParties = useCallback(() => {
-    if (selectedRoute === 'all') {
-      setFilteredParties(partiesData);
-    } else if (selectedRoute === 'miscellaneous') {
-      setFilteredParties(partiesData.filter((p) => !p.isOnRoute));
-    } else {
-      setFilteredParties(
-        partiesData.filter((p) => p.routeId === selectedRoute),
-      );
+  const persistEntry = async (
+    party,
+    payments,
+    notes,
+    rescheduleByBill = {},
+  ) => {
+    const existing = entriesByParty[party.partyId];
+    const hasPayments = (payments || []).length > 0;
+    const hasNotes = !!(notes || '').trim();
+    const hasReschedule =
+      Object.keys(rescheduleByBill).length > 0 ||
+      (existing?.bills || []).some((bill) => billRescheduleDate(bill));
+
+    if (!hasPayments && !hasNotes && !hasReschedule) {
+      if (existing) {
+        await cancelEntry(currentCompanyId, selectedDate, party.partyId);
+      }
+      setEntriesByParty((prev) => {
+        const next = { ...prev };
+        delete next[party.partyId];
+        return next;
+      });
+      return null;
     }
+    const entry = await saveEntry(currentCompanyId, selectedDate, party, {
+      payments,
+      notes: notes || '',
+      rescheduleByBill,
+      existingBills: existing?.bills || [],
+    });
+    setEntriesByParty((prev) => ({ ...prev, [party.partyId]: entry }));
+    return entry;
+  };
+
+  const applyLocalReschedule = (orderIds, newDate) => {
+    const ids = new Set(orderIds);
+    const newTime = newDate.getTime();
+    const dateObj = parseDateKey(selectedDate);
+    setPartiesData((prev) =>
+      prev.map((party) => {
+        if (!party.orders.some((order) => ids.has(order.id))) return party;
+        return recountParty(
+          {
+            ...party,
+            orders: party.orders.map((order) =>
+              ids.has(order.id)
+                ? {
+                    ...order,
+                    schedulePaymentDate: newTime,
+                    lastRescheduledAt: Date.now(),
+                  }
+                : order,
+            ),
+          },
+          dateObj,
+        );
+      }),
+    );
+  };
+
+  const filteredParties = useMemo(() => {
+    if (selectedRoute === 'all') return partiesData;
+    if (selectedRoute === 'miscellaneous') {
+      return partiesData.filter((p) => p.routeId === 'miscellaneous');
+    }
+    return partiesData.filter((p) => p.routeId === selectedRoute);
   }, [selectedRoute, partiesData]);
 
-  const toggleExpanded = (partyId) => {
-    setExpandedParty(expandedParty === partyId ? null : partyId);
+  const stats = useMemo(
+    () => ({
+      dueToday: filteredParties.reduce((sum, p) => sum + p.dueTodayAmount, 0),
+      overdue: filteredParties.reduce((sum, p) => sum + p.overdueAmount, 0),
+      partyCount: filteredParties.length,
+    }),
+    [filteredParties],
+  );
+
+  // A closed day is rendered wholly from snapshots, so everything belongs in
+  // the main section - splitting it would hide entries for parties that only
+  // ever had overdue bills.
+  const rescheduledToday = (party) =>
+    wasPartyRescheduled(party, entriesByParty[party.partyId], selectedDate);
+
+  const dueParties = useMemo(
+    () =>
+      dayClosed
+        ? filteredParties
+        : filteredParties.filter(
+            (p) => p.dueTodayAmount > 0 || rescheduledToday(p),
+          ),
+    [filteredParties, dayClosed, selectedDate, entriesByParty],
+  );
+  const carryOverParties = useMemo(
+    () =>
+      dayClosed
+        ? []
+        : filteredParties.filter(
+            (p) => p.dueTodayAmount <= 0 && !rescheduledToday(p),
+          ),
+    [filteredParties, dayClosed, selectedDate, entriesByParty],
+  );
+
+  const attendedCount = dueParties.filter((p) =>
+    isPartyActioned(p, entriesByParty[p.partyId], selectedDate),
+  ).length;
+  const pendingCount = dueParties.length - attendedCount;
+  const canClose = !dayClosed && pendingCount === 0;
+
+  const collectedTotals = useMemo(() => {
+    const allowed = new Set(filteredParties.map((p) => p.partyId));
+    const entries = Object.values(entriesByParty);
+    return buildReportTotals(
+      selectedRoute === 'all'
+        ? entries
+        : entries.filter((entry) => allowed.has(entry.partyId)),
+    );
+  }, [entriesByParty, filteredParties, selectedRoute]);
+
+  const handleUpdateParty = async (
+    party,
+    { creditDays, contact, routeId, routeWeekday },
+  ) => {
+    try {
+      const dateObj = parseDateKey(selectedDate);
+      const updated = await updatePartyCreditAndRoute(
+        currentCompanyId,
+        party.partyId,
+        { creditDays, contact, routeId, routeWeekday },
+        dateObj,
+      );
+      setPartiesData((prev) =>
+        prev.map((item) =>
+          item.partyId === party.partyId ? { ...item, ...updated } : item,
+        ),
+      );
+      showToast(dispatchToast, `Updated ${party.partyName}`, 'success');
+    } catch (error) {
+      console.error('Error updating party:', error);
+      showToast(dispatchToast, 'Could not update the party', 'error');
+      throw error;
+    }
+  };
+
+  const handleSaveParty = async (
+    party,
+    { notes, payments, rescheduleByBill },
+  ) => {
+    try {
+      await persistEntry(
+        party,
+        payments || [],
+        notes,
+        rescheduleByBill || {},
+      );
+      showToast(dispatchToast, `Saved ${party.partyName}`, 'success');
+    } catch (error) {
+      console.error('Error saving party collection:', error);
+      showToast(dispatchToast, 'Could not save', 'error');
+    }
+  };
+
+  const handleClearEntry = async (party) => {
+    try {
+      await cancelEntry(currentCompanyId, selectedDate, party.partyId);
+      setEntriesByParty((prev) => {
+        const next = { ...prev };
+        delete next[party.partyId];
+        return next;
+      });
+      showToast(dispatchToast, `Cleared ${party.partyName}`, 'success');
+    } catch (error) {
+      console.error('Error clearing collection entry:', error);
+      showToast(dispatchToast, 'Could not clear the entry', 'error');
+    }
+  };
+
+  const handleCloseDay = async () => {
+    if (!canClose || closing) return;
+    setClosing(true);
+    try {
+      const snapshots = await snapshotPartiesForClose(
+        currentCompanyId,
+        selectedDate,
+        partiesData,
+        entriesByParty,
+      );
+      const byParty = {};
+      snapshots.forEach((entry) => {
+        byParty[entry.partyId] = entry;
+      });
+      setEntriesByParty(byParty);
+      const marker = await closeDay(currentCompanyId, selectedDate);
+      setDayStatus(marker);
+      showToast(dispatchToast, 'Day closed', 'success');
+    } catch (error) {
+      console.error('Error closing day:', error);
+      showToast(dispatchToast, 'Could not close the day', 'error');
+    }
+    setClosing(false);
+  };
+
+  const handleReopenDay = async () => {
+    if (closing) return;
+    setClosing(true);
+    try {
+      await reopenDay(currentCompanyId, selectedDate);
+      showToast(dispatchToast, 'Day reopened', 'success');
+      await fetchDashboard();
+    } catch (error) {
+      console.error('Error reopening day:', error);
+      showToast(dispatchToast, 'Could not reopen the day', 'error');
+    }
+    setClosing(false);
+  };
+
+  const handlePrint = (kind) => {
+    flushSync(() => setPrintKind(kind));
+    window.print();
+  };
+
+  const handlePartyReschedule = async (orders, newDate) => {
+    try {
+      await reschedulePartyOrders(currentCompanyId, orders, newDate);
+      applyLocalReschedule(
+        orders.map((order) => order.id),
+        newDate,
+      );
+    } catch (error) {
+      console.error('Error rescheduling party bills:', error);
+      showToast(dispatchToast, 'Could not reschedule the bills', 'error');
+    }
   };
 
   const handleCall = (contact) => {
     if (contact) window.open(`tel:${contact}`);
   };
 
-  const formatCurrency = (amount) =>
-    new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(amount);
-
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'N/A';
-    const date =
-      timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleDateString('en-IN');
-  };
-
   const getBillStatus = (order) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const sched = order.schedulePaymentDate;
-    if (!sched) return 'NOT_SCHEDULED';
-    const schedDate = new Date(sched);
-    schedDate.setHours(0, 0, 0, 0);
-    if (schedDate.getTime() < today.getTime()) return 'OVERDUE';
-    if (schedDate.getTime() === today.getTime()) return 'DUE_TODAY';
+    const dayStart = startOfDay(selectedDate).getTime();
+    const scheduled = order.schedulePaymentDate;
+    if (!scheduled) return 'NOT_SCHEDULED';
+    const scheduledStart = startOfDay(new Date(scheduled)).getTime();
+    if (scheduledStart < dayStart) return 'OVERDUE';
+    if (scheduledStart === dayStart) return 'DUE_TODAY';
     return 'UPCOMING';
-  };
-
-  const handleReschedule = async (orderId, newDate, oldDate) => {
-    try {
-      const orderRef = getCompanyDoc(
-        currentCompanyId,
-        DB_NAMES.ORDERS,
-        orderId,
-      );
-      const now = Date.now();
-      const updateData = {
-        schedulePaymentDate: newDate.getTime(),
-        lastRescheduledAt: now,
-      };
-      if (oldDate) {
-        updateData.rescheduleHistory = arrayUnion({
-          from: oldDate,
-          to: newDate.getTime(),
-          by: firebaseAuth.currentUser?.uid || 'unknown',
-          at: now,
-        });
-      }
-      await updateDoc(orderRef, updateData);
-      await fetchScheduledPayments();
-    } catch (error) {
-      console.error('Error rescheduling:', error);
-    }
   };
 
   const getRouteFilterLabel = () => {
@@ -347,304 +686,269 @@ function CashierDashboard() {
     return routeList.find((r) => r.id === selectedRoute)?.name || 'Unknown';
   };
 
-  const hasMiscellaneous = partiesData.some((p) => !p.isOnRoute);
+  const hasMiscellaneous = partiesData.some(
+    (p) => p.routeId === 'miscellaneous',
+  );
 
-  if (loading) {
-    return (
-      <div className="cashier-dashboard-loading">
-        <Spinner label="Loading payment dashboard..." />
-      </div>
-    );
+  let closeButtonLabel = 'Close day';
+  if (closing) closeButtonLabel = 'Closing...';
+  else if (pendingCount > 0) {
+    closeButtonLabel = `Close day (${pendingCount} pending)`;
   }
 
-  return (
-    <div className="cashier-dashboard">
-      <div className="cashier-dashboard-header">
-        <h1>Payment Dashboard</h1>
-        <div className="header-actions">
-          <TabList
-            selectedValue={viewMode}
-            onTabSelect={(_, d) => setViewMode(d.value)}
-          >
-            <Tab value="daily">Daily View</Tab>
-            <Tab value="range">Date Range</Tab>
-          </TabList>
-        </div>
-      </div>
+  const dueSectionTitle = dayClosed
+    ? `Collections on ${formatLongDate(selectedDate)}`
+    : `Due ${formatLongDate(selectedDate)}`;
 
-      <div className="date-controls">
-        {viewMode === 'daily' ? (
-          <>
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              contentBefore={<CalendarLtr20Regular />}
-              className="date-picker"
-            />
-            <Button onClick={fetchScheduledPayments}>Refresh</Button>
-          </>
-        ) : (
-          <>
-            <DatePicker
-              className="date-picker"
-              onSelectDate={(d) => setRangeFrom(d)}
-              placeholder="From"
-              value={rangeFrom}
-            />
-            <DatePicker
-              className="date-picker"
-              onSelectDate={(d) => setRangeTo(d)}
-              placeholder="To"
-              value={rangeTo}
-            />
-            <Button onClick={fetchScheduledPayments}>Search</Button>
-          </>
-        )}
-      </div>
+  const renderPartyCard = (party) => (
+    <PartyCard
+      key={party.partyId}
+      party={party}
+      expanded={expandedParty === party.partyId}
+      onToggle={() =>
+        setExpandedParty(expandedParty === party.partyId ? null : party.partyId)
+      }
+      onCall={handleCall}
+      onPartyReschedule={handlePartyReschedule}
+      getBillStatus={getBillStatus}
+      entry={entriesByParty[party.partyId]}
+      locked={dayClosed}
+      collectionDate={selectedDate}
+      windowDays={paymentWindowDays}
+      onWindowDaysChange={setPaymentWindowDays}
+      paymentsCache={paymentsCache}
+      onSaveParty={(payload) => handleSaveParty(party, payload)}
+      onClearEntry={handleClearEntry}
+      routes={routeList}
+      onUpdateParty={handleUpdateParty}
+    />
+  );
 
-      <div className="summary-cards">
-        <Card className="summary-card due-today-card">
-          <CardHeader header={<Text weight="semibold">Due Today</Text>} />
-          <div className="summary-value">{formatCurrency(stats.dueToday)}</div>
-        </Card>
+  const loadingPayments = hasLoaded && !paymentsCache;
 
-        <Card className="summary-card overdue-card">
-          <CardHeader header={<Text weight="semibold">Overdue</Text>} />
-          <div className="summary-value">{formatCurrency(stats.overdue)}</div>
-        </Card>
-
-        <Card className="summary-card count-card">
-          <CardHeader header={<Text weight="semibold">Parties</Text>} />
-          <div className="summary-value">{stats.partyCount}</div>
-        </Card>
-      </div>
-
-      <div className="dashboard-filters">
-        <Dropdown
-          placeholder="Filter by Route"
-          value={getRouteFilterLabel()}
-          onOptionSelect={(_, data) => setSelectedRoute(data.optionValue)}
-        >
-          <Option value="all">All Routes</Option>
-          {routeList.map((route) => (
-            <Option key={route.id} value={route.id}>
-              {route.name}
-            </Option>
-          ))}
-          {hasMiscellaneous && (
-            <Option value="miscellaneous">Miscellaneous</Option>
-          )}
-        </Dropdown>
-      </div>
-
+  const renderSection = (title, parties, count, setCount) => (
+    <div className="parties-section">
+      <Text weight="semibold" size={400}>
+        {title} ({parties.length})
+      </Text>
       <div className="parties-list">
-        {filteredParties.length === 0 ? (
-          <Card>
-            <div className="empty-state">
-              <Text>
-                No scheduled payments found for{' '}
-                {viewMode === 'daily'
-                  ? new Date(selectedDate).toLocaleDateString('en-IN', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })
-                  : [
-                      rangeFrom.toLocaleDateString('en-IN'),
-                      rangeTo.toLocaleDateString('en-IN'),
-                    ].join(' - ')}
-              </Text>
-            </div>
-          </Card>
+        {parties.length === 0 ? (
+          <div className="empty-state">
+            <Text size={200}>Nothing here.</Text>
+          </div>
         ) : (
-          filteredParties.map((party) => (
-            <PartyCard
-              key={party.partyId}
-              party={party}
-              expanded={expandedParty === party.partyId}
-              onToggle={() => toggleExpanded(party.partyId)}
-              onCall={handleCall}
-              onReschedule={handleReschedule}
-              formatCurrency={formatCurrency}
-              formatDate={formatDate}
-              getBillStatus={getBillStatus}
-            />
-          ))
+          parties.slice(0, count).map(renderPartyCard)
+        )}
+        {parties.length > count && (
+          <div className="parties-list-more">
+            <Text size={200}>
+              Showing {count} of {parties.length} parties
+            </Text>
+            <Button onClick={() => setCount(count + VISIBLE_PARTIES_STEP)}>
+              Show more
+            </Button>
+          </div>
         )}
       </div>
     </div>
   );
-}
-
-function PartyCard({
-  party,
-  expanded,
-  onToggle,
-  onCall,
-  onReschedule,
-  formatCurrency,
-  formatDate,
-  getBillStatus,
-}) {
-  const hasOverdue = party.overdueAmount > 0;
-  const statusClass = hasOverdue ? 'overdue-status' : 'due-today-status';
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onToggle();
-    }
-  };
 
   return (
-    <Card className={`party-card ${statusClass}`}>
-      <div
-        className="party-card-header"
-        role="button"
-        tabIndex={0}
-        onClick={onToggle}
-        onKeyDown={handleKeyDown}
-      >
-        <div className="party-info">
-          <div className="party-name-row">
-            <Text weight="semibold" size={400}>
-              {party.partyName}
-            </Text>
-            {!party.isOnRoute && (
-              <div className="status-badge miscellaneous">MISC</div>
-            )}
-            {hasOverdue && <div className="status-badge overdue">OVERDUE</div>}
-            <Text size={200} className="party-meta">
-              {party.orders.length} bill
-              {party.orders.length > 1 ? 's' : ''} &bull;{' '}
-              {formatCurrency(party.totalPending)} &bull; {party.oldestBillDays}
-              d old &bull; {party.routeName} &bull; {party.creditDays || '--'}d
-              credit
-            </Text>
-          </div>
+    <>
+      <Toaster toasterId={toasterId} />
+
+      <div className="cashier-dashboard no-print">
+        <div className="cashier-dashboard-header">
+          <h1>Payment Dashboard</h1>
         </div>
-        <div className="party-actions">
-          {party.contact && (
-            <Button
-              appearance="subtle"
-              size="small"
-              icon={<Call20Regular />}
-              onClick={(e) => {
-                e.stopPropagation();
-                onCall(party.contact);
-              }}
-            />
+
+        <div className="date-controls">
+          <DatePicker
+            className="date-picker"
+            value={parseDateKey(selectedDate)}
+            onSelectDate={(d) => {
+              if (!d) return;
+              const next = toDateKey(d);
+              if (next !== selectedDate) setSelectedDate(next);
+            }}
+          />
+          <Button
+            appearance={hasLoaded ? 'secondary' : 'primary'}
+            disabled={loading || !currentCompanyId}
+            onClick={fetchDashboard}
+          >
+            {loading ? 'Loading...' : hasLoaded ? 'Refresh' : 'Load'}
+          </Button>
+          {loadingPayments && (
+            <span className="payments-loading">
+              <Spinner size="tiny" />
+              Loading payments...
+            </span>
           )}
-          {expanded ? <ChevronUp20Regular /> : <ChevronDown20Regular />}
+
+          {hasLoaded && (
+            <>
+              <div className="date-controls-spacer" />
+
+              <Button
+                icon={<Print20Regular />}
+                onClick={() => handlePrint('collection')}
+              >
+                Print report
+              </Button>
+              <Button
+                icon={<Print20Regular />}
+                onClick={() => handlePrint('bills')}
+              >
+                Print bills
+              </Button>
+
+              {!dayClosed && (
+                <Button
+                  appearance="primary"
+                  icon={<LockClosed20Regular />}
+                  disabled={!canClose || closing}
+                  onClick={handleCloseDay}
+                >
+                  {closeButtonLabel}
+                </Button>
+              )}
+
+              {dayClosed && user?.isManager && (
+                <Button
+                  icon={<LockOpen20Regular />}
+                  disabled={closing}
+                  onClick={handleReopenDay}
+                >
+                  Reopen day
+                </Button>
+              )}
+            </>
+          )}
         </div>
+
+        {loading ? (
+          <div className="cashier-dashboard-loading">
+            <Spinner
+              label={
+                loadedBillCount
+                  ? `Loaded ${loadedBillCount} bills...`
+                  : 'Loading payment dashboard...'
+              }
+            />
+          </div>
+        ) : !hasLoaded ? (
+          <Card appearance="outline">
+            <div className="empty-state">
+              <Text>Select a date and click Load.</Text>
+            </div>
+          </Card>
+        ) : (
+          <>
+            <div className="summary-cards">
+              <Card appearance="outline" className="summary-card due-today-card">
+                <CardHeader header={<Text weight="semibold">Due</Text>} />
+                <div className="summary-value">
+                  {formatCurrency(stats.dueToday)}
+                </div>
+              </Card>
+
+              <Card appearance="outline" className="summary-card overdue-card">
+                <CardHeader header={<Text weight="semibold">Overdue</Text>} />
+                <div className="summary-value">
+                  {formatCurrency(stats.overdue)}
+                </div>
+              </Card>
+
+              <Card appearance="outline" className="summary-card count-card">
+                <CardHeader header={<Text weight="semibold">Parties</Text>} />
+                <div className="summary-value">{stats.partyCount}</div>
+              </Card>
+
+              <Card appearance="outline" className="summary-card collected-card">
+                <CardHeader header={<Text weight="semibold">Collected</Text>} />
+                <div className="summary-value">
+                  {formatCurrency(collectedTotals.total)}
+                </div>
+                <div className="summary-breakdown">
+                  {PAYMENT_MODES.filter((mode) => collectedTotals[mode] > 0).map(
+                    (mode) => (
+                      <span key={mode}>
+                        {mode} {formatCurrency(collectedTotals[mode])}
+                      </span>
+                    ),
+                  )}
+                </div>
+                {dueParties.length > 0 && (
+                  <div className="summary-progress">
+                    {attendedCount} of {dueParties.length} due parties attended
+                  </div>
+                )}
+              </Card>
+            </div>
+
+            <div className="dashboard-filters">
+              <Dropdown
+                placeholder="Filter by Route"
+                value={getRouteFilterLabel()}
+                onOptionSelect={(_, data) => setSelectedRoute(data.optionValue)}
+              >
+                <Option value="all">All Routes</Option>
+                {routeList.map((route) => (
+                  <Option key={route.id} value={route.id}>
+                    {route.name}
+                  </Option>
+                ))}
+                {hasMiscellaneous && (
+                  <Option value="miscellaneous">Miscellaneous</Option>
+                )}
+              </Dropdown>
+            </div>
+
+            {filteredParties.length === 0 ? (
+              <Card appearance="outline">
+                <div className="empty-state">
+                  <Text>
+                    No scheduled payments found for{' '}
+                    {formatLongDate(selectedDate)}
+                  </Text>
+                </div>
+              </Card>
+            ) : (
+              <>
+                {renderSection(
+                  dueSectionTitle,
+                  dueParties,
+                  visibleDue,
+                  setVisibleDue,
+                )}
+
+                {!dayClosed &&
+                  carryOverParties.length > 0 &&
+                  renderSection(
+                    'Overdue',
+                    carryOverParties,
+                    visibleCarryOver,
+                    setVisibleCarryOver,
+                  )}
+              </>
+            )}
+          </>
+        )}
       </div>
 
-      {expanded && (
-        <div className="bill-breakdown">
-          <table className="app-table">
-            <thead>
-              <tr>
-                <th>Bill No.</th>
-                <th>Bill Date</th>
-                <th>Days</th>
-                <th>Amount</th>
-                <th>Balance</th>
-                <th>Scheduled For</th>
-                <th>Status</th>
-                <th>Reschedule</th>
-              </tr>
-            </thead>
-            <tbody>
-              {party.orders.map((order) => (
-                <BillRow
-                  key={order.id}
-                  order={order}
-                  formatCurrency={formatCurrency}
-                  formatDate={formatDate}
-                  getBillStatus={getBillStatus}
-                  onReschedule={onReschedule}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </Card>
-  );
-}
-
-function BillRow({
-  order,
-  formatCurrency,
-  formatDate,
-  getBillStatus,
-  onReschedule,
-}) {
-  const [rescheduleDate, setRescheduleDate] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const status = getBillStatus(order);
-
-  const daysSinceBilling = (() => {
-    console.log(order.billCreationTime);
-    const billTime = order.billCreationTime || order.creationTime;
-    if (!billTime) return '--';
-    const diff = Date.now() - billTime;
-    return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
-  })();
-
-  const handleSave = async () => {
-    if (!rescheduleDate) return;
-
-    const existingDate = order.schedulePaymentDate
-      ? new Date(order.schedulePaymentDate)
-      : null;
-    if (existingDate && rescheduleDate.toDateString() === existingDate.toDateString()) {
-      setRescheduleDate(null);
-      return;
-    }
-
-    setSaving(true);
-    await onReschedule(order.id, rescheduleDate, order.schedulePaymentDate);
-    setRescheduleDate(null);
-    setSaving(false);
-  };
-
-  return (
-    <tr>
-      <td>{order.billNumber || order.id}</td>
-      <td>{formatDate(order.billCreationTime)}</td>
-      <td>{daysSinceBilling}</td>
-      <td>{formatCurrency(order.orderAmount || 0)}</td>
-      <td>{formatCurrency(order.balance || 0)}</td>
-      <td>{formatDate(order.schedulePaymentDate)}</td>
-      <td>
-        <span className={`status-pill ${status.toLowerCase()}`}>
-          {status.replace('_', ' ')}
-        </span>
-      </td>
-      <td className="reschedule-cell">
-        <DatePicker
-          minDate={new Date()}
-          size="small"
-          onSelectDate={setRescheduleDate}
-          placeholder="New date"
-          value={rescheduleDate}
+      <div className={`print-only print-kind-${printKind}`}>
+        <DayReportPrintView
+          printKind={printKind}
+          dateKey={selectedDate}
+          parties={filteredParties}
+          entriesByParty={entriesByParty}
+          dayStatus={dayStatus}
+          companyName={getCurrentCompanyName()}
+          users={allUsers}
         />
-        {saving ? (
-          <Spinner size="tiny" />
-        ) : (
-          <Button
-            size="small"
-            icon={<Save20Regular />}
-            disabled={!rescheduleDate}
-            onClick={handleSave}
-          >
-            Save
-          </Button>
-        )}
-      </td>
-    </tr>
+      </div>
+    </>
   );
 }
 
