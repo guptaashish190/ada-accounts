@@ -1,86 +1,29 @@
-import { getDocs, limit, query, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import {
-  Button,
-  Card,
-  Spinner,
-  Combobox,
-  Option,
-  Input,
-  Text,
-} from '@fluentui/react-components';
+import React, { useState } from 'react';
+import { Button, Input } from '@fluentui/react-components';
 import { ArrowUpload24Regular } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import './style.css';
-import PartySelector from '../../../common/partySelector';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
-import { useDebounce } from '../../../services/globalUtils';
 import { useCompany } from '../../../contexts/companyContext';
-import {
-  getCompanyCollection,
-  DB_NAMES,
-} from '../../../services/firestoreHelpers';
+import { useAllParties } from '../../../contexts/allPartiesContext';
 import ImportParties from './importParties';
 
-export default function PartyListScreen({
-  onPartySelected,
-  descriptive,
-  clearOnSelect,
-}) {
-  const [partyDetails, setPartyDetails] = useState([]);
+export default function PartyListScreen({ descriptive }) {
   const [queryPartyName, setQueryPartyName] = useState('');
   const [importOpen, setImportOpen] = useState(false);
-  const debouncedValue = useDebounce(queryPartyName, 500);
   const navigate = useNavigate();
-
-  // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
+  const { parties } = useAllParties();
 
-  // Initial load: fetch first 50 parties when the screen mounts or company changes.
-  useEffect(() => {
-    if (!currentCompanyId) return;
-    const fetchInitial = async () => {
-      const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
-      try {
-        const snapshot = await getDocs(query(partiesRef, limit(50)));
-        setPartyDetails(snapshot.docs.map((doc) => doc.data()));
-      } catch (error) {
-        console.error('Error fetching initial parties:', error);
-      }
-    };
-    fetchInitial();
-  }, [currentCompanyId]);
-
-  // Search: filter by name when 3+ characters are typed; revert to initial 50 when cleared.
-  useEffect(() => {
-    if (!currentCompanyId) return;
-    if (!debouncedValue || debouncedValue.length < 3) {
-      if (!debouncedValue) {
-        const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
-        getDocs(query(partiesRef, limit(50))).then((snap) =>
-          setPartyDetails(snap.docs.map((doc) => doc.data()))
-        );
-      }
-      return;
-    }
-    const fetchParties = async () => {
-      const partiesRef = getCompanyCollection(currentCompanyId, DB_NAMES.PARTIES);
-      const q = query(
-        partiesRef,
-        where('name', '>=', debouncedValue.toUpperCase()),
-        limit(10),
-      );
-      try {
-        const querySnapshot = await getDocs(q);
-        setPartyDetails(querySnapshot.docs.map((doc) => doc.data()));
-      } catch (error) {
-        console.error('Error fetching parties:', error);
-      }
-    };
-    fetchParties();
-  }, [debouncedValue, currentCompanyId]);
-
-  const descriptiveTextStyle = { color: 'grey', textWrap: 'nowrap' };
+  const q = queryPartyName.trim().toLowerCase();
+  const partyDetails = q
+    ? parties.filter(
+        (p) =>
+          (p.name || '').toLowerCase().includes(q) ||
+          String(p.fileNumber || '').toLowerCase().includes(q) ||
+          (p.area || '').toLowerCase().includes(q),
+      )
+    : parties.slice(0, 50);
 
   return (
     <center className="settings-party-list-container">
@@ -106,14 +49,7 @@ export default function PartyListScreen({
         style={descriptive ? { width: '100%' } : {}}
       />
       <VerticalSpace1 />
-      <ImportParties
-        open={importOpen}
-        onClose={() => setImportOpen(false)}
-        onImported={() => {
-          // Retrigger search so newly imported matches show up.
-          setQueryPartyName((q) => q);
-        }}
-      />
+      <ImportParties open={importOpen} onClose={() => setImportOpen(false)} />
       <table className="app-table">
         <thead>
           <tr>

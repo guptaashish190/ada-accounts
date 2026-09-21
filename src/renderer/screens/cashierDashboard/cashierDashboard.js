@@ -648,6 +648,27 @@ function CashierDashboard() {
     setClosing(false);
   };
 
+  // Unnamed @page is global, so landscape is injected only while this
+  // screen is open and removed after print.
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.setAttribute('data-cashier-print-page', '');
+    style.textContent = '@page { size: A4 landscape; margin: 5mm; }';
+
+    const onBeforePrint = () => {
+      if (!style.isConnected) document.head.appendChild(style);
+    };
+    const onAfterPrint = () => style.remove();
+
+    window.addEventListener('beforeprint', onBeforePrint);
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => {
+      window.removeEventListener('beforeprint', onBeforePrint);
+      window.removeEventListener('afterprint', onAfterPrint);
+      style.remove();
+    };
+  }, []);
+
   const handlePrint = (kind) => {
     flushSync(() => setPrintKind(kind));
     window.print();

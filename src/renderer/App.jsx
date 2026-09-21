@@ -17,6 +17,7 @@ import icon from '../../assets/icon.svg';
 import CreateSupplyReportScreen from './screens/createSupplyReport/createSupplyReport';
 import UserContext from './contexts/userContext';
 import AllUsersContext from './contexts/allUsersContext';
+import AllPartiesContext from './contexts/allPartiesContext';
 import CompanyProvider, { useCompany } from './contexts/companyContext';
 import constants from './constants';
 import TabNavigator from './tabs/tabNavigator';
@@ -187,9 +188,11 @@ export default function App({ routeProps, startRoute, printData }) {
             <UserContext>
               <CompanyProvider>
                 <AllUsersContext>
-                  <SettingsContext>
-                    <AppContent />
-                  </SettingsContext>
+                  <AllPartiesContext>
+                    <SettingsContext>
+                      <AppContent />
+                    </SettingsContext>
+                  </AllPartiesContext>
                 </AllUsersContext>
               </CompanyProvider>
             </UserContext>

@@ -8,18 +8,24 @@ import { useCompany } from '../../contexts/companyContext';
 import { getCompanyCollection, DB_NAMES } from '../../services/firestoreHelpers';
 import constants from '../../constants';
 import { useAuthUser } from '../../contexts/allUsersContext';
+import { useSettingsContext } from '../../contexts/settingsContext';
+
+const BILL_WITH_PARTY_ID = 'bill-with-party';
 
 export default function ReceiveSupplyReportScreen() {
   const [receiveQueue, setReceiveQueue] = useState([]);
 
   const [filteredReceiveQueue, setFilteredReceiveQueue] = useState([]);
   const [querySR, setQuerySR] = useState('');
+  const [billWithPartyBillIds, setBillWithPartyBillIds] = useState([]);
 
   const [loading, setLoading] = useState(false);
 
   // Company context for company-scoped queries
   const { currentCompanyId } = useCompany();
   const { allUsers } = useAuthUser();
+  const { settings } = useSettingsContext();
+  const billWithPartyUserId = settings?.billWithParty?.userId || '';
 
   const supplymanNameById = useMemo(() => {
     const map = {};
@@ -154,6 +160,36 @@ export default function ReceiveSupplyReportScreen() {
   }, [currentCompanyId]);
 
   useEffect(() => {
+    if (!currentCompanyId || !billWithPartyUserId) {
+      setBillWithPartyBillIds([]);
+      return undefined;
+    }
+
+    const ordersCollection = getCompanyCollection(
+      currentCompanyId,
+      DB_NAMES.ORDERS,
+    );
+    const unsub = onSnapshot(
+      query(ordersCollection, where('with', '==', billWithPartyUserId)),
+      (snap) => {
+        setBillWithPartyBillIds(
+          snap.docs
+            .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+            .filter(
+              (bill) =>
+                bill.orderStatus ===
+                constants.firebase.billFlowTypes.BILL_WITH_PARTY,
+            )
+            .map((bill) => bill.id),
+        );
+      },
+      (error) =>
+        console.error('Error listening to Bill With Party bills:', error),
+    );
+    return () => unsub();
+  }, [currentCompanyId, billWithPartyUserId]);
+
+  useEffect(() => {
     if (querySR.length === 0) {
       setFilteredReceiveQueue(receiveQueue);
     } else {
@@ -167,6 +203,8 @@ export default function ReceiveSupplyReportScreen() {
       );
     }
   }, [querySR, receiveQueue]);
+
+  const showBillWithPartyRow = Boolean(billWithPartyUserId);
 
   if (loading) return <Loader />;
 
@@ -182,8 +220,36 @@ export default function ReceiveSupplyReportScreen() {
         <VerticalSpace1 />
         <SupplyRowListHeader />
         <VerticalSpace1 />
+        {showBillWithPartyRow && (
+          <>
+            <SupplyReportRow
+              data={{
+                id: BILL_WITH_PARTY_ID,
+                itemType: 'billWithParty',
+                receiptNumber: 'Bill With Party',
+                timestamp: Date.now(),
+                status: constants.firebase.billFlowTypes.BILL_WITH_PARTY,
+                totalBills: billWithPartyBillIds.length,
+                sourceData: {
+                  id: BILL_WITH_PARTY_ID,
+                  receiptNumber: 'Bill With Party',
+                  timestamp: Date.now(),
+                  bills: billWithPartyBillIds,
+                  assignedTo: billWithPartyUserId,
+                  partyCollections: [],
+                  partyPayments: [],
+                  orderDetails: [],
+                },
+              }}
+              supplymanName="Bill With Party"
+            />
+            <VerticalSpace1 />
+          </>
+        )}
         {filteredReceiveQueue.length === 0 ? (
-          <Text style={{ color: '#ddd' }}>No items to receive</Text>
+          showBillWithPartyRow ? null : (
+            <Text style={{ color: '#ddd' }}>No items to receive</Text>
+          )
         ) : (
           groupedSupplyReports.map(([supplymanId, groupedReports]) => (
             <div className="supplyman-group" key={`supplyman-group-${supplymanId}`}>
@@ -229,10 +295,15 @@ export function SupplyReportRow({ data, supplymanName }) {
     allUsers?.find((user) => user.uid === data.personId)?.username ||
     '--';
 
-  const isBundle = data.itemType === 'bundle';
-  const isDelivered = isBundle
-    ? data.status === constants.firebase.billBundleFlowStatus.HANDOVER
-    : data.status === 'Delivered';
+  const isBillWithParty = data.itemType === 'billWithParty';
+  const isBundle = data.itemType === 'bundle' || isBillWithParty;
+  let isDelivered = data.status === 'Delivered';
+  if (isBillWithParty) {
+    isDelivered = (data.totalBills || 0) > 0;
+  } else if (isBundle) {
+    isDelivered =
+      data.status === constants.firebase.billBundleFlowStatus.HANDOVER;
+  }
   return (
     <div
       className="supply-report-row"
@@ -255,6 +326,7 @@ export function SupplyReportRow({ data, supplymanName }) {
             data: {
               supplyReport: data.sourceData || data,
               ...(isBundle ? { isBundle: true } : {}),
+              ...(isBillWithParty ? { isBillWithParty: true } : {}),
             },
           });
         }}

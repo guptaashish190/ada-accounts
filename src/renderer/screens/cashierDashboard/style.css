@@ -600,10 +600,14 @@
   font-weight: 700;
 }
 
+@page cashier-landscape {
+  size: A4 landscape;
+  margin: 5mm;
+}
+
 @media print {
-  @page {
-    size: A4 landscape;
-    margin: 5mm;
+  .cashier-day-report {
+    page: cashier-landscape;
   }
 
   .print-kind-collection .print-bill-report,

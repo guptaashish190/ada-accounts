@@ -49,7 +49,7 @@ import {
 export default function ReceiveSRScreen() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { supplyReport, isBundle } = state;
+  const { supplyReport, isBundle, isBillWithParty = false } = state;
   const [groupedPrimaryBills, setGroupedPrimaryBills] = useState({});
   const [groupedOldBills, setGroupedOldBills] = useState({});
   const [groupedSupplementaryBills, setGroupedSupplementaryBills] = useState(
@@ -87,7 +87,9 @@ export default function ReceiveSRScreen() {
   const billWithPartyUserId = settings?.billWithParty?.userId || '';
 
   const dbName = isBundle ? DB_NAMES.BILL_BUNDLES : DB_NAMES.SUPPLY_REPORTS;
-  const dbBills = isBundle ? supplyReport.bills : supplyReport.orders;
+  const dbBills = isBundle
+    ? supplyReport.bills || []
+    : supplyReport.orders || [];
   const [loading, setLoading] = useState(false);
   const getGroupedBills = async (orderIds, assignmentDetails = []) => {
     try {
@@ -156,7 +158,7 @@ export default function ReceiveSRScreen() {
     }
     if (isBundle) {
       const obg = await getGroupedBills(
-        supplyReport.bills,
+        supplyReport.bills || [],
         supplyReport.assignmentDetails || [],
       );
 
@@ -244,14 +246,19 @@ export default function ReceiveSRScreen() {
         return;
       }
 
-      const supplyReportRef = getCompanyDoc(
-        currentCompanyId,
-        dbName,
-        supplyReport.id,
-      );
-      const supplyReportDataNew = (await getDoc(supplyReportRef)).data();
       const now = Timestamp.now().toMillis();
       const employeeId = firebaseAuth.currentUser.uid;
+
+      let supplyReportRef;
+      let supplyReportDataNew = {};
+      if (!isBillWithParty) {
+        supplyReportRef = getCompanyDoc(
+          currentCompanyId,
+          dbName,
+          supplyReport.id,
+        );
+        supplyReportDataNew = (await getDoc(supplyReportRef)).data() || {};
+      }
 
       // Build partyPayments from partyPaymentInputs for parties with received bills
       const receivedPartyIds = [
@@ -281,46 +288,53 @@ export default function ReceiveSRScreen() {
 
       const batch = writeBatch(firebaseDB);
 
-      batch.update(supplyReportRef, {
-        ...(allBillsReceived
-          ? {
-              status: isBundle
-                ? constants.firebase.billBundleFlowStatus.COMPLETED
-                : constants.firebase.supplyReportStatus.COMPLETED,
-            }
-          : {}),
-        orderDetails: [
-          ...(supplyReportDataNew.orderDetails || []),
-          ...receivedBills.map((rb) => ({
-            billId: rb.id,
-            with: 'Accounts',
-            ...(isBundle
-              ? {
-                  handoverBalance: getHandoverBalance(rb),
-                  erpBalanceAtReceive: getErpBalance(rb),
-                }
-              : {}),
-          })),
-          ...withPartyBillIds.map((billId) => ({
-            billId,
-            with: billWithPartyUserId,
-          })),
-        ],
-        ...(partyPaymentsToWrite.length > 0
-          ? { partyPayments: [...(supplyReportDataNew.partyPayments || []), ...partyPaymentsToWrite] }
-          : {}),
-        ...(!isBundle
-          ? {
-              returnedBills: [
-                ...returnedBills.map((x) => ({
-                  billId: x.id,
-                  remarks: x.notes || '',
-                })),
-              ],
-            }
-          : {}),
-        receivedBy: employeeId,
-      });
+      if (!isBillWithParty && supplyReportRef) {
+        batch.update(supplyReportRef, {
+          ...(allBillsReceived
+            ? {
+                status: isBundle
+                  ? constants.firebase.billBundleFlowStatus.COMPLETED
+                  : constants.firebase.supplyReportStatus.COMPLETED,
+              }
+            : {}),
+          orderDetails: [
+            ...(supplyReportDataNew.orderDetails || []),
+            ...receivedBills.map((rb) => ({
+              billId: rb.id,
+              with: 'Accounts',
+              ...(isBundle
+                ? {
+                    handoverBalance: getHandoverBalance(rb),
+                    erpBalanceAtReceive: getErpBalance(rb),
+                  }
+                : {}),
+            })),
+            ...withPartyBillIds.map((billId) => ({
+              billId,
+              with: billWithPartyUserId,
+            })),
+          ],
+          ...(partyPaymentsToWrite.length > 0
+            ? {
+                partyPayments: [
+                  ...(supplyReportDataNew.partyPayments || []),
+                  ...partyPaymentsToWrite,
+                ],
+              }
+            : {}),
+          ...(!isBundle
+            ? {
+                returnedBills: [
+                  ...returnedBills.map((x) => ({
+                    billId: x.id,
+                    remarks: x.notes || '',
+                  })),
+                ],
+              }
+            : {}),
+          receivedBy: employeeId,
+        });
+      }
 
       for (const rb2 of receivedBills) {
         const orderRef = getCompanyDoc(
@@ -404,7 +418,14 @@ export default function ReceiveSRScreen() {
         });
       }
 
-      await batch.commit();
+      if (
+        receivedBills.length > 0 ||
+        withPartyBillIds.length > 0 ||
+        receivedReturnedBillIds.length > 0 ||
+        !isBillWithParty
+      ) {
+        await batch.commit();
+      }
 
       showToast(dispatchToast, 'All Bills Received', 'success');
       onCreateCashReceipt();
@@ -465,7 +486,7 @@ export default function ReceiveSRScreen() {
     return (
       <BillRow
         supplyReport={supplyReport}
-        useHandoverBalance={isBundle}
+        useHandoverBalance={isBundle && !isBillWithParty}
         isOld={isOld}
         isReturned={isBillReturned}
         allowReceiveReturned={isBillReturned}
@@ -485,9 +506,13 @@ export default function ReceiveSRScreen() {
           );
         }}
         isWithParty={withPartyBillIds.includes(bill.id)}
-        onWithParty={() => {
-          addWithPartyBill(bill);
-        }}
+        onWithParty={
+          isBillWithParty
+            ? undefined
+            : () => {
+                addWithPartyBill(bill);
+              }
+        }
         onUndoWithParty={() => {
           setWithPartyBillIds((ids) => ids.filter((id) => id !== bill.id));
         }}
@@ -563,8 +588,13 @@ export default function ReceiveSRScreen() {
       <div className="receive-sr-container">
         <div className="header-section">
           <h3 className="page-title">
-            Receive {isBundle ? 'Bundle' : 'Supply Report'}:{' '}
-            {supplyReport.receiptNumber}
+            Receive{' '}
+            {isBillWithParty
+              ? 'Bill With Party'
+              : isBundle
+                ? 'Bundle'
+                : 'Supply Report'}
+            : {supplyReport.receiptNumber}
           </h3>
           <Text>
             Date:{' '}
@@ -651,7 +681,11 @@ export default function ReceiveSRScreen() {
                 <div className="title-sr">
                   <span className="party-name">{bills[0].party?.name}</span>
                   <span className="supplementary-label">
-                    {isBundle ? 'Bundle Bills' : 'Supplementary Bills'}
+                    {isBillWithParty
+                      ? 'Bill With Party'
+                      : isBundle
+                        ? 'Bundle Bills'
+                        : 'Supplementary Bills'}
                   </span>
                 </div>
 

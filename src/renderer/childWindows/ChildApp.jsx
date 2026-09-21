@@ -8,6 +8,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import constants from '../constants';
 import '../firebaseInit';
 import AllUsersContext from '../contexts/allUsersContext';
+import AllPartiesContext from '../contexts/allPartiesContext';
 import CompanyProvider from '../contexts/companyContext';
 import SettingsContext from '../contexts/settingsContext';
 import PrintCashReceipt from './printCashReceipt/printCasheReceipt';
@@ -88,32 +89,35 @@ export default function App({ args }) {
       <FluentProvider theme={webLightTheme}>
         <CompanyProvider>
           <AllUsersContext>
-            <SettingsContext>
-              <MemoryRouter
-                key={reportKey}
-                initialEntries={[
-                  {
-                    pathname: '/receiveSRScreen',
-                    state: {
-                      supplyReport: args.data?.supplyReport,
-                      isBundle: args.data?.isBundle ?? false,
+            <AllPartiesContext>
+              <SettingsContext>
+                <MemoryRouter
+                  key={reportKey}
+                  initialEntries={[
+                    {
+                      pathname: '/receiveSRScreen',
+                      state: {
+                        supplyReport: args.data?.supplyReport,
+                        isBundle: args.data?.isBundle ?? false,
+                        isBillWithParty: args.data?.isBillWithParty ?? false,
+                      },
                     },
-                  },
-                ]}
-              >
-                <Routes>
-                  <Route
-                    path="/receiveSupplyReports"
-                    element={<ReceiveSupplyReportScreen />}
-                  />
-                  <Route path="/receiveSRScreen" element={<ReceiveSRScreen />} />
-                  <Route
-                    path="/createPaymentReceipts"
-                    element={<CreatePaymentReceiptDialog />}
-                  />
-                </Routes>
-              </MemoryRouter>
-            </SettingsContext>
+                  ]}
+                >
+                  <Routes>
+                    <Route
+                      path="/receiveSupplyReports"
+                      element={<ReceiveSupplyReportScreen />}
+                    />
+                    <Route path="/receiveSRScreen" element={<ReceiveSRScreen />} />
+                    <Route
+                      path="/createPaymentReceipts"
+                      element={<CreatePaymentReceiptDialog />}
+                    />
+                  </Routes>
+                </MemoryRouter>
+              </SettingsContext>
+            </AllPartiesContext>
           </AllUsersContext>
         </CompanyProvider>
       </FluentProvider>
@@ -174,21 +178,23 @@ export default function App({ args }) {
       <FluentProvider theme={webLightTheme}>
         <CompanyProvider>
           <AllUsersContext>
-            <SettingsContext>
-              <MemoryRouter
-                key={assignKey}
-                initialEntries={[
-                  {
-                    pathname: '/assignBills',
-                    state: { editBundle: args.data?.editBundle },
-                  },
-                ]}
-              >
-                <Routes>
-                  <Route path="/assignBills" element={<AssignBillScreen />} />
-                </Routes>
-              </MemoryRouter>
-            </SettingsContext>
+            <AllPartiesContext>
+              <SettingsContext>
+                <MemoryRouter
+                  key={assignKey}
+                  initialEntries={[
+                    {
+                      pathname: '/assignBills',
+                      state: { editBundle: args.data?.editBundle },
+                    },
+                  ]}
+                >
+                  <Routes>
+                    <Route path="/assignBills" element={<AssignBillScreen />} />
+                  </Routes>
+                </MemoryRouter>
+              </SettingsContext>
+            </AllPartiesContext>
           </AllUsersContext>
         </CompanyProvider>
       </FluentProvider>

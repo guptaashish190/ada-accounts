@@ -22,6 +22,7 @@ import * as XLSX from 'xlsx';
 import { firebaseDB } from '../../../firebaseInit';
 import { useCompany } from '../../../contexts/companyContext';
 import { useCurrentUser } from '../../../contexts/userContext';
+import { useAllParties } from '../../../contexts/allPartiesContext';
 import {
   getCompanyCollection,
   DB_NAMES,
@@ -75,6 +76,7 @@ export default function ImportParties({ open, onClose, onImported }) {
   const [result, setResult] = useState(null);
   const { currentCompanyId } = useCompany();
   const { user } = useCurrentUser();
+  const { reloadParties } = useAllParties();
 
   const reset = () => {
     setRows([]);
@@ -235,6 +237,7 @@ export default function ImportParties({ open, onClose, onImported }) {
       }
 
       setResult({ success: true, count: imported });
+      await reloadParties();
       onImported?.();
     } catch (err) {
       console.error('Import error:', err);

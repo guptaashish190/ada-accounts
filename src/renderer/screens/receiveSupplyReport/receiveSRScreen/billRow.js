@@ -124,10 +124,12 @@ export default function BillRow({
               onClick={() => onReceive(data)}>
               Receive
             </Button>
-            <Button size="small" className="br-btn br-btn-with-party"
-              onClick={() => onWithParty?.()}>
-              With Party
-            </Button>
+            {onWithParty && (
+              <Button size="small" className="br-btn br-btn-with-party"
+                onClick={() => onWithParty()}>
+                With Party
+              </Button>
+            )}
           </>
         )}
       </span>
