@@ -280,6 +280,7 @@ export default function PartyCard({
                     <BillRow
                       key={order.id}
                       order={order}
+                      creditDays={party.creditDays}
                       getBillStatus={getBillStatus}
                       locked={locked}
                       collectionDate={collectionDate}
@@ -331,6 +332,7 @@ export default function PartyCard({
 
 function BillRow({
   order,
+  creditDays,
   getBillStatus,
   locked,
   collectionDate,
@@ -361,9 +363,15 @@ function BillRow({
     if (!billTime) return '--';
     return Math.max(0, Math.floor((Date.now() - billTime) / 86400000));
   })();
+  const pastCredit =
+    typeof daysSinceBilling === 'number' &&
+    creditDays != null &&
+    creditDays !== '' &&
+    !Number.isNaN(Number(creditDays)) &&
+    daysSinceBilling > Number(creditDays);
 
   return (
-    <tr>
+    <tr className={pastCredit ? 'row-past-credit' : undefined}>
       <td>{order.billNumber || order.id}</td>
       <td>{formatDate(order.billCreationTime)}</td>
       <td>{daysSinceBilling}</td>

@@ -348,6 +348,24 @@
   font-weight: 500;
 }
 
+.bill-breakdown .app-table tbody tr.row-past-credit {
+  background: #fef2f2;
+}
+
+.bill-breakdown .app-table tbody tr.row-past-credit:hover {
+  background: #fee2e2;
+}
+
+.bill-breakdown .app-table tbody tr.row-past-credit td {
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.bill-breakdown .app-table tbody tr.row-past-credit .status-pill {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
 .reschedule-header {
   display: flex;
   align-items: center;
