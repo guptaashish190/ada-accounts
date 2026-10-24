@@ -36,7 +36,6 @@ export const PAYMENT_MODES = ['CASH', 'CHEQUE', 'UPI', 'NEFT'];
 
 export const PAYMENT_WINDOW_PRESETS = [2, 7, 10, 30];
 export const DEFAULT_PAYMENT_WINDOW_DAYS = 7;
-export const AUTO_ATTACH_WINDOW_DAYS = 4;
 export const PAYMENT_LOOKUP_DAYS = Math.max(...PAYMENT_WINDOW_PRESETS);
 export const MIN_LIST_BALANCE = 4;
 
@@ -547,37 +546,36 @@ export const paymentToEntryRow = (payment, dateKey) => ({
   sourceRef: payment.sourceRef || payment.id || null,
 });
 
-export const entryHasLinkedPayments = (entry) => {
-  if (!entry || entry.status === 'CANCELLED') return false;
-  if ((entry.sourceRefs || []).some(Boolean)) return true;
-  return (entry.payments || []).some(
-    (payment) => (parseInt(payment.amount, 10) || 0) > 0,
+const linkedPaymentIds = (entry) =>
+  new Set(
+    (entry?.sourceRefs || [])
+      .concat((entry?.payments || []).map((p) => p.sourceRef).filter(Boolean))
+      .concat((entry?.payments || []).map((p) => p.id).filter(Boolean)),
   );
-};
 
-/** Unlinked ±4-day payments for parties that have no saved links yet. */
-export const buildAutoAttachJobs = (
-  parties,
-  entriesByParty,
-  paymentsByParty,
+/** Unlinked payments in the window that can still be attached to this party. */
+export const attachablePayments = (
+  partyPayments,
   claimed,
   dateKey,
+  windowDays,
+  entry,
 ) => {
-  const jobs = [];
-  (parties || []).forEach((party) => {
-    const existing = entriesByParty?.[party.partyId];
-    if (entryHasLinkedPayments(existing)) return;
-    const payments = paymentsInWindow(
-      paymentsByParty?.get(party.partyId) || [],
-      dateKey,
-      AUTO_ATTACH_WINDOW_DAYS,
-    ).filter((payment) => {
+  const linkedIds = linkedPaymentIds(entry);
+  return paymentsInWindow(partyPayments || [], dateKey, windowDays).filter(
+    (payment) => {
       const id = payment?.id || payment?.sourceRef;
-      return id && !claimed.has(id) && (parseInt(payment.amount, 10) || 0) > 0;
-    });
-    if (payments.length) jobs.push({ party, payments, existing });
-  });
-  return jobs;
+      if (!id || (parseInt(payment.amount, 10) || 0) <= 0) return false;
+      if (
+        linkedIds.has(id) ||
+        linkedIds.has(payment.id) ||
+        linkedIds.has(payment.sourceRef)
+      ) {
+        return false;
+      }
+      return !claimed?.has(id) && !claimed?.has(payment.id);
+    },
+  );
 };
 
 export const saveEntry = async (companyId, dateKey, party, form) => {

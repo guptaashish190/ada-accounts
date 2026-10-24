@@ -21,7 +21,7 @@ import {
   useToastController,
 } from '@fluentui/react-components';
 
-import { Open12Filled, Dismiss12Filled } from '@fluentui/react-icons';
+import { Open12Filled, Dismiss12Filled, Search24Regular } from '@fluentui/react-icons';
 import math, { parse } from 'mathjs';
 import Loader from '../../../common/loader';
 import { VerticalSpace1 } from '../../../common/verticalSpace';
@@ -60,6 +60,7 @@ export default function ReceiveSRScreen() {
   const [returnedBills, setReturnedBills] = useState([]);
   const [receivedReturnedBillIds, setReceivedReturnedBillIds] = useState([]);
   const [withPartyBillIds, setWithPartyBillIds] = useState([]);
+  const [partyNameFilter, setPartyNameFilter] = useState('');
   // { [partyId]: { cash, cheque, upi, neft, scheduleDate, notes } }
   const [partyPaymentInputs, setPartyPaymentInputs] = useState(() => {
     const collections = supplyReport.partyCollections || [];
@@ -539,6 +540,23 @@ export default function ReceiveSRScreen() {
     );
   };
 
+  const partyNameQuery = partyNameFilter.trim().toLowerCase();
+  const matchesPartyName = (bills) => {
+    if (!partyNameQuery) return true;
+    return (bills?.[0]?.party?.name || '')
+      .toLowerCase()
+      .includes(partyNameQuery);
+  };
+
+  const hasVisibleParties =
+    (!isBundle &&
+      Object.values(groupedPrimaryBills).some(matchesPartyName)) ||
+    (!isBundle &&
+      Object.keys(groupedOldBills)
+        .filter((partyId) => !groupedPrimaryBills[partyId])
+        .some((partyId) => matchesPartyName(groupedOldBills[partyId]))) ||
+    Object.values(groupedSupplementaryBills).some(matchesPartyName);
+
   const renderPartyPaymentInputs = (partyId) => {
     const partyInput = partyPaymentInputs[partyId] || {};
     return (
@@ -617,9 +635,37 @@ export default function ReceiveSRScreen() {
               </Text>
             </div>
           )}
+          <div className="party-filter-row">
+            <Input
+              className="party-filter-input"
+              contentBefore={<Search24Regular />}
+              contentAfter={
+                partyNameFilter ? (
+                  <span
+                    className="party-filter-clear"
+                    onClick={() => setPartyNameFilter('')}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setPartyNameFilter('');
+                      }
+                    }}
+                  >
+                    <Dismiss12Filled />
+                  </span>
+                ) : undefined
+              }
+              placeholder="Filter by party name..."
+              value={partyNameFilter}
+              onChange={(_, data) => setPartyNameFilter(data.value)}
+            />
+          </div>
         </div>
         <div className="bills-section">
-          {!isBundle && Object.values(groupedPrimaryBills).map((bills) => {
+          {!isBundle && Object.values(groupedPrimaryBills)
+            .filter(matchesPartyName)
+            .map((bills) => {
             const partyId = bills[0].partyId;
             return (
               <div
@@ -649,6 +695,7 @@ export default function ReceiveSRScreen() {
           })}
           {!isBundle && Object.keys(groupedOldBills)
             .filter((partyId) => !groupedPrimaryBills[partyId])
+            .filter((partyId) => matchesPartyName(groupedOldBills[partyId]))
             .map((partyId) => {
               const oldBills = groupedOldBills[partyId];
               return (
@@ -671,7 +718,9 @@ export default function ReceiveSRScreen() {
                 </div>
               );
             })}
-          {Object.values(groupedSupplementaryBills).map((bills) => {
+          {Object.values(groupedSupplementaryBills)
+            .filter(matchesPartyName)
+            .map((bills) => {
             const partyId = bills[0].partyId;
             return (
               <div
@@ -697,6 +746,15 @@ export default function ReceiveSRScreen() {
               </div>
             );
           })}
+          {!hasVisibleParties && (
+            <div className="party-filter-empty">
+              <Text>
+                {partyNameQuery
+                  ? `No parties matching "${partyNameFilter.trim()}"`
+                  : 'No bills to receive'}
+              </Text>
+            </div>
+          )}
         </div>
 
         <div className="footer-section">

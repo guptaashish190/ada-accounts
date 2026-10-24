@@ -59,6 +59,35 @@
   gap: 24px;
 }
 
+.party-filter-row {
+  margin-top: 12px;
+}
+
+.party-filter-input {
+  width: 100%;
+  max-width: 420px;
+}
+
+.party-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.party-filter-clear:hover {
+  color: #111827;
+}
+
+.party-filter-empty {
+  background: white;
+  border-radius: 8px;
+  padding: 24px 16px;
+  text-align: center;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+}
+
 .party-section-receive-sr {
   background: white;
   border-radius: 8px;

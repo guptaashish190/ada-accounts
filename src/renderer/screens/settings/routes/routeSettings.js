@@ -1,5 +1,6 @@
 /* eslint-disable no-restricted-syntax */
 import { addDoc, getDocs, updateDoc } from 'firebase/firestore';
+import * as XLSX from 'xlsx';
 import React, { useEffect, useState } from 'react';
 import {
   Button,
@@ -20,8 +21,18 @@ import {
   Input,
   Label,
 } from '@fluentui/react-components';
-import { AddRegular, DismissRegular } from '@fluentui/react-icons';
+import {
+  AddRegular,
+  ArrowDownload24Regular,
+  ArrowUpload24Regular,
+  DismissRegular,
+} from '@fluentui/react-icons';
 import './style.css';
+import ImportRouteParties from './importRouteParties';
+import {
+  buildRouteExportRows,
+  EXPORT_HEADERS,
+} from './routeImportAlgo';
 import { useSettingsContext } from '../../../contexts/settingsContext';
 import { VerticalSpace1, VerticalSpace2 } from '../../../common/verticalSpace';
 import { useCompany } from '../../../contexts/companyContext';
@@ -90,6 +101,7 @@ export default function RouteSettings() {
   const [partiesLoading, setPartiesLoading] = useState(true);
   const [routesLoading, setRoutesLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [newRouteName, setNewRouteName] = useState('');
   const [creating, setCreating] = useState(false);
 
@@ -270,6 +282,14 @@ export default function RouteSettings() {
     }
   };
 
+  const handleExportRoutes = () => {
+    const rows = buildRouteExportRows(parties, routes);
+    const sheet = XLSX.utils.json_to_sheet(rows, { header: EXPORT_HEADERS });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Routes');
+    XLSX.writeFile(workbook, 'mr-routes.xlsx');
+  };
+
   const handleCloseAddDialog = () => {
     if (creating) return;
     setNewRouteName('');
@@ -295,6 +315,22 @@ export default function RouteSettings() {
       <h3>Route Settings</h3>
       <div className="route-settings-toolbar">
         <Button
+          appearance="secondary"
+          icon={<ArrowDownload24Regular />}
+          onClick={handleExportRoutes}
+          disabled={!currentCompanyId}
+        >
+          Export to Excel
+        </Button>
+        <Button
+          appearance="secondary"
+          icon={<ArrowUpload24Regular />}
+          onClick={() => setImportDialogOpen(true)}
+          disabled={!currentCompanyId}
+        >
+          Import from Excel
+        </Button>
+        <Button
           appearance="primary"
           icon={<AddRegular />}
           onClick={() => setAddDialogOpen(true)}
@@ -303,6 +339,11 @@ export default function RouteSettings() {
           Add Route
         </Button>
       </div>
+      <ImportRouteParties
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImported={fetchRoutes}
+      />
       <div className="route-container">
         {routes.length === 0 ? (
           <div className="no-data-container">

@@ -151,12 +151,13 @@ export default function ViewBundleScreen() {
     }
   };
 
+  
   const onEditBundle = () => {
     window.electron.ipcRenderer.sendMessage('new-window', {
       type: constants.windowConstants.ASSIGN_BILLS,
       data: {
         editBundle: {
-          bundleId,
+        bundleId,
           receiptNumber: bundle.receiptNumber,
           assignedTo: bundle.assignedTo,
           timestamp: bundle.timestamp,

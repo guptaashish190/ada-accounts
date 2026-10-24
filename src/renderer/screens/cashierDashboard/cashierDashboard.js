@@ -29,11 +29,9 @@ import {
   MIN_LIST_BALANCE,
   PAYMENT_LOOKUP_DAYS,
   PAYMENT_MODES,
-  buildAutoAttachJobs,
   cancelEntry,
   closeDay,
   endOfDay,
-  entryHasLinkedPayments,
   fetchAllScheduledOrders,
   fetchClaimedPaymentIds,
   fetchEntriesForDate,
@@ -223,7 +221,6 @@ function CashierDashboard() {
   const [closing, setClosing] = useState(false);
   const [paymentsCache, setPaymentsCache] = useState(null);
   const attachRequestRef = useRef(0);
-  const entriesByPartyRef = useRef({});
 
   const dayClosed = dayStatus?.status === 'CLOSED';
 
@@ -234,7 +231,6 @@ function CashierDashboard() {
     setLoadedBillCount(0);
     setPartiesData([]);
     setEntriesByParty({});
-    entriesByPartyRef.current = {};
     setDayStatus(null);
     setPaymentsCache(null);
     setRouteList([]);
@@ -251,73 +247,19 @@ function CashierDashboard() {
     setVisibleCarryOver(INITIAL_VISIBLE_PARTIES);
   }, [selectedRoute, partiesData]);
 
-  useEffect(() => {
-    entriesByPartyRef.current = entriesByParty;
-  }, [entriesByParty]);
-
-  const autoAttachUnlinkedPayments = async ({
-    requestId,
-    companyId,
-    dateKey,
-    parties,
-    entriesByParty: loadedEntries,
-  }) => {
+  const loadPayments = async (requestId, companyId, dateKey) => {
     try {
       const [paymentsByParty, claimed] = await Promise.all([
         fetchPaymentsInWindow(companyId, dateKey, PAYMENT_LOOKUP_DAYS),
         fetchClaimedPaymentIds(companyId, dateKey, PAYMENT_LOOKUP_DAYS),
       ]);
       if (requestId !== attachRequestRef.current) return;
-
       setPaymentsCache({ byParty: paymentsByParty, claimed });
-
-      const jobs = buildAutoAttachJobs(
-        parties,
-        loadedEntries,
-        paymentsByParty,
-        claimed,
-        dateKey,
-      );
-      if (!jobs.length) return;
-
-      const saved = (
-        await Promise.allSettled(
-          jobs.map(async ({ party, payments, existing }) => {
-            const latest = entriesByPartyRef.current[party.partyId] || existing;
-            if (entryHasLinkedPayments(latest)) return null;
-            return saveEntry(companyId, dateKey, party, {
-              payments,
-              notes: latest?.notes || '',
-              rescheduleByBill: {},
-              existingBills: latest?.bills || [],
-            });
-          }),
-        )
-      )
-        .filter((result) => result.status === 'fulfilled' && result.value)
-        .map((result) => result.value);
-      if (requestId !== attachRequestRef.current || !saved.length) return;
-
-      setEntriesByParty((prev) => {
-        const next = { ...prev };
-        saved.forEach((entry) => {
-          if (entryHasLinkedPayments(prev[entry.partyId])) return;
-          next[entry.partyId] = entry;
-        });
-        entriesByPartyRef.current = next;
-        return next;
-      });
-
-      showToast(
-        dispatchToast,
-        `Linked recent payments for ${saved.length} parties`,
-        'success',
-      );
     } catch (error) {
-      console.error('Error auto-linking recent payments:', error);
+      console.error('Error loading recent payments:', error);
       if (requestId === attachRequestRef.current) {
         setPaymentsCache({ byParty: new Map(), claimed: new Map() });
-        showToast(dispatchToast, 'Could not auto-link recent payments', 'error');
+        showToast(dispatchToast, 'Could not load recent payments', 'error');
       }
     }
   };
@@ -407,7 +349,6 @@ function CashierDashboard() {
 
       if (requestId !== attachRequestRef.current) return;
       setEntriesByParty(byParty);
-      entriesByPartyRef.current = byParty;
       setDayStatus(status);
       setPartiesData(parties);
       setRouteList(routes || []);
@@ -418,13 +359,7 @@ function CashierDashboard() {
         setPaymentsCache({ byParty: new Map(), claimed: new Map() });
         return;
       }
-      void autoAttachUnlinkedPayments({
-        requestId,
-        companyId: currentCompanyId,
-        dateKey: selectedDate,
-        parties,
-        entriesByParty: byParty,
-      });
+      void loadPayments(requestId, currentCompanyId, selectedDate);
     } catch (error) {
       console.error('Error loading cashier dashboard:', error);
       if (requestId !== attachRequestRef.current) return;

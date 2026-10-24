@@ -17,4 +17,5 @@
   "dependencies": {
     "@3ksy/electron-pos-printer": "^1.4.9"
   }
+  
 }

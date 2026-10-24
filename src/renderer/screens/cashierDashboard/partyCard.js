@@ -10,6 +10,7 @@ import { DatePicker } from '@fluentui/react-datepicker-compat';
 import CollectionEntryForm from './collectionEntryForm';
 import PartyEditDialog from './partyEditDialog';
 import {
+  attachablePayments,
   formatCurrency,
   formatDate,
   formatDateRel,
@@ -33,6 +34,17 @@ export const entryChipLabel = (entry) => {
   }
   if (entry && entry.source !== 'CLOSE_SNAPSHOT') return 'NO PAYMENT';
   return null;
+};
+
+const availableChipLabel = (payments) => {
+  if (!payments?.length) return null;
+  const total = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const modes = [...new Set(payments.map((p) => p.mode).filter(Boolean))].join(
+    '+',
+  );
+  return modes
+    ? `${formatCurrency(total)} ${modes}`
+    : `${formatCurrency(total)}`;
 };
 
 export const wasPartyRescheduled = (party, entry, collectionDate) =>
@@ -117,6 +129,25 @@ export default function PartyCard({
   const hasPayment = !!(paymentChip && paymentChip !== 'NO PAYMENT');
   const wasRescheduled = wasPartyRescheduled(party, entry, collectionDate);
   const isActioned = isPartyActioned(party, entry, collectionDate);
+  const availableChip = useMemo(() => {
+    if (locked || !paymentsCache) return null;
+    return availableChipLabel(
+      attachablePayments(
+        paymentsCache.byParty.get(party.partyId) || [],
+        paymentsCache.claimed,
+        collectionDate,
+        windowDays,
+        entry,
+      ),
+    );
+  }, [
+    locked,
+    paymentsCache,
+    party.partyId,
+    collectionDate,
+    windowDays,
+    entry,
+  ]);
 
   const dateChanges = useMemo(
     () =>
@@ -225,9 +256,14 @@ export default function PartyCard({
           )}
         </span>
         <span className="party-col-flag">
-          {hasPayment && (
-            <span className="status-badge collected">{paymentChip}</span>
-          )}
+          <span className="party-chips">
+            {hasPayment && (
+              <span className="status-badge collected">{paymentChip}</span>
+            )}
+            {availableChip && (
+              <span className="status-badge available">{availableChip}</span>
+            )}
+          </span>
         </span>
         <div className="party-actions">
           {party.contact ? (
