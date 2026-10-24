@@ -203,6 +203,8 @@ export default function UsersManagementScreen() {
         isDeactivated: false,
         companyId: userData.companyId || currentCompanyId,
         canSwitchCompany: userData.canSwitchCompany || false,
+        canSeePtr: userData.canSeePtr !== false,
+        canSeePtd: userData.canSeePtd !== false,
       });
 
       showToast(dispatchToast, 'User created successfully', 'success');
@@ -229,6 +231,8 @@ export default function UsersManagementScreen() {
         jobs: userData.jobs || [],
         companyId: userData.companyId,
         canSwitchCompany: userData.canSwitchCompany || false,
+        canSeePtr: userData.canSeePtr !== false,
+        canSeePtd: userData.canSeePtd !== false,
         assignedRoute: userData.assignedRoute || '',
       });
 
@@ -510,6 +514,8 @@ function CreateUserDialog({
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [isManager, setIsManager] = useState(false);
   const [canSwitchCompany, setCanSwitchCompany] = useState(false);
+  const [canSeePtr, setCanSeePtr] = useState(true);
+  const [canSeePtd, setCanSeePtd] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -532,6 +538,8 @@ function CreateUserDialog({
       jobs: selectedJobs,
       isManager,
       canSwitchCompany,
+      canSeePtr,
+      canSeePtd,
     });
 
     if (success) {
@@ -542,6 +550,8 @@ function CreateUserDialog({
       setSelectedJobs([]);
       setIsManager(false);
       setCanSwitchCompany(false);
+      setCanSeePtr(true);
+      setCanSeePtd(true);
       onOpenChange(false);
     }
     setSaving(false);
@@ -555,6 +565,8 @@ function CreateUserDialog({
     setSelectedJobs([]);
     setIsManager(false);
     setCanSwitchCompany(false);
+    setCanSeePtr(true);
+    setCanSeePtd(true);
     onOpenChange(false);
   };
 
@@ -677,6 +689,32 @@ function CreateUserDialog({
                   Allow user to switch between companies (Owner only)
                 </small>
               </div>
+
+              <div className="form-field">
+                <div className="switch-container">
+                  <Switch
+                    checked={canSeePtr}
+                    onChange={(e, data) => setCanSeePtr(data.checked)}
+                  />
+                  <Label htmlFor="create-see-ptr">Can See PTR</Label>
+                </div>
+                <small className="form-hint">
+                  Show PTR rates in the mobile app
+                </small>
+              </div>
+
+              <div className="form-field">
+                <div className="switch-container">
+                  <Switch
+                    checked={canSeePtd}
+                    onChange={(e, data) => setCanSeePtd(data.checked)}
+                  />
+                  <Label htmlFor="create-see-ptd">Can See PTD</Label>
+                </div>
+                <small className="form-hint">
+                  Show PTD rates in the mobile app
+                </small>
+              </div>
             </div>
           </DialogContent>
           <DialogActions>
@@ -717,6 +755,8 @@ function EditUserDialog({
   const [isManager, setIsManager] = useState(user?.isManager || false);
   const [canSwitchCompany, setCanSwitchCompany] =
     useState(user?.canSwitchCompany || false);
+  const [canSeePtr, setCanSeePtr] = useState(user?.canSeePtr !== false);
+  const [canSeePtd, setCanSeePtd] = useState(user?.canSeePtd !== false);
   const [assignedRoute, setAssignedRoute] = useState(user?.assignedRoute || '');
   const [routes, setRoutes] = useState([]);
   const [routesLoading, setRoutesLoading] = useState(false);
@@ -732,6 +772,8 @@ function EditUserDialog({
       setSelectedJobs(user.jobs || []);
       setIsManager(user.isManager || false);
       setCanSwitchCompany(user.canSwitchCompany || false);
+      setCanSeePtr(user.canSeePtr !== false);
+      setCanSeePtd(user.canSeePtd !== false);
       setAssignedRoute(user.assignedRoute || '');
     }
   }, [user, open]);
@@ -803,6 +845,8 @@ function EditUserDialog({
       jobs: selectedJobs,
       isManager,
       canSwitchCompany,
+      canSeePtr,
+      canSeePtd,
       assignedRoute: isMR ? assignedRoute : '',
     });
 
@@ -819,6 +863,8 @@ function EditUserDialog({
     setSelectedJobs(user?.jobs || []);
     setIsManager(user?.isManager || false);
     setCanSwitchCompany(user?.canSwitchCompany || false);
+    setCanSeePtr(user?.canSeePtr !== false);
+    setCanSeePtd(user?.canSeePtd !== false);
     setAssignedRoute(user?.assignedRoute || '');
     onOpenChange(false);
   };
@@ -960,6 +1006,32 @@ function EditUserDialog({
                 </div>
                 <small className="form-hint">
                   Allow user to switch between companies (Owner only)
+                </small>
+              </div>
+
+              <div className="form-field">
+                <div className="switch-container">
+                  <Switch
+                    checked={canSeePtr}
+                    onChange={(e, data) => setCanSeePtr(data.checked)}
+                  />
+                  <Label htmlFor="edit-see-ptr">Can See PTR</Label>
+                </div>
+                <small className="form-hint">
+                  Show PTR rates in the mobile app
+                </small>
+              </div>
+
+              <div className="form-field">
+                <div className="switch-container">
+                  <Switch
+                    checked={canSeePtd}
+                    onChange={(e, data) => setCanSeePtd(data.checked)}
+                  />
+                  <Label htmlFor="edit-see-ptd">Can See PTD</Label>
+                </div>
+                <small className="form-hint">
+                  Show PTD rates in the mobile app
                 </small>
               </div>
             </div>

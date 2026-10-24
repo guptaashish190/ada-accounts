@@ -44,6 +44,13 @@ const PRODUCT_FIELDS = [
 
 const SKIP = '__skip__';
 
+// Round a rate to 2 decimal places; EPSILON guards against cases like 1.005 -> 1.00
+const roundRate = (value) => {
+  const n = parseFloat(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+};
+
 export default function ImportProducts({ open, onClose, onImported }) {
   const fileRef = useRef(null);
   const [rows, setRows] = useState([]);
@@ -200,8 +207,8 @@ export default function ImportProducts({ open, onClose, onImported }) {
           packSize: String(row[mapping.packSize] || '').trim(),
           boxConversion: parseFloat(row[mapping.boxConversion]) || 0,
           mrp: parseFloat(row[mapping.mrp]) || 0,
-          ptd: parseFloat(row[mapping.ptd]) || 0,
-          ptr: parseFloat(row[mapping.ptr]) || 0,
+          ptd: roundRate(row[mapping.ptd]),
+          ptr: roundRate(row[mapping.ptr]),
           composition: String(row[mapping.composition] || '').trim(),
           imageUrls: normalizedImageUrls,
           isActive: true,
