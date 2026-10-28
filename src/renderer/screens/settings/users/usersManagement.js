@@ -203,8 +203,8 @@ export default function UsersManagementScreen() {
         isDeactivated: false,
         companyId: userData.companyId || currentCompanyId,
         canSwitchCompany: userData.canSwitchCompany || false,
-        canSeePtr: userData.canSeePtr !== false,
-        canSeePtd: userData.canSeePtd !== false,
+        canSeePtr: userData.canSeePtr === true,
+        canSeePtd: userData.canSeePtd === true,
       });
 
       showToast(dispatchToast, 'User created successfully', 'success');
@@ -231,8 +231,8 @@ export default function UsersManagementScreen() {
         jobs: userData.jobs || [],
         companyId: userData.companyId,
         canSwitchCompany: userData.canSwitchCompany || false,
-        canSeePtr: userData.canSeePtr !== false,
-        canSeePtd: userData.canSeePtd !== false,
+        canSeePtr: userData.canSeePtr === true,
+        canSeePtd: userData.canSeePtd === true,
         assignedRoute: userData.assignedRoute || '',
       });
 
@@ -514,8 +514,8 @@ function CreateUserDialog({
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [isManager, setIsManager] = useState(false);
   const [canSwitchCompany, setCanSwitchCompany] = useState(false);
-  const [canSeePtr, setCanSeePtr] = useState(true);
-  const [canSeePtd, setCanSeePtd] = useState(true);
+  const [canSeePtr, setCanSeePtr] = useState(false);
+  const [canSeePtd, setCanSeePtd] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -550,8 +550,8 @@ function CreateUserDialog({
       setSelectedJobs([]);
       setIsManager(false);
       setCanSwitchCompany(false);
-      setCanSeePtr(true);
-      setCanSeePtd(true);
+      setCanSeePtr(false);
+      setCanSeePtd(false);
       onOpenChange(false);
     }
     setSaving(false);
@@ -565,8 +565,8 @@ function CreateUserDialog({
     setSelectedJobs([]);
     setIsManager(false);
     setCanSwitchCompany(false);
-    setCanSeePtr(true);
-    setCanSeePtd(true);
+    setCanSeePtr(false);
+    setCanSeePtd(false);
     onOpenChange(false);
   };
 
@@ -755,8 +755,8 @@ function EditUserDialog({
   const [isManager, setIsManager] = useState(user?.isManager || false);
   const [canSwitchCompany, setCanSwitchCompany] =
     useState(user?.canSwitchCompany || false);
-  const [canSeePtr, setCanSeePtr] = useState(user?.canSeePtr !== false);
-  const [canSeePtd, setCanSeePtd] = useState(user?.canSeePtd !== false);
+  const [canSeePtr, setCanSeePtr] = useState(user?.canSeePtr === true);
+  const [canSeePtd, setCanSeePtd] = useState(user?.canSeePtd === true);
   const [assignedRoute, setAssignedRoute] = useState(user?.assignedRoute || '');
   const [routes, setRoutes] = useState([]);
   const [routesLoading, setRoutesLoading] = useState(false);
@@ -772,8 +772,8 @@ function EditUserDialog({
       setSelectedJobs(user.jobs || []);
       setIsManager(user.isManager || false);
       setCanSwitchCompany(user.canSwitchCompany || false);
-      setCanSeePtr(user.canSeePtr !== false);
-      setCanSeePtd(user.canSeePtd !== false);
+      setCanSeePtr(user.canSeePtr === true);
+      setCanSeePtd(user.canSeePtd === true);
       setAssignedRoute(user.assignedRoute || '');
     }
   }, [user, open]);
@@ -863,8 +863,8 @@ function EditUserDialog({
     setSelectedJobs(user?.jobs || []);
     setIsManager(user?.isManager || false);
     setCanSwitchCompany(user?.canSwitchCompany || false);
-    setCanSeePtr(user?.canSeePtr !== false);
-    setCanSeePtd(user?.canSeePtd !== false);
+    setCanSeePtr(user?.canSeePtr === true);
+    setCanSeePtd(user?.canSeePtd === true);
     setAssignedRoute(user?.assignedRoute || '');
     onOpenChange(false);
   };
